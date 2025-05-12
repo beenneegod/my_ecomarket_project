@@ -16,7 +16,13 @@ else:
 # -----------------------------------------------------
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
-
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000 # 1 год в секундах
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY and DEBUG: # В режиме DEBUG можно сгенерировать временный ключ
@@ -89,10 +95,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/stable/ref/settings/#databases
-
+DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': DB_ENGINE,
         'NAME': os.getenv('DATABASE_NAME'),
         'USER': os.getenv('DATABASE_USER'),
         'PASSWORD': os.getenv('DATABASE_PASSWORD'),
@@ -101,8 +107,12 @@ DATABASES = {
     }
 }
 # Проверка наличия всех переменных БД
-if not all([DATABASES['default']['NAME'], DATABASES['default']['USER'], DATABASES['default']['PASSWORD'], DATABASES['default']['HOST']]):
-     print("Warning: Database configuration is incomplete. Check environment variables in .env (DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD, DATABASE_HOST).")
+if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
+    # Убедимся, что порт не передается как пустая строка, если MySQL этого не любит
+    if not DATABASES['default']['PORT']:
+        del DATABASES['default']['PORT'] # Удаляем ключ PORT, если он пустой для MySQL
+    # Дополнительные опции для MySQL можно добавить здесь, если они специфичны
+    DATABASES['default'].setdefault('OPTIONS', {}).update({'charset': 'utf8mb4'})
 
 
 # Password validation
