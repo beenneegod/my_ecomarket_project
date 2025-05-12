@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Оплата отменена{% endblock %}
+
+{% block content %}
+    <h2>Оплата была отменена</h2>
+    <p>Вы отменили процесс оплаты.</p>
+    <p>Ваш заказ не был оформлен. Ваша корзина сохранена, вы можете попробовать оплатить снова.</p>
+    <p>
+        <a href="{% url 'store:cart_detail' %}">Вернуться в корзину</a> или
+        <a href="{% url 'store:product_list' %}">продолжить покупки</a>.
+    </p>
+{% endblock %}

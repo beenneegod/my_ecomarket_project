@@ -1,0 +1,105 @@
+/* static/css/product_detail.css */
+
+.product-detail-container {
+    display: flex;
+    flex-wrap: wrap; /* Позволяет переноситься на мобильных */
+    gap: 30px;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.product-image-column {
+    flex: 1 1 40%; /* Занимает ~40% ширины, может сжиматься/растягиваться */
+    min-width: 280px; /* Минимальная ширина для картинки */
+    text-align: center;
+}
+
+.product-image-column img {
+    max-width: 100%;
+    height: auto;
+    max-height: 400px; /* Ограничение высоты */
+    object-fit: contain;
+    border-radius: 5px;
+}
+
+.product-info-column {
+    flex: 1 1 55%; /* Занимает ~55% ширины */
+}
+
+.product-info-column h2 {
+    margin-top: 0;
+    font-size: 1.8em;
+    margin-bottom: 10px;
+}
+
+.product-info-column .price {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #e67e22;
+    margin-bottom: 20px;
+}
+
+.product-description {
+    margin-bottom: 25px;
+}
+
+.product-description h3 {
+    margin-bottom: 5px;
+    font-size: 1.2em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+.product-description p {
+    line-height: 1.6;
+    color: #555;
+}
+
+.add-to-cart-form {
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.add-to-cart-form label {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.quantity-input-detail {
+    width: 70px;
+    padding: 8px;
+    text-align: center;
+    margin-right: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+/* Стили кнопки используются из base.css (.add-to-cart-btn) */
+
+.stock-info {
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: #27ae60; /* Зеленый для наличия */
+}
+
+.out-of-stock {
+    color: #e74c3c; /* Красный для отсутствия */
+    font-weight: bold;
+    margin-bottom: 25px;
+}
+
+.back-to-list-btn {
+    display: inline-block;
+    margin-top: 15px;
+    color: #3498db;
+    text-decoration: none;
+}
+
+.back-to-list-btn:hover {
+    text-decoration: underline;
+}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    {% if current_category %}{{ current_category.name }}{% else %}Товары{% endif %} - EcoMarket
+{% endblock %}
+
+{% block content %}
+    <div class="row"> {# Используем Bootstrap row для двух колонок #}
+        {# --- Боковая панель с категориями --- #}
+        <aside class="col-lg-3 col-md-4 mb-4"> {# Bootstrap классы для ширины колонок #}
+            <div class="list-group">
+                <a href="{% url 'store:product_list' %}" class="list-group-item list-group-item-action {% if not current_category %}active{% endif %}">
+                    Wszystkie produkty
+                </a>
+                {% for c in categories %}
+                    <a href="{{ c.get_absolute_url }}" class="list-group-item list-group-item-action {% if current_category.slug == c.slug %}active{% endif %}">
+                        {{ c.name }}
+                    </a>
+                {% endfor %}
+            </div>
+        </aside>
+
+        {# --- Основной блок со списком товаров --- #}
+        <section class="col-lg-9 col-md-8"> {# Bootstrap классы для ширины колонок #}
+            <h2>
+                {% if query %}
+                    Rezultat wyszukiwania: "{{ query }}"
+                {% elif current_category %}
+                    {{ current_category.name }}
+                {% else %}
+                    Nasze produkty
+                {% endif %}
+            </h2>
+
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3"> {# Адаптивная сетка Bootstrap для карточек товаров #}
+                {% for product in products %}
+                    <div class="col">
+                        <div class="card shadow-sm h-100"> {# Bootstrap card компонент, h-100 для одинаковой высоты #}
+                            <a href="{% url 'store:product_detail' product.slug %}">
+                                {% if product.image %}
+                                    <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
+                                {% else %}
+                                    <img src="{% static 'img/no_image.png' %}" class="card-img-top" alt="Нет изображения" style="height: 200px; object-fit: cover;">
+                                {% endif %}
+                            </a>
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title"><a href="{% url 'store:product_detail' product.slug %}" class="text-decoration-none text-dark">{{ product.name }}</a></h5>
+                                <p class="card-text mt-auto"><strong>{{ product.price }} PLN</strong></p>
+                                <button class="btn btn-primary add-to-cart-btn mt-2" data-product-id="{{ product.id }}">
+                                    Dodaj do koszyka
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col">
+                        {% if query %}
+                            <p>Za twoim zapytaniem "{{ query }}" nic nie znaleziono.</p>
+                        {% else %}
+                            <p>W tej kategorii brak towarów.</p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div> {# Конец .row для карточек #}
+
+            {% include "store/pagination.html" with page=products query=query current_category=current_category %}
+        </section>
+    </div> {# Конец .row для колонок #}
+{% endblock %}
+
+{% block extra_css %}
+    {# Удаляем старые стили для сайдбара и product-list-container, т.к. Bootstrap их заменяет #}
+    {# Если были какие-то уникальные стили, их можно оставить или адаптировать #}
+{% endblock %}

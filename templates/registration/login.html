@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Logowanie - EcoMarket{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6 col-xl-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4 p-md-5">
+                <h2 class="card-title text-center mb-4">Logowanie</h2>
+
+                {% if form.errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {% if form.non_field_errors %}
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        {% else %}
+                            Nazwa użytkownika lub hasło jest nieprawidłowe. Proszę spróbować ponownie.
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                {% if next %}
+                    {% if user.is_authenticated %}
+                        <div class="alert alert-warning" role="alert">
+                            Twoje konto nie ma dostępu do tej strony. Aby kontynuować, zaloguj się na konto z odpowiednimi uprawnieniami.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info" role="alert">
+                            Proszę się zalogować, aby zobaczyć tę stronę.
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                <form method="post" action="{% url 'login' %}" class="needs-validation" novalidate>
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label_tag|default:"Nazwa użytkownika" }}</label>
+                        {{ form.username }} {# Теперь это поле должно иметь классы из CustomAuthenticationForm #}
+                        <div class="invalid-feedback">Proszę podać nazwę użytkownika.</div>
+                        {% if form.username.errors %} {# Показываем ошибки поля, если они есть от Django #}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.username.errors %} {{ error }} {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label_tag|default:"Hasło" }}</label>
+                        {{ form.password }} {# Это поле тоже должно иметь классы #}
+                        <div class="invalid-feedback">Proszę podać hasło.</div>
+                         {% if form.password.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.password.errors %} {{ error }} {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <input type="hidden" name="next" value="{{ next|default:'/' }}">
+
+                    <div class="d-grid gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary btn-lg">Zaloguj się</button>
+                    </div>
+
+                    <p class="mt-3 text-center">
+                        Nie masz konta? <a href="{% url 'register' %}">Zarejestruj się</a>
+                        <br>
+                        <a href="{% url 'password_reset' %}">Zapomniałeś hasła?</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{# Скрипт валидации Bootstrap #}
+<script>
+(() => {
+  'use strict'
+  const forms = document.querySelectorAll('.needs-validation')
+  Array.from(forms).forEach(form => {
+    form.addEventListener('submit', event => {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
+{% endblock %}

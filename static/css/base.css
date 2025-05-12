@@ -1,0 +1,43 @@
+/* static/css/base.css */
+
+body {
+    /* Вы можете задать здесь свой основной шрифт, если он отличается от стандартного Bootstrap */
+    /* font-family: 'ВашШрифт', sans-serif; */
+
+    /* Эти стили помогают прижать футер к низу страницы, если контента мало */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main.container {
+    flex-grow: 1; /* Занимает все доступное пространство, прижимая футер */
+    padding-top: 1.5rem;    /* Немного верхнего отступа для основного контента (Bootstrap .pt-3 или .pt-4) */
+    padding-bottom: 1.5rem; /* Немного нижнего отступа (Bootstrap .pb-3 или .pb-4) */
+}
+
+/* Стили для кнопки выхода, чтобы она выглядела как пункт dropdown-item в Bootstrap */
+.logout-button-bs {
+    background: none!important;
+    border: none!important;
+    padding: var(--bs-dropdown-item-padding-y) var(--bs-dropdown-item-padding-x) !important; /* Используем переменные Bootstrap */
+    color: var(--bs-dropdown-link-color) !important;
+    text-align: inherit!important;
+    display: block!important;
+    width: 100%!important;
+    font-size: inherit!important; /* Должно наследоваться от .dropdown-item */
+    font-family: inherit!important;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.logout-button-bs:hover,
+.logout-button-bs:focus {
+    color: var(--bs-dropdown-link-hover-color) !important;
+    background-color: var(--bs-dropdown-link-hover-bg) !important;
+}
+
+/* Дополнительные кастомные стили, если они действительно нужны
+   и не могут быть достигнуты классами Bootstrap, добавляйте сюда.
+   Например, специфичные цвета вашего бренда, если вы не хотите менять SASS переменные Bootstrap.
+*/

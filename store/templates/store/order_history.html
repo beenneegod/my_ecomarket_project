@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Historia Twoich zamówień - EcoMarket{% endblock %}
+
+{% block content %}
+    <h2 class="mb-4">Historia Twoich zamówień</h2>
+
+    {% if orders %}
+        <div class="accordion" id="ordersAccordion"> {# Используем Bootstrap Accordion для каждого заказа #}
+            {% for order in orders %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingOrder{{ order.id }}">
+                        <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOrder{{ order.id }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapseOrder{{ order.id }}">
+                            Zamówienie #{{ order.id }} złożone {{ order.created_at|date:"d.m.Y H:i" }} - Suma: {{ order.get_total_cost }} PLN
+                            <span class="ms-auto badge {% if order.paid %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                {% if order.paid %}Opłacone{% else %}Oczekuje na płatność{% endif %}
+                            </span>
+                        </button>
+                    </h2>
+                    <div id="collapseOrder{{ order.id }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" aria-labelledby="headingOrder{{ order.id }}" data-bs-parent="#ordersAccordion">
+                        <div class="accordion-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h5>Dane dostawy:</h5>
+                                    <address>
+                                        <strong>{{ order.get_full_name }}</strong><br>
+                                        {{ order.address_line_1 }}<br>
+                                        {% if order.address_line_2 %}{{ order.address_line_2 }}<br>{% endif %}
+                                        {{ order.postal_code }} {{ order.city }}<br>
+                                        {{ order.country }}<br>
+                                        Email: {{ order.email }}
+                                    </address>
+                                </div>
+                                {% if order.stripe_id %}
+                                <div class="col-md-6">
+                                    <h5>Płatność:</h5>
+                                    <p class="mb-0">ID transakcji Stripe: <small class="text-muted">{{ order.stripe_id }}</small></p>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <h6>Zamówione produkty:</h6>
+                            <ul class="list-group list-group-flush">
+                                {% for item in order.items.all %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>
+                                            {% if item.product.image %}
+                                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" style="width: 40px; height: 40px; object-fit: cover; margin-right: 10px;" class="img-thumbnail me-2">
+                                            {% endif %}
+                                            {{ item.product.name }}
+                                        </span>
+                                        <span>{{ item.quantity }} szt. x {{ item.price }} PLN = <strong>{{ item.get_cost }} PLN</strong></span>
+                                    </li>
+                                {% empty %}
+                                    <li class="list-group-item">Brak informacji o produktach w zamówieniu.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            Nie masz jeszcze żadnych zamówień.
+        </div>
+        <p><a href="{% url 'store:product_list' %}" class="btn btn-primary"><i class="bi bi-cart-plus"></i> Rozpocznij zakupy</a></p>
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+    {# Удаляем старые стили из этого шаблона, если они были #}
+    {# Bootstrap Icons уже должны быть подключены в base.html или здесь #}
+{% endblock %}

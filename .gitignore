@@ -1,0 +1,44 @@
+# .gitignore
+
+# Environment variables
+.env*
+*.env
+
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django media files (если не версионируем)
+/media/  # Для диплома, если медиа немного, МОЖНО включить их в Git, закомментировав эту строку
+
+# Django staticfiles (собранные для production)
+/staticfiles/
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.sublime-workspace
+*.sublime-project
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Virtual environment
+venv/
+env/
+.venv/
+venv_py311/
+venv_py312/
+# SQLite database (если использовался локально)
+db.sqlite3
+*.sqlite3
+
+# Локальные логи и временные файлы
+*.log
+local_settings.py
+
+# Stripe CLI config (если создается в проекте)
+.stripe/

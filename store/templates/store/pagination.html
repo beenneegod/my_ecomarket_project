@@ -1,0 +1,40 @@
+{% if page.has_other_pages %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center mt-4"> {# Классы Bootstrap: pagination и justify-content-center #}
+
+            {# --- Кнопка "Предыдущая" --- #}
+            <li class="page-item {% if not page.has_previous %}disabled{% endif %}">
+                <a class="page-link" href="{% if page.has_previous %}?page={{ page.previous_page_number }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}{% else %}#__{% endif %}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                    {# <span class="sr-only">Poprzednia</span> #}
+                </a>
+            </li>
+
+            {# --- Номера страниц (упрощенная логика для примера) --- #}
+            {# Вы можете добавить более сложную логику для отображения ... если страниц много #}
+            {% for i in page.paginator.page_range %}
+                {% if page.number == i %}
+                    <li class="page-item active" aria-current="page"><span class="page-link">{{ i }}</span></li>
+                {% elif i > page.number|add:'-3' and i < page.number|add:'3' %} {# Показываем +-2 страницы от текущей #}
+                    <li class="page-item"><a class="page-link" href="?page={{ i }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}">{{ i }}</a></li>
+                {% elif i == 1 or i == page.paginator.num_pages %} {# Всегда показываем первую и последнюю, если они не в диапазоне +-2 #}
+                    {% if i == 1 and page.number > 3 %} {# Многоточие после первой, если текущая > 3 #}
+                       <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    <li class="page-item"><a class="page-link" href="?page={{ i }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}">{{ i }}</a></li>
+                    {% if i == page.paginator.num_pages and page.number < page.paginator.num_pages|add:"-2" %} {# Многоточие перед последней #}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {# --- Кнопка "Следующая" --- #}
+            <li class="page-item {% if not page.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{% if page.has_next %}?page={{ page.next_page_number }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}{% else %}#__{% endif %}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                    {# <span class="sr-only">Następna</span> #}
+                </a>
+            </li>
+        </ul>
+    </nav>
+{% endif %}

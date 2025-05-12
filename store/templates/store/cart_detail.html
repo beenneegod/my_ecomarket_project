@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Twój Koszyk - EcoMarket{% endblock %}
+
+{% block content %}
+    <h2 class="mb-4">Twój Koszyk</h2>
+
+    {% if cart %}
+        <div class="table-responsive mb-4"> {# table-responsive для адаптивности таблицы #}
+            <table class="table table-hover align-middle"> {# Классы Bootstrap для таблицы #}
+                <thead class="table-light"> {# Светлый фон для заголовков таблицы #}
+                    <tr>
+                        <th scope="col" style="width: 10%;">Zdjęcie</th>
+                        <th scope="col" style="width: 30%;">Produkt</th>
+                        <th scope="col" style="width: 20%;">Ilość</th>
+                        <th scope="col" style="width: 15%; text-align: right;">Cena za szt.</th>
+                        <th scope="col" style="width: 15%; text-align: right;">Wartość ogólna</th>
+                        <th scope="col" style="width: 10%; text-align: center;">Usunąć</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cart %}
+                        {% with product=item.product %}
+                        <tr class="cart-item" data-product-id="{{ product.id }}">
+                            <td>
+                                <a href="{% url 'store:product_detail' product.slug %}">
+                                    {% if product.image %}
+                                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-thumbnail" style="max-height: 75px; max-width: 75px; object-fit: contain;">
+                                    {% else %}
+                                        <img src="{% static 'img/no_image.png' %}" alt="Нет изображения" class="img-thumbnail" style="max-height: 75px; max-width: 75px; object-fit: contain;">
+                                    {% endif %}
+                                </a>
+                            </td>
+                            <td>
+                                <a href="{% url 'store:product_detail' product.slug %}" class="text-decoration-none text-dark">{{ product.name }}</a>
+                            </td>
+                            <td>
+                                <div class="input-group input-group-sm" style="max-width: 130px;"> {# input-group для объединения поля и кнопок (если будете добавлять кнопки +/-) #}
+                                    <input type="number" value="{{ item.quantity }}" min="0" max="{{ product.stock }}" class="form-control quantity-input text-center" data-product-id="{{ product.id }}">
+                                    {# Можно добавить кнопки +/- сюда позже #}
+                                </div>
+                            </td>
+                            <td class="text-end">{{ item.price }} PLN</td>
+                            <td class="text-end item-total-price">{{ item.total_price }} PLN</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-danger remove-from-cart-btn" data-product-id="{{ product.id }}" title="Удалить товар">
+                                    <i class="bi bi-trash"></i> {# Bootstrap Icon #}
+                                </button>
+                            </td>
+                        </tr>
+                        {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row justify-content-end">
+            <div class="col-md-6 col-lg-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Podsumowanie zamówienia</h4>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Do zapłaty:
+                                <strong id="cart-total-price">{{ cart.get_total_price }}PLN</strong>
+                            </li>
+                        </ul>
+                        <div class="d-grid gap-2 mt-3">
+                            <a href="{% url 'payments:checkout' %}" class="btn btn-success btn-lg">
+                                <i class="bi bi-credit-card"></i> Przejdź do kasy
+                            </a>
+                            <a href="{% url 'store:product_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left-circle"></i> Kontynuuj zakupy
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <div class="alert alert-info" role="alert"> {# Используем alert Bootstrap #}
+            Ваша корзина пуста.
+        </div>
+        <p><a href="{% url 'store:product_list' %}" class="btn btn-primary"><i class="bi bi-cart-plus"></i> Начать покупки</a></p>
+    {% endif %}
+
+    {# Подключаем JS для корзины (если еще не подключен глобально в base.html или нужен специфичный) #}
+    {# <script src="{% static 'js/cart.js' %}"></script> #}
+    {# cart.js уже должен быть подключен в base.html #}
+{% endblock %}
+
+{% block extra_css %}
+    {# <link rel="stylesheet" href="{% static 'css/cart.css' %}"> #}
+    {# Удаляем ссылку на старый cart.css, так как Bootstrap покрывает стили #}
+    {# Bootstrap Icons уже должны быть подключены в base.html #}
+{% endblock %}
