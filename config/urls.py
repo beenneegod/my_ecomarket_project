@@ -13,6 +13,7 @@ urlpatterns = [
     # Подключаем все URL из приложения store по корневому пути ''
     path('', include('store.urls', namespace='store')),
     path('payment/', include('payments.urls', namespace='payments')),
+    path('blog/', include('blog.urls', namespace='blog')), # Added blog URLs
 
     path('accounts/login/', auth_views.LoginView.as_view(
             template_name='registration/login.html',

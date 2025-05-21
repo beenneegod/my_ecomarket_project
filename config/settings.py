@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     # Наши приложения:
     'store.apps.StoreConfig', # Регистрируем приложение store
     'payments.apps.PaymentsConfig',
+    'blog.apps.BlogConfig', # Add the blog app
 ]
 
 MIDDLEWARE = [

@@ -3,6 +3,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse # Для AJAX ответов
+from django.views.decorators.csrf import ensure_csrf_cookie # Импортируем декоратор
 from .models import Product, Order, Category # Импортируем модели Product и Order
 from .cart import Cart # Импортируем наш класс Cart
 from decimal import Decimal
@@ -12,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 
+@ensure_csrf_cookie
 def product_list(request, category_slug=None):
     categories = Category.objects.all()
     products_list = Product.objects.filter(available=True)
@@ -51,6 +53,7 @@ def product_list(request, category_slug=None):
     }
     return render(request, 'store/product_list.html', context)
 
+@ensure_csrf_cookie
 def product_detail(request, product_slug): # Принимаем product_slug вместо product_id
     """
     Представление для отображения страницы одного товара.
