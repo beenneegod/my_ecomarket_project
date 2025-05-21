@@ -3,18 +3,22 @@
 
 {% block title %}{{ post.title }} - Blog - EcoMarket{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'blog/css/blog.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row">
-        <div class="col-lg-8">
+        <div class="col-lg-8 blog-post-detail">
             <!-- Post content-->
             <article>
                 <!-- Post header-->
-                <header class="mb-4">
+                <header class="mb-4 post-header">
                     <!-- Post title-->
                     <h1 class="fw-bolder mb-1">{{ post.title }}</h1>
                     <!-- Post meta content-->
-                    <div class="text-muted fst-italic mb-2">
+                    <div class="text-muted fst-italic mb-2 post-meta">
                         Posted on {{ post.published_at|date:"F j, Y, P" }} by {{ post.author.username|default:"Unknown author" }}
                     </div>
                     <!-- Post categories (if any, not in model yet) -->
@@ -23,7 +27,7 @@
                 <!-- Preview image figure-->
                 {% if post.image %}
                 <figure class="mb-4">
-                    <img src="{{ post.image.url }}" alt="{{ post.title }}" class="img-fluid rounded">
+                    <img src="{{ post.image.url }}" alt="{{ post.title }}" class="img-fluid rounded post-image">
                 </figure>
                 {% endif %}
                 <!-- Post content-->
@@ -33,14 +37,14 @@
             </article>
 
             <!-- Comments section-->
-            <section class="mb-5">
+            <section class="mb-5 comments-section">
                 <div class="card bg-light">
                     <div class="card-body">
                         <h2 class="mb-4">Comments ({{ comments.count }})</h2>
                         <!-- Comment form -->
                         {% if user.is_authenticated %}
                             <h3 class="mb-3">Leave a comment</h3>
-                            <form method="post">
+                            <form method="post" class="comment-form">
                                 {% csrf_token %}
                                 {{ comment_form.as_p }}
                                 <button type="submit" class="btn btn-primary mt-2">Submit Comment</button>
@@ -53,11 +57,11 @@
 
                         <!-- Existing Comments -->
                         {% for comment in comments %}
-                        <div class="d-flex mb-4">
+                        <div class="d-flex mb-4 comment">
                             <div class="flex-shrink-0"><img class="rounded-circle" src="{% static 'img/no_image.png' %}" alt="User avatar" width="50" /></div>
                             <div class="ms-3">
-                                <div class="fw-bold">{{ comment.author.username|default:"Anonymous" }}</div>
-                                <div class="text-muted fst-italic mb-1"><small>{{ comment.created_at|date:"F j, Y, P" }}</small></div>
+                                <div class="fw-bold comment-author">{{ comment.author.username|default:"Anonymous" }}</div>
+                                <div class="text-muted fst-italic mb-1 comment-date"><small>{{ comment.created_at|date:"F j, Y, P" }}</small></div>
                                 {{ comment.body|linebreaks }}
                             </div>
                         </div>

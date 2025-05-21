@@ -3,15 +3,19 @@
 
 {% block title %}Blog - EcoMarket{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'blog/css/blog.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 blog-post-list">
     <h1 class="mb-4">Blog Posts</h1>
 
     {% for post in posts %}
-    <div class="card mb-3">
+    <div class="card mb-3 post-item">
         <div class="card-body">
-            <h2 class="card-title"><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h2>
-            <p class="card-text"><small class="text-muted">{{ post.published_at|date:"F j, Y, P" }}</small></p>
+            <h2 class="card-title post-title"><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h2>
+            <p class="card-text post-meta"><small class="text-muted">{{ post.published_at|date:"F j, Y, P" }} by {{ post.author.username|default:"Unknown" }}</small></p>
             <p class="card-text">{{ post.body|truncatewords:30|linebreaks }}</p>
             <a href="{{ post.get_absolute_url }}" class="btn btn-primary btn-sm">Read more</a>
         </div>
