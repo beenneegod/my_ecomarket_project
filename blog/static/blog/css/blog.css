@@ -1,0 +1,71 @@
+/* blog/static/blog/css/blog.css */
+
+.blog-post-list .post-item {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.blog-post-list .post-item:last-child {
+    border-bottom: none;
+}
+
+.blog-post-list .post-title a {
+    text-decoration: none;
+    color: #333;
+}
+
+.blog-post-list .post-title a:hover {
+    color: #007bff;
+}
+
+.blog-post-list .post-meta {
+    font-size: 0.9em;
+    color: #777;
+    margin-bottom: 0.5rem;
+}
+
+.blog-post-detail .post-header {
+    margin-bottom: 1.5rem;
+}
+
+.blog-post-detail .post-meta {
+    font-size: 0.9em;
+    color: #777;
+    margin-bottom: 1rem;
+}
+
+.blog-post-detail .post-image {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 1.5rem;
+}
+
+.comments-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+}
+
+.comments-section .comment {
+    padding: 0.75rem 0;
+    border-bottom: 1px dashed #f0f0f0;
+}
+
+.comments-section .comment:last-child {
+    border-bottom: none;
+}
+
+.comments-section .comment-author {
+    font-weight: bold;
+}
+
+.comments-section .comment-date {
+    font-size: 0.85em;
+    color: #888;
+    margin-left: 0.5em;
+}
+
+.comment-form textarea {
+    min-height: 100px;
+}
