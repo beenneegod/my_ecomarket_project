@@ -130,13 +130,13 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/stable/topics/i18n/
 
-LANGUAGE_CODE = 'pl' # Установим польский язык по умолчанию
+LANGUAGE_CODE = 'pl'
 
-TIME_ZONE = 'Europe/Warsaw' # Установим часовой пояс Варшавы
+TIME_ZONE = 'Europe/Warsaw'
 
-USE_I18N = True # Включаем интернационализацию
+USE_I18N = True
 
-USE_TZ = True # Включаем поддержку часовых поясов
+USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images in our code)

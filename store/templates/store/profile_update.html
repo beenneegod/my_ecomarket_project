@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    {{ page_title|default:"Edytuj Profil" }} - EcoMarket
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5" data-aos="fade-in">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <h2 class="text-center mb-4">{{ page_title|default:"Edytuj Profil" }}</h2>
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4 p-md-5">
+                    {% comment %} Отображение текущего аватара {% endcomment %}
+                    <div class="text-center mb-4">
+                        <img src="{{ profile.avatar_url }}" alt="Twój awatar" class="img-thumbnail rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.avatar.id_for_label }}" class="form-label">{{ form.avatar.label }}</label>
+                            {{ form.avatar }}
+                            {% if form.avatar.help_text %}
+                                <small class="form-text text-muted d-block mt-1">{{ form.avatar.help_text|safe }}</small>
+                            {% endif %}
+                            {% if form.avatar.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.avatar.errors %} {{ error }} {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.bio.id_for_label }}" class="form-label">{{ form.bio.label }}</label>
+                            {{ form.bio }}
+                            {% if form.bio.help_text %}
+                                <small class="form-text text-muted d-block mt-1">{{ form.bio.help_text|safe }}</small>
+                            {% endif %}
+                            {% if form.bio.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.bio.errors %} {{ error }} {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">Zapisz zmiany</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{# Bootstrap validation script, если еще не подключен глобально или нужен здесь #}
+<script>
+(() => {
+  'use strict'
+  const forms = document.querySelectorAll('.needs-validation')
+  Array.from(forms).forEach(form => {
+    form.addEventListener('submit', event => {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
+{% endblock %}

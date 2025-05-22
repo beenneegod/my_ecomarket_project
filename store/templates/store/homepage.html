@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    {{ page_title|default:"Witamy w EcoMarket!" }}
+{% endblock %}
+
+{% block extra_css %}
+    {# Если нужны специфичные стили для главной, можно создать homepage.css #}
+    {# <link rel="stylesheet" href="{% static 'css/homepage.css' %}"> #}
+{% endblock %}
+
+{% block content %}
+{# 1. Hero Section #}
+<section class="hero-section text-center bg-light py-5 mb-5" data-aos="fade-in">
+    <div class="container">
+        <img src="{% static 'img/placeholder_hero_banner.jpg' %}" alt="EcoMarket - Świeże produkty dla Ciebie" class="img-fluid rounded mb-4" style="max-height: 400px; object-fit: cover;">
+        <h1 class="display-4 fw-bold text-success">Odkryj Świat Zdrowia z EcoMarket!</h1>
+        <p class="lead text-muted col-lg-8 mx-auto">
+            Najlepsze ekologiczne produkty, świeże warzywa, owoce i wyjątkowe zestawy subskrypcyjne prosto pod Twoje drzwi.
+        </p>
+        <a href="{% url 'store:product_list' %}" class="btn btn-primary btn-lg mt-3">
+            <i class="bi bi-basket3-fill"></i> Przeglądaj produkty
+        </a>
+        {# Можно добавить кнопку для подписки, когда секция будет готова #}
+        {# <a href="#subscription-section" class="btn btn-outline-success btn-lg mt-3 ms-2">Nasze Eko Boxy</a> #}
+    </div>
+</section>
+
+{# 2. Секция преимуществ (Пример) #}
+<section class="features-section py-5" data-aos="fade-up">
+    <div class="container">
+        <h2 class="text-center mb-5">Dlaczego EcoMarket?</h2>
+        <div class="row text-center">
+            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="feature-item p-4 border rounded shadow-sm bg-white h-100"> {# Используем белый фон для контраста #}
+                    <i class="bi bi-brightness-high-fill display-3 text-primary mb-3"></i>
+                    <h4>Zawsze Świeże</h4>
+                    <p class="text-muted">Codzienne dostawy od lokalnych rolników gwarantują najwyższą jakość.</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="feature-item p-4 border rounded shadow-sm bg-white h-100">
+                    <i class="bi bi-box-seam-fill display-3 text-primary mb-3"></i>
+                    <h4>Eko Opakowania</h4>
+                    <p class="text-muted">Dbamy o planetę, używając opakowań przyjaznych środowisku.</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="feature-item p-4 border rounded shadow-sm bg-white h-100">
+                    <i class="bi bi-truck display-3 text-primary mb-3"></i>
+                    <h4>Szybka Dostawa</h4>
+                    <p class="text-muted">Zamów dziś, a zdrowe produkty trafią do Ciebie błyskawicznie.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# 3. Популярные категории или товары (Пример с категориями) #}
+{% if categories %}
+<section class="popular-categories py-5 bg-light" data-aos="fade-up"> {# bg-light или наш var(--color-surface-alt) #}
+    <div class="container">
+        <h2 class="text-center mb-5">Popularne Kategorie</h2>
+        <div class="row">
+            {% for category in categories %}
+            <div class="col-md-3 mb-4" data-aos="zoom-in" data-aos-delay="{% widthratio forloop.counter0 1 100 %}">
+                <a href="{% url 'store:product_list_by_category' category.slug %}" class="text-decoration-none">
+                    <div class="card category-card h-100 text-center"> {# .category-card - новый класс для стилизации #}
+                        {# Здесь можно добавить изображение категории, если оно есть в модели Category #}
+                        {# <img src="..." class="card-img-top" alt="{{ category.name }}"> #}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ category.name }}</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{# 4. Избранные товары (Пример) #}
+{% if featured_products %}
+<section class="featured-products py-5" data-aos="fade-up">
+    <div class="container">
+        <h2 class="text-center mb-5">Polecane Produkty</h2>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4"> {# Классы Bootstrap для адаптивной сетки карточек #}
+            {% for product in featured_products %}
+                <div class="col">
+                    {% include 'store/partials/product_card.html' with product=product %} {# Используем существующий шаблон карточки товара #}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{# 5. Последние посты из блога (Пример) #}
+{% if latest_posts %}
+<section class="latest-blog-posts py-5 bg-light" data-aos="fade-up"> {# bg-light или наш var(--color-surface-alt) #}
+    <div class="container">
+        <h2 class="text-center mb-5">Co Nowego na Blogu?</h2>
+        <div class="row">
+            {% for post in latest_posts %}
+            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter0 1 100 %}">
+                <div class="card blog-post-preview h-100"> {# .blog-post-preview - новый класс #}
+                    {% if post.image %}
+                        <a href="{{ post.get_absolute_url }}">
+                            <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}" style="height: 200px; object-fit: cover;">
+                        </a>
+                    {% endif %}
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title"><a href="{{ post.get_absolute_url }}" class="text-decoration-none">{{ post.title }}</a></h5>
+                        <p class="card-text text-muted"><small>{{ post.published_at|date:"F j, Y" }}</small></p>
+                        <p class="card-text">{{ post.body|striptags|truncatewords:15 }}</p> {# striptags - чтобы убрать HTML из превью #}
+                        <a href="{{ post.get_absolute_url }}" class="btn btn-outline-primary btn-sm mt-auto">Czytaj więcej</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-4">
+            <a href="{% url 'blog:post_list' %}" class="btn btn-success">Zobacz wszystkie posty</a> {# Кнопка "Посмотреть все посты" #}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{# TODO: Добавить секцию-тизер для подписки на "здоровые боксы", когда она будет готова #}
+
+{% endblock %}

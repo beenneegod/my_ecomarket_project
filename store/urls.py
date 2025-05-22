@@ -12,4 +12,5 @@ urlpatterns = [
     path('cart/add/<int:product_id>/', views.cart_add, name='cart_add'), # Оставляем ID для AJAX
     path('cart/remove/<int:product_id>/', views.cart_remove, name='cart_remove'), # Оставляем ID для AJAX
     path('orders/', views.order_history, name='order_history'),
+    path('profile/edit/', views.profile_update, name='profile_update'),
 ]
