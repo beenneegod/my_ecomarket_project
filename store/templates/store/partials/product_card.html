@@ -1,0 +1,19 @@
+{% load static %}
+<div class="card shadow-sm h-100" data-aos="fade-up">
+    <a href="{% url 'store:product_detail' product.slug %}">
+        {% if product.image %}
+            <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;" loading="lazy">
+        {% else %}
+            <img src="{% static 'img/no_image.png' %}" class="card-img-top" alt="Нет изображения" style="height: 200px; object-fit: cover;" loading="lazy">
+        {% endif %}
+    </a>
+    <div class="card-body d-flex flex-column">
+        <h5 class="card-title">
+        <a href="{% url 'store:product_detail' product.slug %}" class="text-decoration-none">{{ product.name }}</a>
+        </h5>
+        <p class="card-text mt-auto"><strong>{{ product.price }} PLN</strong></p>
+        <button class="btn btn-primary add-to-cart-btn mt-2" data-product-id="{{ product.id }}">
+            Dodaj do koszyka
+        </button>
+    </div>
+</div>

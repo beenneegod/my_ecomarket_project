@@ -12,7 +12,7 @@
     <h1 class="mb-4">Blog Posts</h1>
 
     {% for post in posts %}
-    <div class="card mb-3 post-item">
+    <div class="card mb-3 post-item" data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter0 1 100 %}">
         <div class="card-body">
             <h2 class="card-title post-title"><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h2>
             <p class="card-text post-meta"><small class="text-muted">{{ post.published_at|date:"F j, Y, P" }} by {{ post.author.username|default:"Unknown" }}</small></p>

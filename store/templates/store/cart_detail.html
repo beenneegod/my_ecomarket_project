@@ -63,7 +63,7 @@
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 Do zapłaty:
-                                <strong id="cart-total-price">{{ cart.get_total_price }}PLN</strong>
+                                <strong id="cart-total-price">{{ cart.get_total_price }} PLN</strong>
                             </li>
                         </ul>
                         <div class="d-grid gap-2 mt-3">
@@ -74,6 +74,24 @@
                                 <i class="bi bi-arrow-left-circle"></i> Kontynuuj zakupy
                             </a>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="confirmDeleteModalLabel">Potwierdź usunięcie</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Czy na pewno chcesz usunąć ten produkt z koszyka?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Usuń</button>
                     </div>
                 </div>
             </div>
@@ -92,7 +110,5 @@
 {% endblock %}
 
 {% block extra_css %}
-    {# <link rel="stylesheet" href="{% static 'css/cart.css' %}"> #}
-    {# Удаляем ссылку на старый cart.css, так как Bootstrap покрывает стили #}
-    {# Bootstrap Icons уже должны быть подключены в base.html #}
+    <link rel="stylesheet" href="{% static 'css/cart.css' %}">
 {% endblock %}

@@ -4,45 +4,54 @@
 {% block title %}{{ product.name }} - EcoMarket{% endblock %}
 
 {% block content %}
-<div class="container mt-4"> {# Добавляем верхний отступ #}
+<div class="container mt-4" data-aos="fade-in"> {# Добавим общую анимацию появления для всей страницы товара #}
     <div class="row">
-        <div class="col-md-6 mb-4"> {# Колонка для изображения #}
+        <div class="col-md-6 mb-4" data-aos="fade-right" data-aos-delay="100"> {# Колонка для изображения #}
             {% if product.image %}
-                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded shadow-sm"> {# img-fluid для адаптивности, rounded, shadow #}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded shadow-sm" style="max-height: 500px; object-fit: contain;">
             {% else %}
-                <img src="{% static 'img/no_image.png' %}" alt="Нет изображения" class="img-fluid rounded shadow-sm">
+                <img src="{% static 'img/no_image.png' %}" alt="Нет изображения" class="img-fluid rounded shadow-sm" style="max-height: 500px; object-fit: contain;">
             {% endif %}
         </div>
 
-        <div class="col-md-6"> {# Колонка для информации о товаре #}
-            <h2>{{ product.name }}</h2>
-            <p class="display-6 text-primary fw-bold">{{ product.price }} PLN</p> {# Классы для цены #}
+        <div class="col-md-6" data-aos="fade-left" data-aos-delay="200"> {# Колонка для информации о товаре #}
+            <h2 class="mb-3">{{ product.name }}</h2>
+            <p class="display-5 text-primary fw-bold mb-3">{{ product.price }} PLN</p> {# Немного увеличили display-6 до display-5 #}
 
-            <div class="product-description mb-3">
+            <div class="product-description mb-4">
                 <h4>Opis:</h4>
                 <p>{{ product.description|linebreaksbr }}</p>
             </div>
 
-            <div class="add-to-cart-form mb-3 p-3 bg-light border rounded"> {# Обертка для формы #}
+            <div class="add-to-cart-form mb-4 p-3 bg-light border rounded">
                 {% if product.stock > 0 %}
-                    <div class="row g-2 align-items-center">
+                    <div class="row g-2 align-items-center mb-3">
                         <div class="col-auto">
-                            <label for="quantity-{{ product.id }}" class="col-form-label">Количество:</label>
+                            <label for="quantity-{{ product.id }}" class="col-form-label fw-medium">Ilość:</label> {# Изменили текст, добавили fw-medium #}
                         </div>
                         <div class="col-auto">
-                             {# Используем form-control для input #}
                             <input type="number" id="quantity-{{ product.id }}" name="quantity" value="1" min="1" max="{{ product.stock }}" class="form-control quantity-input-detail" style="width: 80px;">
                         </div>
                         <div class="col-auto">
-                            {# Используем btn btn-success для кнопки #}
-                            <button class="btn btn-success add-to-cart-btn" data-product-id="{{ product.id }}">
-                                <i class="bi bi-cart-plus"></i> Dodaj do koszyka {# Иконка Bootstrap (нужно подключить Bootstrap Icons) #}
+                            <button class="btn btn-primary add-to-cart-btn" data-product-id="{{ product.id }}">
+                                <i class="bi bi-cart-plus"></i> Dodaj do koszyka
                             </button>
                         </div>
                     </div>
-                    <small class="form-text text-muted mt-2 d-block">Na stanie: {{ product.stock }} szt.</small>
+                    {# Обновленный блок информации о наличии #}
+                    {% if product.stock > 5 %}
+                        <div class="stock-info stock-available mt-2"> {# Убрали d-block, т.к. .stock-info уже inline-block #}
+                            <i class="bi bi-check-circle-fill"></i> Na stanie: {{ product.stock }} szt.
+                        </div>
+                    {% elif product.stock > 0 %}
+                        <div class="stock-info stock-low mt-2">  {# Убрали d-block #}
+                            <i class="bi bi-exclamation-triangle-fill"></i> Ostatnie sztuki: {{ product.stock }} szt.
+                        </div>
+                    {% endif %}
                 {% else %}
-                    <p class="alert alert-warning">Brak produktu</p> {# Используем alert Bootstrap #}
+                    <div class="stock-info stock-out mt-2 mb-3"> {# Добавили mb-3 для отступа, если товара нет и нет формы #}
+                        <i class="bi bi-x-circle-fill"></i> Brak produktu
+                    </div>
                 {% endif %}
             </div>
 
@@ -51,9 +60,18 @@
             </a>
         </div>
     </div>
+
+    {# <hr class="my-5">
+    <div class="row">
+        <div class="col">
+            <h4>Może Cię również zainteresować:</h4>
+            <! -- Здесь могут быть карточки других товаров -->
+        </div>
+    </div> #}
 </div>
 {% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"> {# Подключаем Bootstrap Icons #}
+    {# <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"> #}
+    {# <link rel="stylesheet" href="{% static 'css/product_detail.css' %}"> #}
 {% endblock %}

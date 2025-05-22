@@ -113,3 +113,33 @@ class OrderItem(models.Model):
     def get_cost(self):
         """Возвращает стоимость данного элемента заказа (цена * количество)"""
         return self.price * self.quantity
+    
+
+class Profile(models.Model): # Без отступа в начале строки
+    # --- Начало блока с отступом (4 пробела) ---
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
+    # Если default_avatar.png в static/img/, то default в ImageField лучше убрать или указать путь относительно MEDIA_ROOT
+    # Логика для дефолтного аватара теперь полностью в avatar_url
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    bio = models.TextField(blank=True, null=True, verbose_name="O sobie")
+
+    class Meta:
+        # --- Начало блока с еще одним уровнем отступа (еще 4 пробела, итого 8) ---
+        verbose_name = "Profil użytkownika"
+        verbose_name_plural = "Profile użytkowników"
+        # --- Конец блока Meta ---
+
+    def __str__(self):
+        # --- Начало блока с отступом для метода (еще 4 пробела, итого 8) ---
+        return f"Profil użytkownika {self.user.username}"
+        # --- Конец блока __str__ ---
+
+    @property
+    def avatar_url(self):
+        # --- Начало блока с отступом для метода (еще 4 пробела, итого 8) ---
+        if self.avatar and hasattr(self.avatar, 'url'):
+            return self.avatar.url
+        else:
+            # Этот импорт здесь, чтобы избежать циклических зависимостей на уровне модуля
+            from django.templatetags.static import static
+            return static('img/default_avatar.png')

@@ -1,7 +1,7 @@
 # store/admin.py
 
 from django.contrib import admin
-from .models import Category, Product, Order, OrderItem
+from .models import Category, Product, Order, OrderItem, Profile
 from import_export.admin import ImportExportModelAdmin
 from .admin_resources import CategoryResource, ProductResource
 
@@ -91,6 +91,17 @@ class OrderAdmin(admin.ModelAdmin):
     def get_total_cost_display(self, obj):
         return f"{obj.get_total_cost()} PLN"
 
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'avatar', 'bio_short')
+    search_fields = ('user__username', 'user__email')
+
+    @admin.display(description='Krótkie Bio')
+    def bio_short(self, obj):
+        if obj.bio:
+            return obj.bio[:50] + '...' if len(obj.bio) > 50 else obj.bio
+        return "-"
 # Базовая регистрация OrderItem (не обязательно, т.к. он встроен в Order)
 # Если хотите видеть OrderItem отдельно:
 # @admin.register(OrderItem)

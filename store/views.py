@@ -4,14 +4,17 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse # Для AJAX ответов
 from django.views.decorators.csrf import ensure_csrf_cookie # Импортируем декоратор
-from .models import Product, Order, Category # Импортируем модели Product и Order
+from .models import Product, Order, Category, Profile # Импортируем модели Product и Order
 from .cart import Cart # Импортируем наш класс Cart
 from decimal import Decimal
 from django.contrib.auth import login # Функция для автоматического входа пользователя
-from .forms import UserRegistrationForm # Импортируем нашу форму
+from .forms import UserRegistrationForm, ProfileUpdateForm # Импортируем нашу форму
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
+from blog.models import Post
+from django.contrib import messages
+
 
 @ensure_csrf_cookie
 def product_list(request, category_slug=None):
@@ -198,3 +201,50 @@ def cart_detail(request):
     cart = Cart(request)
     # Передаем объект cart в шаблон. Шаблон сможет итерировать по нему.
     return render(request, 'store/cart_detail.html', {'cart': cart})
+
+
+def homepage(request):
+    # Получаем несколько популярных/новых товаров для отображения (пример)
+    featured_products = Product.objects.filter(available=True).order_by('-created_at')[:4] # Последние 4 товара
+
+    # Получаем несколько последних постов из блога (пример)
+    latest_posts = Post.objects.filter(status='published').order_by('-published_at')[:3] # Последние 3 опубликованных поста
+
+    # Можно также получить категории для отображения
+    categories = Category.objects.all()[:4] # Первые 4 категории
+
+    context = {
+        'featured_products': featured_products,
+        'latest_posts': latest_posts,
+        'categories': categories,
+        'page_title': 'Witamy w EcoMarket!' # Для <title> тега
+    }
+    return render(request, 'store/homepage.html', context)
+
+@login_required # Этот view доступен только залогиненным пользователям
+def profile_update(request):
+    # Получаем или создаем профиль для текущего пользователя
+    # (Сигнал уже должен был создать профиль при регистрации, но на всякий случай)
+    profile, created = Profile.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        # Если форма отправлена
+        # Мы передаем request.POST для текстовых данных и request.FILES для файлов (аватар)
+        # instance=profile нужен, чтобы форма знала, какой объект Profile мы обновляем
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save() # Сохраняем изменения в профиле (включая новый аватар)
+            messages.success(request, 'Twój profil został pomyślnie zaktualizowany!')
+            return redirect('store:profile_update') # Перенаправляем обратно на эту же страницу (или другую)
+        else:
+            messages.error(request, 'Popraw błędy w formularzu.')
+    else:
+        # Если это GET-запрос, просто отображаем форму с текущими данными профиля
+        form = ProfileUpdateForm(instance=profile)
+
+    context = {
+        'form': form,
+        'profile': profile, # Передаем профиль для отображения текущего аватара
+        'page_title': 'Edytuj Profil'
+    }
+    return render(request, 'store/profile_update.html', context)

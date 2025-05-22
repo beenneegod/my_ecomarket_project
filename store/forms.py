@@ -9,6 +9,8 @@ from django.contrib.auth.forms import (
 )
 from django.contrib.auth.models import User # Если нужна стандартная модель User
 from .models import Order
+from .models import Profile
+
 
 class OrderCreateForm(forms.ModelForm):
     class Meta:
@@ -110,3 +112,16 @@ class CustomSetPasswordForm(SetPasswordForm):
     #     if User.objects.filter(email=email).exists():
     #         raise forms.ValidationError("Пользователь с таким email уже существует.")
     #     return email
+
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['avatar', 'bio'] # Поля, которые пользователь сможет редактировать
+        widgets = {
+            'avatar': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Napisz coś o sobie...'}),
+        }
+        labels = {
+            'avatar': 'Zmień awatar',
+            'bio': 'O Tobie',
+        }
