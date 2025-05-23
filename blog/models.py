@@ -55,6 +55,13 @@ class Comment(models.Model):
         related_name='blog_comments'
     )
     body = models.TextField(max_length=500)
+    # НОВОЕ ПОЛЕ ДЛЯ ИЗОБРАЖЕНИЯ КОММЕНТАРИЯ
+    image = models.ImageField(
+        upload_to='blog_comments/%Y/%m/%d/', # Куда сохранять изображения
+        blank=True, # Поле необязательное
+        null=True,  # Разрешаем NULL в БД
+        verbose_name="Obrazek"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     active = models.BooleanField(default=True)

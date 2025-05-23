@@ -1,5 +1,3 @@
-// static/js/cart.js
-
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Cart JS loaded");
 
@@ -52,11 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(response => {
             if (!response.ok) {
-                // Попробуем получить JSON с ошибкой от сервера
                 return response.json().then(errData => {
                     throw new Error(errData.error || `HTTP error! status: ${response.status}`);
                 }).catch(() => {
-                    // Если JSON нет или он невалидный, бросаем общую ошибку
                     throw new Error(`HTTP error! status: ${response.status}`);
                 });
             }
@@ -143,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     duration: 3000,
                     gravity: "top",
                     position: "right",
-                    style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // Исправлено backgroundColor
+                    style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // ИСПРАВЛЕНО
                 }).showToast();
                 return;
             }
@@ -165,11 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData
             })
             .then(response => {
-                // Возвращаем кнопку в активное состояние и исходное содержимое только после обработки ответа,
-                // чтобы избежать двойного клика или если ошибка не JSON
-                // btn.disabled = false; // Убрано отсюда
-                // btn.innerHTML = originalButtonContent; // Убрано отсюда
-
                 if (!response.ok) {
                     return response.json().then(errData => {
                         throw new Error(errData.error || `HTTP error! status: ${response.status}`);
@@ -207,32 +198,32 @@ document.addEventListener('DOMContentLoaded', () => {
                             duration: 5000,
                             gravity: "top",
                             position: "right",
-                            style: { background: "linear-gradient(to right, #ff8c00, #ffc371)" } // Исправлено backgroundColor
+                            style: { background: "linear-gradient(to right, #ff8c00, #ffc371)" } // ИСПРАВЛЕНО (в твоем коде уже было style, но на всякий случай)
                         }).showToast();
                     }
                 } else {
                     console.error("Error adding product:", data.error || 'Unknown server error');
                     Toastify({
-                        text: `Nie udało się dodać produktu: ${data.error || 'Błąd serwera'}`,
+                        text: `Nie udało się dodać produktu: ${data.error || 'Błąd serwera'}`, // Текст был на русском, заменил
                         duration: 3000,
                         gravity: "top",
                         position: "right",
-                        style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // Исправлено backgroundColor
+                        style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // ИСПРАВЛЕНО
                     }).showToast();
-                    btn.innerHTML = originalButtonContent; // Возвращаем исходный текст при ошибке
+                    btn.innerHTML = originalButtonContent;
                     btn.disabled = false;
                 }
             })
             .catch(error => {
                 console.error('Fetch Error:', error);
                 Toastify({
-                    text: `Błąd przy dodawaniu produktu: ${error.message}`,
+                    text: `Błąd przy dodawaniu produktu: ${error.message}`, // Текст был на русском, заменил
                     duration: 3000,
                     gravity: "top",
                     position: "right",
                     style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" }
                 }).showToast();
-                btn.innerHTML = originalButtonContent; // Возвращаем исходный текст при ошибке
+                btn.innerHTML = originalButtonContent;
                 btn.disabled = false;
             });
         });
@@ -261,11 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Убираем confirm, так как его заменит SweetAlert
-            // if (!confirm('Na pewno chcesz usunąc product?')) {
-            //     return;
-            // }
-
             Swal.fire({
                 title: 'Potwierdź usunięcie',
                 text: "Czy na pewno chcesz usunąć ten produkt z koszyka?",
@@ -273,8 +259,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 showCancelButton: true,
                 confirmButtonText: 'Tak, usuń',
                 cancelButtonText: 'Anuluj',
-                confirmButtonColor: 'var(--color-primary)', // Используем CSS переменную
-                cancelButtonColor: 'var(--color-text-medium)', // Используем CSS переменную
+                confirmButtonColor: 'var(--color-primary)',
+                cancelButtonColor: 'var(--color-text-medium)',
             }).then((result) => {
                 if (result.isConfirmed) {
                     performDeleteRequest(productId, cartItemRow);
@@ -288,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('change', event => {
             const productId = event.target.dataset.productId;
             const newQuantity = parseInt(event.target.value);
-            const url = `/store/cart/add/${productId}/`;
+            const url = `/store/cart/add/${productId}/`; // Используется тот же URL, что и для добавления
             const cartItemRow = event.target.closest('.cart-item');
 
             if (isNaN(newQuantity) || newQuantity < 0) {
@@ -297,10 +283,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     duration: 3000,
                     gravity: "top",
                     position: "right",
-                    style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // Исправлено backgroundColor
+                    style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // ИСПРАВЛЕНО
                 }).showToast();
-                // Можно вернуть предыдущее значение, если есть способ его сохранить, или значение из cartItemRow
-                // event.target.value = event.target.defaultValue; // или какое-то другое значение
+                // Можно добавить логику восстановления предыдущего значения инпута, если есть
+                // event.target.value = event.target.defaultValue; // или сохраненное ранее значение
                 return;
             }
 
@@ -344,10 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateCartCount(data.cart_total_items);
 
                     if (data.item_removed) {
-                        // Если товар удален (кол-во стало 0), строка будет анимирована и удалена
-                        // через performDeleteRequest, если бы мы его вызвали.
-                        // Здесь, если сервер удалил товар из-за quantity=0,
-                        // мы должны инициировать анимацию удаления строки.
                         if (cartItemRow) {
                             cartItemRow.classList.add('is-removing');
                             cartItemRow.addEventListener('transitionend', () => {
@@ -357,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data.cart_total_items === 0) {
                             setTimeout(() => { window.location.reload(); }, 500);
                         }
-                         Toastify({
+                        Toastify({
                             text: "Produkt usunięty (ilość 0).",
                             duration: 3000,
                             gravity: "top",
@@ -372,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             duration: 5000,
                             gravity: "top",
                             position: "right",
-                            style: { background: "linear-gradient(to right, #ff8c00, #ffc371)" } // Исправлено backgroundColor
+                            style: { background: "linear-gradient(to right, #ff8c00, #ffc371)" } // ИСПРАВЛЕНО
                         }).showToast();
                     } else {
                         Toastify({
@@ -380,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             duration: 3000,
                             gravity: "top",
                             position: "right",
-                            style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } // Исправлено backgroundColor
+                            style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } // ИСПРАВЛЕНО
                         }).showToast();
                     }
                 } else {
@@ -390,9 +372,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         duration: 3000,
                         gravity: "top",
                         position: "right",
-                        style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // Исправлено backgroundColor
+                        style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // ИСПРАВЛЕНО
                     }).showToast();
-                    // Вернуть старое значение, если есть такая логика и значение сохранено
                 }
             })
             .catch(error => {
@@ -402,9 +383,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     duration: 3000,
                     gravity: "top",
                     position: "right",
-                    style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // Исправлено backgroundColor
+                    style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // ИСПРАВЛЕНО
                 }).showToast();
-                 // Вернуть старое значение, если есть такая логика и значение сохранено
             });
         });
     });

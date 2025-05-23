@@ -116,30 +116,95 @@ class OrderItem(models.Model):
     
 
 class Profile(models.Model): # Без отступа в начале строки
-    # --- Начало блока с отступом (4 пробела) ---
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
-    # Если default_avatar.png в static/img/, то default в ImageField лучше убрать или указать путь относительно MEDIA_ROOT
-    # Логика для дефолтного аватара теперь полностью в avatar_url
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     bio = models.TextField(blank=True, null=True, verbose_name="O sobie")
-
+    stripe_customer_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Stripe Customer ID")
     class Meta:
-        # --- Начало блока с еще одним уровнем отступа (еще 4 пробела, итого 8) ---
         verbose_name = "Profil użytkownika"
         verbose_name_plural = "Profile użytkowników"
-        # --- Конец блока Meta ---
 
     def __str__(self):
-        # --- Начало блока с отступом для метода (еще 4 пробела, итого 8) ---
         return f"Profil użytkownika {self.user.username}"
-        # --- Конец блока __str__ ---
 
     @property
     def avatar_url(self):
-        # --- Начало блока с отступом для метода (еще 4 пробела, итого 8) ---
         if self.avatar and hasattr(self.avatar, 'url'):
             return self.avatar.url
         else:
-            # Этот импорт здесь, чтобы избежать циклических зависимостей на уровне модуля
             from django.templatetags.static import static
             return static('img/default_avatar.png')
+        
+
+
+class SubscriptionBoxType(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Nazwa Boxa Subskrypcyjnego")
+    slug = models.SlugField(max_length=200, unique=True, verbose_name="URL slug")
+    description = models.TextField(verbose_name="Opis")
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Cena za okres")
+    # Частота подписки, например, 'weekly', 'monthly'
+    # Можно использовать Choices для предопределенных вариантов
+    BILLING_PERIOD_CHOICES = [
+        ('week', 'Tygodniowo'),
+        ('month', 'Miesięcznie'),
+        # ('year', 'Rocznie'), # Если нужно
+    ]
+    billing_period = models.CharField(
+        max_length=10,
+        choices=BILLING_PERIOD_CHOICES,
+        default='month',
+        verbose_name="Okres rozliczeniowy"
+    )
+    image = models.ImageField(upload_to='subscription_boxes/', blank=True, null=True, verbose_name="Obrazek Boxa")
+    is_active = models.BooleanField(default=True, verbose_name="Aktywny (dostępny do subskrypcji)")
+    # Поле для ID тарифного плана в Stripe (Stripe Price ID)
+    stripe_price_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Stripe Price ID")
+
+
+    class Meta:
+        verbose_name = "Typ Boxa Subskrypcyjnego"
+        verbose_name_plural = "Typy Boxów Subskrypcyjnych"
+        ordering = ['price']
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        # Позже создадим URL для детальной страницы типа бокса
+        return reverse('store:subscription_box_detail', args=[self.slug])
+
+
+class UserSubscription(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subscriptions')
+    box_type = models.ForeignKey(SubscriptionBoxType, on_delete=models.PROTECT, related_name='user_subscriptions')
+    # Статус подписки
+    STATUS_CHOICES = [
+        ('active', 'Aktywna'),
+        ('trialing', 'Okres próbny'), # Можно добавить, если Stripe это поддерживает для твоих планов
+        ('paused', 'Wstrzymana'),
+        ('canceled', 'Anulowana'),
+        ('incomplete', 'Niekompletna'), # Если требует действия от пользователя
+        ('incomplete_expired', 'Niekompletna (wygasła)'),
+        ('pending_payment', 'Oczekuje na płatność'),
+        ('past_due', 'Zaległa płatność'),
+    ]
+    status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='pending_payment')
+    start_date = models.DateTimeField(auto_now_add=True, verbose_name="Data utworzenia w systemie")
+    current_period_start = models.DateTimeField(verbose_name="Początek bieżącego okresu", blank=True, null=True)
+    current_period_end = models.DateTimeField(verbose_name="Koniec bieżącego okresu", blank=True, null=True)
+    cancel_at_period_end = models.BooleanField(default=False, verbose_name="Anulować na koniec okresu?")
+    stripe_subscription_id = models.CharField(max_length=255, blank=True, null=True, unique=True, verbose_name="Stripe Subscription ID")
+    stripe_customer_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Stripe Customer ID")
+    # Дополнительные поля, если нужны (например, кастомный адрес доставки для этой подписки)
+    # ...
+
+    class Meta:
+        verbose_name = "Subskrypcja Użytkownika"
+        verbose_name_plural = "Subskrypcje Użytkowników"
+        ordering = ['-start_date']
+
+    def __str__(self):
+        return f"Subskrypcja użytkownika {self.user.username} na {self.box_type.name}"
+
+    def is_active(self):
+        return self.status == 'active'

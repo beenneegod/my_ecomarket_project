@@ -26,11 +26,15 @@
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link active" aria-current="page" href="{% url 'store:product_list' %}">Towary</a>
+                            <a class="nav-link {% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %}active{% endif %}" href="{% url 'store:product_list' %}">Towary</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'blog:post_list' %}">Blog</a>
+                            <a class="nav-link {% if request.resolver_match.view_name == 'store:subscription_box_list' %}active{% endif %}" href="{% url 'store:subscription_box_list' %}">Eko Boxy</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'blog' %}active{% endif %}" href="{% url 'blog:post_list' %}">Blog</a>
+                        </li>
+
                         {# Другие ссылки, если нужны #}
                     </ul>
                     {# Форма поиска (переносим сюда) #}
@@ -100,7 +104,7 @@
         {% endblock %}
     </main>
 
-    <footer class="py-4 mt-auto bg-light"> {# Добавляем Bootstrap классы для футера #}
+    <footer class="py-3 mt-auto bg-light">
         <div class="container text-center">
             <p class="mb-0">&copy; {% now "Y" %} EcoMarket. Wszelkie prawa zastrzeżone.</p>
         </div>

@@ -178,7 +178,6 @@ def stripe_webhook(request):
         print(f"Processing checkout.session.completed for session: {session.id}")
 
         if session.payment_status == "paid":
-            # --- НАЧАЛО ОБРАБОТКИ ОПЛАЧЕННОЙ СЕССИИ ---
             try:
                 # Проверяем дубликат
                 if Order.objects.filter(stripe_id=session.id).exists():
@@ -274,7 +273,6 @@ def stripe_webhook(request):
 
                 # Если транзакция прошла успешно:
                 print(f"Order {order.id} successfully created from webhook for session {session.id}")
-                # --- ДОБАВЛЯЕМ ЯВНЫЙ RETURN ПОСЛЕ УСПЕХА ---
                 print(f"Attempting to send confirmation email for Order #{order.id}...")
                 send_order_confirmation_email(order)
                 return HttpResponse(status=200)

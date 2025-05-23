@@ -13,4 +13,8 @@ urlpatterns = [
     path('cart/remove/<int:product_id>/', views.cart_remove, name='cart_remove'), # Оставляем ID для AJAX
     path('orders/', views.order_history, name='order_history'),
     path('profile/edit/', views.profile_update, name='profile_update'),
+    path('subscription-boxes/', views.subscription_box_list, name='subscription_box_list'),
+    path('subscription/checkout/<int:box_type_id>/', views.process_subscription_checkout, name='process_subscription_checkout'),
+    path('subscription/success/', views.subscription_success, name='subscription_success'),
+    path('subscription/canceled/', views.subscription_canceled, name='subscription_canceled'),
 ]
