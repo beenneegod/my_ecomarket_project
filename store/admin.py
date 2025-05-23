@@ -1,7 +1,7 @@
 # store/admin.py
 
 from django.contrib import admin
-from .models import Category, Product, Order, OrderItem, Profile
+from .models import (Category, Product, Order, OrderItem, Profile, SubscriptionBoxType, UserSubscription)
 from import_export.admin import ImportExportModelAdmin
 from .admin_resources import CategoryResource, ProductResource
 
@@ -94,14 +94,38 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'avatar', 'bio_short')
-    search_fields = ('user__username', 'user__email')
+    list_display = ('user', 'avatar', 'bio_short', 'stripe_customer_id')
+    search_fields = ('user__username', 'user__email', 'stripe_customer_id')
+    readonly_fields = ('user', 'stripe_customer_id')
 
     @admin.display(description='Krótkie Bio')
     def bio_short(self, obj):
         if obj.bio:
             return obj.bio[:50] + '...' if len(obj.bio) > 50 else obj.bio
         return "-"
+    
+
+
+@admin.register(SubscriptionBoxType)
+class SubscriptionBoxTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price', 'billing_period', 'is_active', 'stripe_price_id')
+    list_filter = ('is_active', 'billing_period')
+    search_fields = ('name', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('price', 'is_active', 'stripe_price_id')
+
+@admin.register(UserSubscription)
+class UserSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'box_type', 'status', 'start_date', 'current_period_end', 'stripe_subscription_id', 'stripe_customer_id')
+    list_filter = ('status', 'box_type', 'start_date', 'current_period_end')
+    search_fields = ('user__username', 'box_type__name', 'stripe_subscription_id', 'stripe_customer_id')
+    list_select_related = ('user', 'box_type')
+    readonly_fields = ('user', 'box_type', 'start_date', 'stripe_subscription_id', 'stripe_customer_id', 'current_period_start', 'current_period_end', 'cancel_at_period_end')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj: # При редактировании существующего объекта
+            return self.readonly_fields + ('status',) # Статус тоже лучше менять через логику, а не вручную
+        return self.readonly_fields
 # Базовая регистрация OrderItem (не обязательно, т.к. он встроен в Order)
 # Если хотите видеть OrderItem отдельно:
 # @admin.register(OrderItem)

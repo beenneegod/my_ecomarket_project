@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, View # DetailView is not directly used, a custom View is.
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy # Not strictly needed here, but good for general use.
-
+from django.contrib import messages
 from .models import Post, Comment
 from .forms import CommentForm # Assuming CommentForm will be created later
 
@@ -116,8 +116,7 @@ class LoginProtectedPostDetailView(LoginRequiredMixin, PostDetailView):
 # Final version for PostDetailView as per task description:
 # (The previous PostDetailView was mostly fine, just clarifying the LoginRequired part)
 
-class PostDetailView(View): # Inherit from View for custom GET and POST
-
+class PostDetailView(View):
     def get(self, request, slug, *args, **kwargs):
         post = get_object_or_404(Post, slug=slug, status='published')
         comments = post.comments.filter(active=True).order_by('-created_at')
@@ -131,28 +130,29 @@ class PostDetailView(View): # Inherit from View for custom GET and POST
 
     def post(self, request, slug, *args, **kwargs):
         post = get_object_or_404(Post, slug=slug, status='published')
-        comments = post.comments.filter(active=True).order_by('-created_at')
-        
-        # This assumes CommentForm is designed to work with request.user.
-        # If request.user must be authenticated, this check is vital.
-        if not request.user.is_authenticated:
-            # Redirect to login page if user is not authenticated
-            # You might want to pass a 'next' parameter to redirect back after login
-            # e.g., return redirect(f"{reverse_lazy('login')}?next={request.path}")
-            return redirect(reverse_lazy('login')) 
 
-        comment_form = CommentForm(data=request.POST)
+        if not request.user.is_authenticated:
+            messages.error(request, "Musisz być zalogowany, aby dodać komentarz.")
+            return redirect(reverse_lazy('login') + f"?next={request.path}")
+
+        # Передаем request.POST для текстовых данных и request.FILES для файлов
+        comment_form = CommentForm(data=request.POST, files=request.FILES) 
+
         if comment_form.is_valid():
             new_comment = comment_form.save(commit=False)
             new_comment.post = post
-            new_comment.author = request.user # Assign authenticated user
+            new_comment.author = request.user
             new_comment.save()
-            return redirect(post.get_absolute_url()) # Redirect to the post's page
+            messages.success(request, "Twój komentarz został dodany!")
+            return redirect(post.get_absolute_url() + '#comments-section') # Перенаправляем к секции комментариев
         else:
-            # Form is invalid, re-render the page with the form and errors
+            # Если форма невалидна, передаем ее обратно с ошибками
+            # Также нужно снова получить список комментариев для корректного отображения страницы
+            comments = post.comments.filter(active=True).order_by('-created_at')
+            messages.error(request, "Popraw błędy w formularzu komentarza.")
             context = {
                 'post': post,
                 'comments': comments,
-                'comment_form': comment_form,
+                'comment_form': comment_form, # Форма с ошибками
             }
             return render(request, 'blog/post_detail.html', context)

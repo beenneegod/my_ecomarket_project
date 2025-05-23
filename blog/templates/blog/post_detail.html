@@ -8,75 +8,184 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4" data-aos="fade-in">
     <div class="row">
         <div class="col-lg-8 blog-post-detail">
-            <!-- Post content-->
             <article>
-                <!-- Post header-->
                 <header class="mb-4 post-header">
-                    <!-- Post title-->
                     <h1 class="fw-bolder mb-1">{{ post.title }}</h1>
-                    <!-- Post meta content-->
                     <div class="text-muted fst-italic mb-2 post-meta">
-                        Posted on {{ post.published_at|date:"F j, Y, P" }} by {{ post.author.username|default:"Unknown author" }}
+                        Opublikowano {{ post.published_at|date:"F j, Y, P" }} przez
+                        {% if post.author.profile.get_full_name %}
+                            {{ post.author.profile.get_full_name }}
+                        {% else %}
+                            {{ post.author.username|default:"Nieznany autor" }}
+                        {% endif %}
                     </div>
-                    <!-- Post categories (if any, not in model yet) -->
-                    <!-- <a class="badge bg-secondary text-decoration-none link-light" href="#!">Web Design</a> -->
                 </header>
-                <!-- Preview image figure-->
                 {% if post.image %}
-                <figure class="mb-4">
-                    <img src="{{ post.image.url }}" alt="{{ post.title }}" class="img-fluid rounded post-image">
+                <figure class="mb-4" data-aos="zoom-in">
+                    <img src="{{ post.image.url }}" alt="{{ post.title }}" class="img-fluid rounded post-image shadow-sm">
                 </figure>
                 {% endif %}
-                <!-- Post content-->
-                <section class="mb-5">
+                <section class="mb-5 post-body-content">
                     {{ post.body|linebreaks }}
                 </section>
             </article>
 
-            <!-- Comments section-->
-            <section class="mb-5 comments-section">
-                <div class="card bg-light">
-                    <div class="card-body">
-                        <h2 class="mb-4">Comments ({{ comments.count }})</h2>
-                        <!-- Comment form -->
-                        {% if user.is_authenticated %}
-                            <h3 class="mb-3">Leave a comment</h3>
-                            <form method="post" class="comment-form">
-                                {% csrf_token %}
-                                {{ comment_form.as_p }}
-                                <button type="submit" class="btn btn-primary mt-2">Submit Comment</button>
-                            </form>
-                        {% else %}
-                            <p>Please <a href="{% url 'login' %}?next={{ request.path }}">log in</a> to post a comment.</p>
-                        {% endif %}
-
+            <section class="mb-5 comments-section" id="comments-section"> {# Добавлен ID для якоря #}
+                <div class="card shadow-sm" style="background-color: var(--color-surface-alt);"> {# Используем наш бежевый фон для карточки комментариев #}
+                    <div class="card-body p-4">
+                        <h2 class="mb-4 h3">Komentarze ({{ comments.count }})</h2>
+                        
                         <hr class="my-4">
 
-                        <!-- Existing Comments -->
                         {% for comment in comments %}
-                        <div class="d-flex mb-4 comment">
-                            <div class="flex-shrink-0"><img class="rounded-circle" src="{% static 'img/no_image.png' %}" alt="User avatar" width="50" /></div>
-                            <div class="ms-3">
-                                <div class="fw-bold comment-author">{{ comment.author.username|default:"Anonymous" }}</div>
-                                <div class="text-muted fst-italic mb-1 comment-date"><small>{{ comment.created_at|date:"F j, Y, P" }}</small></div>
-                                {{ comment.body|linebreaks }}
+                        <div class="d-flex mb-4 comment pb-3 border-bottom-dashed" id="comment-{{ comment.id }}" data-aos="fade-up"
+                            data-aos-delay="{% if forloop.counter0 < 10 %}{% widthratio forloop.counter0 1 50 %}{% else %}500{% endif %}">
+                            <div class="flex-shrink-0">
+                                {% if comment.author.profile and comment.author.profile.avatar_url %}
+                                    <img class="rounded-circle shadow-sm" src="{{ comment.author.profile.avatar_url }}" alt="{{ comment.author.username }} avatar" width="50" height="50" style="object-fit: cover;" />
+                                {% else %}
+                                    <img class="rounded-circle shadow-sm" src="{% static 'img/default_avatar.png' %}" alt="Domyślny awatar użytkownika" width="50" height="50" />
+                                {% endif %}
+                            </div>
+                            <div class="ms-3 flex-grow-1">
+                                <div class="fw-bold comment-author">
+                                    {% if comment.author.profile.get_full_name %}
+                                        {{ comment.author.profile.get_full_name }}
+                                    {% else %}
+                                        {{ comment.author.username|default:"Anonim" }}
+                                    {% endif %}
+                                </div>
+                                <div class="text-muted fst-italic mb-1 comment-date"><small>{{ comment.created_at|date:"F j, Y, H:i" }}</small></div>
+                                <div class="comment-body">
+                                    {{ comment.body|linebreaks }}
+                                </div>
+
+                                {% if comment.image %}
+                                    <div class="mt-2 comment-image-container">
+                                        <a href="{{ comment.image.url }}" data-bs-toggle="modal" data-bs-target="#imageModal-{{ comment.id }}" title="Kliknij, aby powiększyć obrazek">
+                                            <img src="{{ comment.image.url }}" alt="Obrazek do komentarza od {{ comment.author.username }}" class="img-fluid rounded shadow-sm" style="max-height: 150px; max-width: 100%; cursor: pointer;">
+                                        </a>
+                                    </div>
+
+                                    <div class="modal fade" id="imageModal-{{ comment.id }}" tabindex="-1" aria-labelledby="imageModalLabel-{{ comment.id }}" aria-hidden="true">
+                                        <div class="modal-dialog modal-xl modal-dialog-centered"> {# modal-xl для большего размера #}
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="imageModalLabel-{{ comment.id }}">
+                                                        Obrazek od 
+                                                        {% if comment.author.profile.get_full_name %}
+                                                            {{ comment.author.profile.get_full_name }}
+                                                        {% else %}
+                                                            {{ comment.author.username }}
+                                                        {% endif %}
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body text-center p-0"> {# p-0 чтобы картинка занимала все место #}
+                                                    <img src="{{ comment.image.url }}" alt="Obrazek do komentarza - powiększenie" class="img-fluid">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         {% empty %}
-                        <p>No comments yet. Be the first to comment!</p>
+                        <p class="text-muted">Brak komentarzy. Bądź pierwszy!</p>
                         {% endfor %}
+                        
+                        <hr class="my-4">
+
+                        {% if user.is_authenticated %}
+                            <div class="comment-form-container mt-4 p-4 rounded shadow-sm" style="background-color: var(--color-surface);"> {# Белый фон для формы на бежевом фоне карточки #}
+                                <h3 class="mb-3 h4">Zostaw komentarz</h3>
+                                <form method="post" class="comment-form" enctype="multipart/form-data" novalidate>
+                                    {% csrf_token %}
+                                    
+                                    <div class="mb-3">
+                                        {# Для body можно не выводить label, если есть placeholder в форме #}
+                                        {% if comment_form.body.label and comment_form.body.label != '' %}
+                                        <label for="{{ comment_form.body.id_for_label }}" class="form-label">{{ comment_form.body.label }}</label>
+                                        {% endif %}
+                                        {{ comment_form.body }}
+                                        {% if comment_form.body.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in comment_form.body.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        {% if comment_form.body.help_text %}
+                                            <small class="form-text text-muted d-block mt-1">{{ comment_form.body.help_text|safe }}</small>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="{{ comment_form.image.id_for_label }}" class="form-label">{{ comment_form.image.label }}</label>
+                                        {{ comment_form.image }}
+                                        {% if comment_form.image.help_text %}
+                                            <small class="form-text text-muted d-block mt-1">{{ comment_form.image.help_text|safe }}</small>
+                                        {% endif %}
+                                        {% if comment_form.image.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in comment_form.image.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-send-fill me-2"></i>Wyślij komentarz</button>
+                                </form>
+                            </div>
+                        {% else %}
+                            <p class="mt-4 text-center">Proszę <a href="{% url 'login' %}?next={{ request.path }}" class="fw-bold">zalogować się</a>, aby dodać komentarz.</p>
+                        {% endif %}
                     </div>
                 </div>
             </section>
         </div>
-        <!-- Side widgets (optional, can be added later) -->
-        <div class="col-lg-4">
-            <!-- Search widget-->
-            <!-- Categories widget-->
-            <!-- Side widget-->
+
+        <div class="col-lg-4 ps-lg-5" data-aos="fade-left" data-aos-delay="300">
+            <div class="sticky-top" style="top: 2rem;"> {# Делаем сайдбар "липким" #}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header py-3">
+                        <h5 class="m-0 fw-bold">O Autorze</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        {% if post.author.profile and post.author.profile.avatar_url %}
+                            <img class="rounded-circle img-fluid shadow-sm mb-3" src="{{ post.author.profile.avatar_url }}" alt="{{ post.author.username }} avatar" style="width: 100px; height: 100px; object-fit: cover;" />
+                        {% else %}
+                            <img class="rounded-circle img-fluid shadow-sm mb-3" src="{% static 'img/default_avatar.png' %}" alt="Domyślny awatar użytkownika" style="width: 100px; height: 100px;" />
+                        {% endif %}
+                        <h5 class="mb-1">
+                            {% if post.author.get_full_name %}
+                                {{ post.author.get_full_name }}
+                            {% else %}
+                                {{ post.author.username }}
+                            {% endif %}
+                        </h5>
+                        {% if post.author.profile.bio %}
+                            <p class="text-muted small">{{ post.author.profile.bio|truncatewords:20 }}</p>
+                        {% endif %}
+                        {# Можно добавить ссылку на страницу автора, если она будет #}
+                    </div>
+                </div>
+                
+                {# Другие виджеты можно добавить сюда, например, последние посты, категории блога #}
+                <div class="card shadow-sm">
+                    <div class="card-header py-3">
+                        <h5 class="m-0 fw-bold">Szukaj w Blogu</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="get" action="#"> {# TODO: Добавить URL для поиска по блогу, если нужен #}
+                            <div class="input-group">
+                                <input class="form-control" type="text" name="q_blog" placeholder="Wpisz słowa kluczowe..." aria-label="Wpisz słowa kluczowe..." aria-describedby="button-search-blog" />
+                                <button class="btn btn-primary" id="button-search-blog" type="submit"><i class="bi bi-search"></i></button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ feedback_title|default:"Status Subskrypcji" }} - EcoMarket{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5 text-center" data-aos="fade-in">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body p-4 p-md-5">
+                    {% if "Udana" in feedback_title %}
+                        <i class="bi bi-check-circle-fill display-1 text-success mb-3"></i>
+                    {% elif "Anulowana" in feedback_title %}
+                        <i class="bi bi-exclamation-circle-fill display-1 text-warning mb-3"></i>
+                    {% else %}
+                        <i class="bi bi-info-circle-fill display-1 text-info mb-3"></i>
+                    {% endif %}
+                    <h2 class="card-title mb-3">{{ feedback_title }}</h2>
+                    <p class="lead">{{ feedback_message }}</p>
+                    <hr class="my-4">
+                    <a href="{% url 'homepage' %}" class="btn btn-primary me-2">Wróć na stronę główną</a>
+                    <a href="{% url 'store:subscription_box_list' %}" class="btn btn-outline-secondary">Zobacz inne boxy</a>
+                    {% if user.is_authenticated %}
+                    <a href="#" class="btn btn-info ms-2">Moje Subskrypcje (wkrótce)</a> {# TODO: Ссылка на управление подписками #}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

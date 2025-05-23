@@ -717,3 +717,56 @@ hr {
 .blog-post-preview .card-text.text-muted small {
     font-size: 0.85em;
 }
+
+.border-bottom-dashed {
+    border-bottom: 1px dashed var(--color-border) !important; /* Пунктирная линия */
+    padding-bottom: 1rem !important; /* Увеличим отступ снизу, если есть разделитель */
+}
+.border-bottom-dashed:last-child {
+    border-bottom: none !important; /* У последнего комментария убираем линию */
+}
+
+/* Subscription Box List Styles */
+.subscription-box-card {
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    /* Наследует стили .card, так что фон уже var(--color-surface-alt) */
+}
+.subscription-box-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg) !important; /* Используем более заметную тень */
+}
+/* Стилизация кнопки выбора внутри карточки подписки */
+.subscription-box-card .form-check-label.btn { /* Более специфичный селектор */
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.subscription-box-card .form-check-input:checked + .form-check-label.btn {
+    background-color: var(--color-primary) !important;
+    color: var(--color-surface) !important;
+    border-color: var(--color-primary) !important;
+    font-weight: bold;
+    box-shadow: none; /* Убираем тень у активной кнопки, чтобы она не "прыгала" */
+}
+
+
+/* Header Search Form Styles */
+header .navbar form.d-flex input.form-control {
+    /* Зададим максимальную ширину для поля поиска */
+    max-width: 180px; /* Поэкспериментируй с этим значением (например, 150px, 200px) */
+    /* Можно также уменьшить его padding, если он слишком большой, но это может повлиять на высоту */
+    /* padding-top: 0.375rem; */
+    /* padding-bottom: 0.375rem; */
+    /* font-size: 0.9rem; */ /* Можно и шрифт чуть уменьшить */
+    transition: max-width 0.3s ease-in-out; /* Плавный переход при фокусе, если будем увеличивать */
+}
+
+/* Опционально: увеличивать поле поиска при фокусе */
+header .navbar form.d-flex input.form-control:focus {
+    max-width: 250px; /* Увеличивается при клике/фокусе */
+}
+
+/* Можно немного уменьшить кнопку поиска, если нужно еще место */
+header .navbar form.d-flex button.btn-outline-success {
+    padding: 0.375rem 0.6rem; /* Уменьшаем паддинги кнопки */
+    font-size: 0.9rem; /* Уменьшаем шрифт кнопки */
+}

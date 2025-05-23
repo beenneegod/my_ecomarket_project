@@ -9,7 +9,7 @@ from django.contrib.auth.forms import (
 )
 from django.contrib.auth.models import User # Если нужна стандартная модель User
 from .models import Order
-from .models import Profile
+from .models import Profile, SubscriptionBoxType
 
 
 class OrderCreateForm(forms.ModelForm):
@@ -125,3 +125,20 @@ class ProfileUpdateForm(forms.ModelForm):
             'avatar': 'Zmień awatar',
             'bio': 'O Tobie',
         }
+
+class SubscriptionChoiceForm(forms.Form):
+    # Поле для выбора типа подписочного бокса.
+    # ModelChoiceField позволяет выбрать из существующих объектов модели.
+    box_type = forms.ModelChoiceField(
+        queryset=SubscriptionBoxType.objects.filter(is_active=True), # Показываем только активные боксы
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}), # Отображаем как радиокнопки
+        empty_label=None, # Убираем пустой вариант "-- Válassz --"
+        label="Wybierz rodzaj Eko Boxa"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Можно добавить кастомные стили или логику сюда, если нужно
+        # Например, если хочешь, чтобы радиокнопки отображались в несколько колонок или иначе.
+        # Но Bootstrap 5 хорошо стилизует .form-check-input для RadioSelect.
+        self.fields['box_type'].label_attrs = {'class': 'h5 mb-3 d-block'} # Делаем метку побольше и блочной

@@ -4,16 +4,21 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse # Для AJAX ответов
 from django.views.decorators.csrf import ensure_csrf_cookie # Импортируем декоратор
-from .models import Product, Order, Category, Profile # Импортируем модели Product и Order
+from .models import Product, Order, Category, Profile, SubscriptionBoxType # Импортируем модели Product и Order
 from .cart import Cart # Импортируем наш класс Cart
 from decimal import Decimal
 from django.contrib.auth import login # Функция для автоматического входа пользователя
-from .forms import UserRegistrationForm, ProfileUpdateForm # Импортируем нашу форму
+from .forms import UserRegistrationForm, ProfileUpdateForm, SubscriptionChoiceForm # Импортируем нашу форму
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from blog.models import Post
 from django.contrib import messages
+import stripe
+from django.urls import reverse, reverse_lazy
+from django.conf import settings
+
+
 
 
 @ensure_csrf_cookie
@@ -193,7 +198,7 @@ def cart_remove(request, product_id):
         'cart_total_price': cart.get_total_price() # Общая стоимость для обновления
     })
 
-
+@ensure_csrf_cookie
 def cart_detail(request):
     """
     Представление для отображения страницы корзины.
@@ -202,7 +207,7 @@ def cart_detail(request):
     # Передаем объект cart в шаблон. Шаблон сможет итерировать по нему.
     return render(request, 'store/cart_detail.html', {'cart': cart})
 
-
+@ensure_csrf_cookie
 def homepage(request):
     # Получаем несколько популярных/новых товаров для отображения (пример)
     featured_products = Product.objects.filter(available=True).order_by('-created_at')[:4] # Последние 4 товара
@@ -248,3 +253,101 @@ def profile_update(request):
         'page_title': 'Edytuj Profil'
     }
     return render(request, 'store/profile_update.html', context)
+
+@login_required
+def process_subscription_checkout(request, box_type_id):
+    try:
+        selected_box = SubscriptionBoxType.objects.get(id=box_type_id, is_active=True)
+    except SubscriptionBoxType.DoesNotExist:
+        messages.error(request, "Wybrany typ boxa jest niedostępny.")
+        return redirect('store:subscription_box_list')
+
+    if not selected_box.stripe_price_id:
+        messages.error(request, "Dla tego boxa nie skonfigurowano planu płatności. Prosimy o kontakt.")
+        return redirect('store:subscription_box_list')
+
+    success_url = request.build_absolute_uri(reverse('store:subscription_success')) # Нужен новый URL для успеха подписки
+    cancel_url = request.build_absolute_uri(reverse('store:subscription_canceled')) # Нужен новый URL для отмены
+
+    # Получаем или создаем Stripe Customer ID для пользователя
+    # Это важно, чтобы все подписки пользователя были привязаны к одному клиенту в Stripe
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    stripe_customer_id = profile.stripe_customer_id
+
+    checkout_session_params = {
+        'mode': 'subscription',
+        'payment_method_types': ['card', 'p24'], # Добавь p24 или другие нужные методы
+        'line_items': [{
+            'price': selected_box.stripe_price_id,
+            'quantity': 1,
+        }],
+        'success_url': success_url,
+        'cancel_url': cancel_url,
+        'metadata': {
+            'django_user_id': str(request.user.id),
+            'subscription_box_type_id': str(selected_box.id)
+        }
+    }
+
+    if stripe_customer_id:
+        checkout_session_params['customer'] = stripe_customer_id
+    else:
+        # Если у пользователя еще нет Stripe Customer ID, Stripe создаст его.
+        # Мы можем передать email, чтобы Stripe связал или создал клиента.
+        checkout_session_params['customer_email'] = request.user.email
+        # Или можно создать клиента в Stripe заранее и сохранить его ID
+        # try:
+        #     customer = stripe.Customer.create(email=request.user.email, name=request.user.get_full_name())
+        #     profile.stripe_customer_id = customer.id
+        #     profile.save()
+        #     checkout_session_params['customer'] = customer.id
+        # except stripe.error.StripeError as e:
+        #     messages.error(request, f"Błąd przy tworzeniu klienta płatności: {e}")
+        #     return redirect('store:subscription_box_list')
+
+
+    try:
+        session = stripe.checkout.Session.create(**checkout_session_params)
+        return redirect(session.url, code=303)
+    except stripe.error.StripeError as e:
+        messages.error(request, f"Błąd systemu płatności przy tworzeniu sesji subskrypcji: {e}")
+        return redirect('store:subscription_box_list')
+    except Exception as e:
+        messages.error(request, f"Wystąpił nieoczekiwany błąd: {e}")
+        return redirect('store:subscription_box_list')
+    
+
+
+def subscription_box_list(request):
+    active_boxes = SubscriptionBoxType.objects.filter(is_active=True)
+
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            messages.info(request, "Musisz być zalogowany, aby zasubskrybować box.")
+            return redirect(reverse_lazy('login') + f"?next={request.path}")
+
+        form = SubscriptionChoiceForm(request.POST)
+        if form.is_valid():
+            selected_box_type = form.cleaned_data['box_type']
+            return redirect('store:process_subscription_checkout', box_type_id=selected_box_type.id)
+        else:
+            messages.error(request, "Proszę wybrać poprawny box.")
+    else:
+        form = SubscriptionChoiceForm()
+
+    context = {
+        'subscription_boxes': active_boxes,
+        'form': form,
+        'page_title': 'Wybierz Swój Eko Box Subskrypcyjny'
+    }
+    return render(request, 'store/subscription_box_list.html', context)
+    
+
+def subscription_success(request):
+    # Здесь можно будет добавить логику очистки корзины или показа деталей подписки
+    messages.success(request, "Dziękujemy za subskrypcję! Oczekuj na potwierdzenie.")
+    return render(request, 'store/subscription_feedback.html', {'feedback_title': "Subskrypcja Udana!", 'feedback_message': "Twoja subskrypcja została pomyślnie zainicjowana. Szczegóły otrzymasz wkrótce."})
+
+def subscription_canceled(request):
+    messages.warning(request, "Proces subskrypcji został anulowany.")
+    return render(request, 'store/subscription_feedback.html', {'feedback_title': "Subskrypcja Anulowana", 'feedback_message': "Możesz spróbować ponownie w dowolnym momencie."})

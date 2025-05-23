@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    {{ page_title|default:"Nasze Eko Boxy Subskrypcyjne" }} - EcoMarket
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5" data-aos="fade-in">
+    <header class="text-center mb-5">
+        <h1 class="display-5 fw-bold">{{ page_title|default:"Nasze Eko Boxy Subskrypcyjne" }}</h1>
+        <p class="lead text-muted col-lg-8 mx-auto">
+            Wybierz idealny zestaw zdrowych, ekologicznych produktów dostarczanych regularnie pod Twoje drzwi.
+        </p>
+    </header>
+
+    {% if subscription_boxes %}
+        <form method="post" action="{% url 'store:subscription_box_list' %}" class="needs-validation" novalidate>
+            {% csrf_token %}
+
+            {% if form.box_type.label %}
+            <div class="text-center mb-4">
+                <label class="{{ form.box_type.label_attrs.class }}">{{ form.box_type.label }}</label>
+            </div>
+            {% endif %}
+
+            <div class="row justify-content-center">
+                {% for box in subscription_boxes %}
+                <div class="col-md-6 col-lg-4 mb-4" data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter0 1 100 %}">
+                    <div class="card h-100 subscription-box-card shadow-sm text-center">
+                        {% if box.image %}
+                            <img src="{{ box.image.url }}" class="card-img-top" alt="{{ box.name }}" style="height: 220px; object-fit: cover;">
+                        {% else %}
+                            <img src="{% static 'img/placeholder_box.png' %}" class="card-img-top" alt="Domyślny obrazek boxa" style="height: 220px; object-fit: cover; background-color: #f0f0f0;">
+                        {% endif %}
+                        <div class="card-body d-flex flex-column p-4">
+                            <h4 class="card-title h5 fw-bold mb-2">{{ box.name }}</h4>
+                            <p class="card-text text-muted small mb-3">{{ box.description|truncatewords:20 }}</p>
+
+                            <div class="mb-3">
+                                <span class="display-6 fw-bold text-primary">{{ box.price }} PLN</span>
+                                <span class="text-muted">/ {{ box.get_billing_period_display }}</span> {# Отображает человекочитаемое значение из choices #}
+                            </div>
+
+                            {# Радиокнопка для выбора этого бокса #}
+                            <div class="form-check mt-auto pt-3 border-top">
+                                <input class="form-check-input visually-hidden" type="radio" name="{{ form.box_type.html_name }}" value="{{ box.id }}" id="box-{{ box.id }}" {% if form.box_type.value == box.id|stringformat:"s" %}checked{% endif %} required>
+                                <label class="form-check-label stretched-link btn btn-outline-success w-100" for="box-{{ box.id }}">
+                                    Wybieram ten box
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if form.box_type.errors %}
+                <div class="alert alert-danger mt-4 text-center">
+                    {% for error in form.box_type.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="text-center mt-5">
+                <button type="submit" class="btn btn-primary btn-lg px-5">
+                    <i class="bi bi-arrow-right-circle-fill me-2"></i> Przejdź dalej
+                </button>
+            </div>
+        </form>
+    {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            Obecnie nie mamy dostępnych żadnych Eko Boxów subskrypcyjnych. Zajrzyj później!
+        </div>
+    {% endif %}
+</div>
+
+{# Нужно создать изображение placeholder_box.png в static/img/ #}
+{# CSS для .subscription-box-card и анимации выбора #}
+<style>
+    .subscription-box-card {
+        cursor: pointer;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .subscription-box-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg) !important;
+    }
+    .subscription-box-card .form-check-input:checked + .form-check-label {
+        background-color: var(--color-primary) !important;
+        color: var(--color-surface) !important;
+        border-color: var(--color-primary) !important;
+        font-weight: bold;
+    }
+    .subscription-box-card .form-check-label {
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-aos-delay*="multiply_custom"]').forEach(el => {
+            const expression = el.dataset.aosDelay;
+            const parts = expression.match(/(\d+)\|multiply_custom:(\d+)/);
+            if (parts && parts.length === 3) {
+                const val = parseInt(parts[1]);
+                const multiplier = parseInt(parts[2]);
+                el.dataset.aosDelay = (val * multiplier).toString();
+            }
+        });
+    });
+</script>
+{% endblock %}
