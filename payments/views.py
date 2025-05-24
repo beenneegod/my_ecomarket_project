@@ -15,6 +15,8 @@ from store.forms import OrderCreateForm
 from .tasks import send_order_confirmation_email_task, send_subscription_confirmation_email_task, \
                    send_subscription_canceled_email_task, send_payment_failed_email_task
 from django.utils import timezone
+from datetime import datetime, timezone as dt_timezone
+import traceback
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -152,385 +154,458 @@ def payment_canceled(request):
 def stripe_webhook(request):
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-    endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+    endpoint_secret = settings.STRIPE_WEBHOOK_SECRET # Убедитесь, что это STRIPE_WEBHOOK_SECRET, а не другой
     event = None
 
-    # Проверка наличия секрета
-    if not endpoint_secret:
-         print("!!! Webhook Error: Stripe Webhook Secret not configured.")
-         return HttpResponse(status=500)
+    print(f"WEBHOOK: Received a request. Sig_header: {sig_header is not None}")
 
-    # Проверка подписи и парсинг события
+    if not endpoint_secret:
+        print("!!! WEBHOOK Error: Stripe Webhook Secret (STRIPE_WEBHOOK_SECRET) not configured.")
+        return HttpResponse(status=500, content="Webhook secret not configured.")
+
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
     except ValueError as e:
-        print(f"Webhook ValueError (Invalid payload): {e}")
-        return HttpResponse(status=400) # Ошибка в запросе клиента (Stripe)
+        print(f"WEBHOOK ValueError (Invalid payload): {e}")
+        return HttpResponse(status=400)
     except stripe.error.SignatureVerificationError as e:
-        print(f"Webhook SignatureVerificationError (Invalid signature): {e}")
-        return HttpResponse(status=400) # Ошибка в запросе клиента (Stripe)
+        print(f"WEBHOOK SignatureVerificationError (Invalid signature): {e}")
+        return HttpResponse(status=400)
     except Exception as e:
-        print(f"Webhook Error (Unknown error during event construction): {e}")
-        return HttpResponse(status=500) # Неизвестная ошибка сервера
+        print(f"WEBHOOK Error (Unknown error during event construction): {e}")
+        traceback.print_exc()
+        return HttpResponse(status=500)
 
-    # Обработка конкретного события checkout.session.completed
+    print(f"WEBHOOK: Successfully constructed event: id={event.get('id')}, type={event.get('type')}")
+
+    # === Обработчик checkout.session.completed ===
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         session_id = session.id
         session_mode = session.get('mode')
-        print(f"Processing checkout.session.completed for session: {session.id} with mode: {session_mode}")
+        session_payment_status = session.get('payment_status')
+        print(f"WEBHOOK checkout.session.completed: Processing session_id={session_id}, mode={session_mode}, payment_status={session_payment_status}")
 
-        if session.payment_status == "paid":
+        if session_payment_status == "paid":
             if session_mode == 'subscription':
                 try:
                     stripe_subscription_id_from_session = session.get('subscription')
+                    print(f"WEBHOOK checkout.session.completed (subscription): stripe_subscription_id_from_session='{stripe_subscription_id_from_session}'")
+
+                    # Проверка на идемпотентность, если запись уже была создана этим же subscription_id
+                    # (например, если Stripe повторно прислал checkout.session.completed)
                     if stripe_subscription_id_from_session and \
                        UserSubscription.objects.filter(stripe_subscription_id=stripe_subscription_id_from_session).exists():
-                        print(f"UserSubscription for Stripe subscription {stripe_subscription_id_from_session} already exists (checked before update_or_create). Skipping further processing for this event.")
+                        existing_sub = UserSubscription.objects.get(stripe_subscription_id=stripe_subscription_id_from_session)
+                        print(f"WEBHOOK checkout.session.completed (subscription): UserSubscription for Stripe subscription '{stripe_subscription_id_from_session}' (local id {existing_sub.id}) already exists. Idempotency check passed.")
+                        # Если запись уже есть, мы все равно можем обновить некоторые поля, если это первое событие,
+                        # или просто вернуть 200. Для простоты, если она есть, считаем, что все уже сделано ранее.
+                        # Однако, если статус был 'incomplete', его можно обновить.
+                        # В данном случае, мы создаем с 'incomplete', так что это не должно быть проблемой.
                         return HttpResponse(status=200)
 
                     metadata = session.get('metadata', {})
                     django_user_id = metadata.get('django_user_id')
                     box_type_id = metadata.get('subscription_box_type_id')
-                    stripe_subscription_id = session.get('subscription')
                     stripe_customer_id = session.get('customer')
 
-                    if not all([django_user_id, box_type_id, stripe_subscription_id, stripe_customer_id]):
-                        print(f"Webhook Error: Missing required metadata for subscription session {session_id}. Metadata: {metadata}")
-                        return HttpResponse(status=400)
+                    print(f"WEBHOOK checkout.session.completed (subscription): metadata={metadata}, django_user_id='{django_user_id}', box_type_id='{box_type_id}', stripe_customer_id='{stripe_customer_id}'")
+
+                    if not all([django_user_id, box_type_id, stripe_subscription_id_from_session, stripe_customer_id]):
+                        print(f"WEBHOOK checkout.session.completed (subscription) ERROR: Missing required data. UserID: {django_user_id}, BoxTypeID: {box_type_id}, StripeSubID: {stripe_subscription_id_from_session}, StripeCustID: {stripe_customer_id}. Session_id: {session_id}.")
+                        return HttpResponse(status=400, content="Missing required data in webhook for subscription session.")
 
                     User = get_user_model()
                     user = None
                     if django_user_id and django_user_id != 'None':
                         try:
                             user = User.objects.get(id=int(django_user_id))
-                        except (User.DoesNotExist, ValueError, TypeError):
-                            print(f"Webhook Warning: User with id='{django_user_id}' not found for subscription session {session_id}.")
-                            return HttpResponse(status=400)
-                        
+                            print(f"WEBHOOK checkout.session.completed (subscription): Found user id={user.id}")
+                        except (User.DoesNotExist, ValueError, TypeError) as e:
+                            print(f"WEBHOOK checkout.session.completed (subscription) WARNING: User with id='{django_user_id}' not found for session {session_id}. Error: {e}")
+                            return HttpResponse(status=400, content=f"User with id='{django_user_id}' not found.")
+                    
                     if not user:
-                        print(f"Webhook Error: User is required for subscription session {session_id}. No valid user found.")
+                        print(f"WEBHOOK checkout.session.completed (subscription) ERROR: User is required for subscription session {session_id}. No valid user found.")
+                        return HttpResponse(status=400, content="User is required for subscription.")
 
-                    box_type = get_object_or_404(SubscriptionBoxType, id=box_type_id)
+                    try:
+                        box_type = SubscriptionBoxType.objects.get(id=int(box_type_id))
+                        print(f"WEBHOOK checkout.session.completed (subscription): Found box_type id={box_type.id}, name='{box_type.name}'")
+                    except (SubscriptionBoxType.DoesNotExist, ValueError, TypeError): # Добавлены ValueError, TypeError
+                        print(f"WEBHOOK checkout.session.completed (subscription) ERROR: SubscriptionBoxType with id='{box_type_id}' not found or invalid ID for session {session_id}.")
+                        return HttpResponse(status=400, content=f"SubscriptionBoxType with id='{box_type_id}' not found or invalid.")
 
                     with transaction.atomic():
-                        # Обновляем или создаем профиль клиента Stripe
-                        if user:
-                            profile, _ = Profile.objects.get_or_create(user=user)
-                            if not profile.stripe_customer_id:
-                                profile.stripe_customer_id = stripe_customer_id
-                                profile.save()
-                            print(f"Profile updated/retrieved for user {user.id} with Stripe customer ID {stripe_customer_id}")
-
-                        # Создаем или обновляем запись о подписке пользователя
-                        # (логика может зависеть от того, обрабатываете ли вы customer.subscription.created/updated отдельно)
-                        subscription, created = UserSubscription.objects.update_or_create(
-                            stripe_subscription_id=stripe_subscription_id,
+                        profile, profile_created = Profile.objects.get_or_create(user=user)
+                        if not profile.stripe_customer_id:
+                            profile.stripe_customer_id = stripe_customer_id
+                            profile.save()
+                            print(f"WEBHOOK checkout.session.completed (subscription): Profile for user {user.id} {'created' if profile_created else 'retrieved'}. Stripe customer ID set to '{stripe_customer_id}'.")
+                        else:
+                             print(f"WEBHOOK checkout.session.completed (subscription): Profile for user {user.id} {'created' if profile_created else 'retrieved'}. Stripe customer ID already '{profile.stripe_customer_id}'.")
+                        
+                        subscription, sub_created = UserSubscription.objects.update_or_create(
+                            stripe_subscription_id=stripe_subscription_id_from_session,
                             defaults={
                                 'user': user,
                                 'box_type': box_type,
                                 'stripe_customer_id': stripe_customer_id,
-                                'status': 'active', # Считаем активной после успешной оплаты
-                                # current_period_start/end лучше получать из события customer.subscription.updated или invoice.paid
+                                'status': 'incomplete', # Начальный статус. Будет обновлен customer.subscription.updated/created или invoice.paid.
                             }
                         )
-                        if created:
-                            print(f"UserSubscription record CREATED for Stripe sub ID {stripe_subscription_id}")
-                        else:
-                            print(f"UserSubscription record UPDATED for Stripe sub ID {stripe_subscription_id}")
-                        if user: # Отправляем письмо, только если есть пользователь с email
-                           send_subscription_confirmation_email_task(subscription.id)
-                        # Отправляем email с подтверждением подписки
-
-                    print(f"Subscription session {session_id} processed successfully.")
-                    return HttpResponse(status=200)
-
+                        action = "CREATED" if sub_created else "UPDATED (idempotency)"
+                        print(f"WEBHOOK checkout.session.completed (subscription): UserSubscription record {action} for Stripe sub ID '{stripe_subscription_id_from_session}', local id={subscription.id}. Status set to 'incomplete'.")
+                    
+                    print(f"WEBHOOK checkout.session.completed (subscription): Session {session_id} processed successfully.")
+                
                 except Exception as e:
-                    print(f"Webhook Error: Failed to process PAID subscription session {session_id}. Error: {e}")
+                    print(f"WEBHOOK checkout.session.completed (subscription) ERROR: Failed to process PAID subscription session {session_id}. Error: {e}")
+                    traceback.print_exc()
                     return HttpResponse(status=500)
 
             elif session_mode == 'payment':
+                # ВАШ СУЩЕСТВУЮЩИЙ КОД ДЛЯ ОБРАБОТКИ ОБЫЧНЫХ ПЛАТЕЖЕЙ (session_mode == 'payment')
+                # Я его не буду полностью копировать сюда, так как мы фокусировались на подписках,
+                # но он должен остаться здесь.
+                # Убедитесь, что он использует transaction.atomic() и корректно обрабатывает ошибки.
                 try:
                     if Order.objects.filter(stripe_id=session_id).exists():
-                        print(f"Order for payment session {session_id} already exists.")
+                        print(f"WEBHOOK checkout.session.completed (payment): Order for payment session {session_id} already exists. Skipping.")
                         return HttpResponse(status=200)
 
                     metadata = session.get('metadata', {})
                     User = get_user_model()
                     user = None
                     user_id_from_metadata = metadata.get('user_id')
-                    if user_id_from_metadata and user_id_from_metadata != 'None': # Проверка, что не строка "None"
+                    print(f"WEBHOOK checkout.session.completed (payment): metadata={metadata}, user_id_from_metadata='{user_id_from_metadata}'")
+
+                    if user_id_from_metadata and user_id_from_metadata != 'None':
                         try:
                             user = User.objects.get(id=int(user_id_from_metadata))
+                            print(f"WEBHOOK checkout.session.completed (payment): Found user id={user.id if user else 'None'}")
                         except (User.DoesNotExist, ValueError, TypeError):
-                            user = None
-
-                    print(f"Fetching line items for payment session {session_id}...")
+                            user = None 
+                            print(f"WEBHOOK checkout.session.completed (payment) WARNING: User with id='{user_id_from_metadata}' not found.")
+                    
+                    customer_details_email = session.get('customer_details', {}).get('email')
+                    order_email = customer_details_email if customer_details_email else metadata.get('email', '')
+                    print(f"WEBHOOK checkout.session.completed (payment): Order email will be '{order_email}'. Fetching line items for session {session_id}...")
+                    
                     try:
-                        line_items_response = stripe.checkout.Session.list_line_items(
-                            session_id, limit=50, expand=['data.price.product']
-                        )
+                        line_items_response = stripe.checkout.Session.list_line_items(session_id, limit=50, expand=['data.price.product'])
                         if not line_items_response or not line_items_response.data:
-                            print(f"Webhook Error: Could not retrieve line items for payment session {session_id}")
-                            return HttpResponse(status=500)
-                        print(f"Line items fetched successfully: {len(line_items_response.data)} items.")
+                            print(f"WEBHOOK checkout.session.completed (payment) ERROR: Could not retrieve line items for session {session_id}")
+                            return HttpResponse(status=500, content="Could not retrieve line items from Stripe.")
+                        print(f"WEBHOOK checkout.session.completed (payment): Line items fetched: {len(line_items_response.data)} items.")
                     except stripe.error.StripeError as e:
-                        print(f"Webhook Error: Stripe API error fetching line items for payment session {session_id}: {e}")
+                        print(f"WEBHOOK checkout.session.completed (payment) ERROR: Stripe API error fetching line items for session {session_id}: {e}")
                         return HttpResponse(status=500)
 
                     with transaction.atomic():
                         order = Order.objects.create(
-                            user=user,
-                            paid=True,
-                            stripe_id=session_id,
-                            first_name=metadata.get('first_name', ''),
-                            last_name=metadata.get('last_name', ''),
-                            email=session.customer_details.email if session.customer_details else metadata.get('email', ''),
-                            address_line_1=metadata.get('address_line_1', ''),
-                            address_line_2=metadata.get('address_line_2', ''),
-                            postal_code=metadata.get('postal_code', ''),
-                            city=metadata.get('city', ''),
-                            country=metadata.get('country', '')
+                            user=user, paid=True, stripe_id=session_id,
+                            first_name=metadata.get('first_name', ''), last_name=metadata.get('last_name', ''),
+                            email=order_email, address_line_1=metadata.get('address_line_1', ''),
+                            address_line_2=metadata.get('address_line_2', ''), postal_code=metadata.get('postal_code', ''),
+                            city=metadata.get('city', ''), country=metadata.get('country', '')
                         )
+                        print(f"WEBHOOK checkout.session.completed (payment): Order object created with id={order.id}, stripe_id={order.stripe_id}")
                         items_to_create = []
                         products_stock_update = {}
                         for item_data in line_items_response.data:
                             try:
                                 price_info = item_data.get('price', {})
-                                product_info = price_info.get('product', {}) # Это Stripe Product
-                                stripe_product_metadata = product_info.get('metadata', {})
-                                product_db_id = stripe_product_metadata.get('product_db_id')
+                                product_info_stripe = price_info.get('product', {}) 
+                                stripe_product_metadata = product_info_stripe.get('metadata', {})
+                                product_db_id_str = stripe_product_metadata.get('product_db_id')
 
-                                if not product_db_id:
-                                    print(f"Webhook Error: Payment line item from Stripe Product {product_info.id} does not contain product_db_id. Metadata: {stripe_product_metadata}")
-                                    raise ValueError("Missing product_db_id in payment line item metadata")
-
-                                product = Product.objects.get(id=product_db_id)
+                                if not product_db_id_str:
+                                    print(f"WEBHOOK checkout.session.completed (payment) ERROR: Line item from Stripe Product '{product_info_stripe.get('id', 'N/A')}' does not contain 'product_db_id'. Metadata: {stripe_product_metadata}.")
+                                    raise ValueError(f"Missing product_db_id for Stripe Product {product_info_stripe.get('id')}")
+                                
+                                product_db = Product.objects.get(id=int(product_db_id_str))
                                 quantity = item_data.get('quantity', 0)
-                                price_paid = Decimal(item_data.get('amount_total', 0)) / 100 # Используем amount_total для общей суммы позиции
-                                                                                            # или item_data.price.unit_amount если это цена за единицу
+                                unit_amount = price_info.get('unit_amount')
+                                if unit_amount is None: unit_amount = item_data.get('amount_subtotal',0) # amount_subtotal для line_item - это цена за единицу * кол-во, до скидок
+                                
+                                price_paid_per_unit = Decimal(0)
+                                if quantity > 0 and unit_amount is not None: # Используем unit_amount если есть, или item_data.price.unit_amount
+                                    price_paid_per_unit = (Decimal(price_info.get('unit_amount', item_data.get('amount_subtotal',0) / quantity )) / Decimal('100')) if price_info.get('unit_amount') is not None else (Decimal(item_data.get('amount_subtotal',0))/quantity / Decimal('100'))
+
 
                                 items_to_create.append(OrderItem(
-                                    order=order, product=product, price=price_paid / quantity if quantity else 0, quantity=quantity
-                                )) # Убедитесь, что price это цена за единицу
-                                products_stock_update[product.id] = products_stock_update.get(product.id, 0) + quantity
+                                    order=order, product=product_db, price=price_paid_per_unit, quantity=quantity
+                                ))
+                                products_stock_update[product_db.id] = products_stock_update.get(product_db.id, 0) + quantity
+                                print(f"WEBHOOK checkout.session.completed (payment): Prepared OrderItem: product_id={product_db.id}, qty={quantity}, price_per_unit={price_paid_per_unit}")
                             except Product.DoesNotExist:
-                                print(f"Webhook Error: Product with id={product_db_id} not found (session {session_id}). Order creation failed.")
-                                raise ValueError(f"Product {product_db_id} not found") # Откатит транзакцию
+                                print(f"WEBHOOK checkout.session.completed (payment) ERROR: Product with id={product_db_id_str} not found. Order {order.id} creation failed.")
+                                raise 
                             except Exception as e:
-                                print(f"Webhook Error: Problem processing payment line item: {e}")
-                                raise # Откатываем транзакцию
-
-                        if items_to_create: OrderItem.objects.bulk_create(items_to_create)
+                                print(f"WEBHOOK checkout.session.completed (payment) ERROR: Problem processing payment line item for order {order.id}: {e}")
+                                traceback.print_exc()
+                                raise 
+                        if items_to_create: 
+                            OrderItem.objects.bulk_create(items_to_create)
+                            print(f"WEBHOOK checkout.session.completed (payment): Bulk created {len(items_to_create)} OrderItems for order {order.id}.")
                         for prod_id, qty_decrement in products_stock_update.items():
                             Product.objects.filter(id=prod_id).update(stock=F('stock') - qty_decrement)
-
-                    print(f"Order {order.id} successfully created from webhook for payment session {session_id}")
-                    send_order_confirmation_email_task(order.id) # Используем .delay()
-                    return HttpResponse(status=200)
-
+                            print(f"WEBHOOK checkout.session.completed (payment): Updated stock for product_id={prod_id}, decrement={qty_decrement}.")
+                    print(f"WEBHOOK checkout.session.completed (payment): Order {order.id} successfully processed from webhook for session {session_id}")
+                    send_order_confirmation_email_task(order.id)
+                    print(f"WEBHOOK checkout.session.completed (payment): Queued order confirmation email for order {order.id}")
                 except Exception as e:
-                    print(f"Webhook Error: Failed to process PAID payment session {session_id}. Error: {e}")
+                    print(f"WEBHOOK checkout.session.completed (payment) ERROR: Failed to process PAID payment session {session_id}. Error: {e}")
+                    traceback.print_exc()
                     return HttpResponse(status=500)
-            else:
-                print(f"Webhook Error: Unknown session mode '{session_mode}' for session {session_id}")
-                return HttpResponse(status=400) # Неизвестный режим сессии
 
+            else: # session_mode не 'subscription' и не 'payment'
+                print(f"WEBHOOK checkout.session.completed ERROR: Unknown session mode '{session_mode}' for session {session_id}")
+                return HttpResponse(status=400, content="Unknown session mode.")
         else: # payment_status != "paid"
-            print(f"Payment status for session {session_id} is '{session.payment_status}', not creating order/subscription.")
-            return HttpResponse(status=200)
-        
-    elif event['type'] == 'invoice.paid':
-        invoice = event['data']['object']
-        stripe_subscription_id = invoice.get('subscription')
-        stripe_customer_id = invoice.get('customer')
-        invoice_id = invoice.get('id') # Более безопасный доступ
-        invoice_status = invoice.get('status') # Более безопасный доступ
-        # Для boolean 'paid' можно использовать .get() с дефолтным значением
-        is_invoice_paid_from_attribute = invoice.get('paid', False) 
+             print(f"WEBHOOK checkout.session.completed: Payment status for session {session_id} is '{session_payment_status}', not processing.")
 
-        print(f"Processing 'invoice.paid' event for Stripe Invoice ID: {invoice_id}, Subscription ID: {stripe_subscription_id}, Status: {invoice_status}, Paid Flag: {is_invoice_paid_from_attribute}")
-
-        # Обрабатываем, только если счет оплачен и это счет по подписке
-        if invoice_status == 'paid' and stripe_subscription_id:
-            try:
-                user_subscription = UserSubscription.objects.get(stripe_subscription_id=stripe_subscription_id)
-
-                # Обновляем даты периода подписки
-                new_period_start = None
-                new_period_end = None
-                if invoice.lines and invoice.lines.data: # Убедимся, что есть строки в инвойсе
-                    # Обычно для подписки одна строка (line item)
-                    # Если могут быть другие сценарии (например, инвойс с несколькими строками подписки),
-                    # нужно будет более сложная логика для определения правильной строки.
-                    # Для простоты берем первую.
-                    subscription_line_item = next((line for line in invoice.lines.data if line.type == "subscription" and line.subscription == stripe_subscription_id), None)
-                    if subscription_line_item and subscription_line_item.period:
-                        period_data = subscription_line_item.period
-                        new_period_start = timezone.datetime.fromtimestamp(period_data.start, tz=timezone.utc)
-                        new_period_end = timezone.datetime.fromtimestamp(period_data.end, tz=timezone.utc)
-                
-                if new_period_start and new_period_end:
-                    user_subscription.current_period_start = new_period_start
-                    user_subscription.current_period_end = new_period_end
-                
-                user_subscription.status = 'active' # Подтверждаем, что активна
-                user_subscription.save()
-                
-                # Опционально обновить stripe_customer_id в UserSubscription и Profile, если его нет
-                if user_subscription.user and stripe_customer_id:
-                    if not user_subscription.stripe_customer_id:
-                        user_subscription.stripe_customer_id = stripe_customer_id
-                        user_subscription.save(update_fields=['stripe_customer_id'])
-                    
-                    profile, _ = Profile.objects.get_or_create(user=user_subscription.user)
-                    if not profile.stripe_customer_id:
-                        profile.stripe_customer_id = stripe_customer_id
-                        profile.save()
-                
-                print(f"UserSubscription {user_subscription.id} updated from invoice.paid. Status: active. Period: {new_period_start} - {new_period_end}")
-                
-                # Опционально: отправить email о продлении подписки (если это не первая оплата)
-                # if invoice.billing_reason != 'subscription_create': # Не отправлять для первого инвойса, т.к. уже есть письмо об активации
-                #     send_subscription_renewal_email_task.delay(user_subscription.id)
-
-            except UserSubscription.DoesNotExist:
-                print(f"Webhook Warning: Received invoice.paid for non-existent UserSubscription with Stripe sub ID: {stripe_subscription_id}")
-            except Exception as e:
-                print(f"Webhook Error: Failed to process invoice.paid for Stripe sub ID {stripe_subscription_id}. Error: {e}")
-                # Не возвращаем 500, чтобы Stripe не повторял, если проблема с нашей стороны, но не критичная для Stripe
-        else:
-            print(f"Invoice {invoice_id} (status: {invoice_status}) from 'invoice.paid' event not processed further. Might not be related to a known subscription or status is not 'paid'. Billing reason: {invoice.get('billing_reason')}")
-
-        return HttpResponse(status=200)
-    
-    elif event['type'] == 'invoice.payment_failed':
-        invoice = event['data']['object']
-        stripe_subscription_id = invoice.get('subscription')
-        
-        print(f"Processing invoice.payment_failed for Stripe subscription ID: {stripe_subscription_id}, Invoice ID: {invoice.id}")
-
-        if stripe_subscription_id:
-            try:
-                user_subscription = UserSubscription.objects.get(stripe_subscription_id=stripe_subscription_id)
-                # Stripe будет пытаться списать средства несколько раз (Smart Retries).
-                # Статус 'past_due' уместен, пока Stripe не отменит подписку окончательно.
-                user_subscription.status = 'past_due' 
-                user_subscription.save()
-                print(f"UserSubscription {user_subscription.id} status updated to 'past_due' due to invoice.payment_failed.")
-                
-                if user_subscription.user:
-                    send_payment_failed_email_task(user_subscription.id)
-                # Опционально: отправить email пользователю о проблеме с оплатой
-                # send_payment_failed_email_task.delay(user_subscription.id)
-
-            except UserSubscription.DoesNotExist:
-                print(f"Webhook Warning: Received invoice.payment_failed for non-existent UserSubscription with Stripe sub ID: {stripe_subscription_id}")
-            except Exception as e:
-                print(f"Webhook Error: Failed to process invoice.payment_failed for Stripe sub ID {stripe_subscription_id}. Error: {e}")
-        else:
-            print(f"Invoice.payment_failed event {invoice.id} without a subscription ID.")
-            
-        return HttpResponse(status=200)
-    
-
-    elif event['type'] == 'customer.subscription.updated':
+    # === Обработчик customer.subscription.created И customer.subscription.updated ===
+    elif event['type'] in ['customer.subscription.created', 'customer.subscription.updated']:
         subscription_stripe_obj = event['data']['object']
         stripe_subscription_id = subscription_stripe_obj.id
-        
-        print(f"Processing customer.subscription.updated for Stripe subscription ID: {stripe_subscription_id}")
+        new_stripe_status = subscription_stripe_obj.get('status')
+        stripe_customer_id_from_sub = subscription_stripe_obj.get('customer')
+
+        print(f"WEBHOOK {event['type']}: Processing for Stripe subscription ID: '{stripe_subscription_id}', New Stripe Status: '{new_stripe_status}'")
 
         try:
+            # Пытаемся ПОЛУЧИТЬ существующую UserSubscription.
+            # Она ДОЛЖНА быть создана ранее обработчиком checkout.session.completed.
             user_subscription = UserSubscription.objects.get(stripe_subscription_id=stripe_subscription_id)
-            
-            new_status_from_stripe = subscription_stripe_obj.get('status')
-            previous_attributes = event['data'].get('previous_attributes', {}) # Для отслеживания, что именно изменилось
-            
-            print(f"  Stripe new status: {new_status_from_stripe}, Current local status: {user_subscription.status}")
-            if 'status' in previous_attributes:
-                 print(f"  Stripe previous status: {previous_attributes['status']}")
+            print(f"WEBHOOK {event['type']}: Found UserSubscription id={user_subscription.id}. Old local status: {user_subscription.status}")
 
-            # Простое сопоставление статусов (доработайте при необходимости)
-            # Статусы Stripe: active, past_due, unpaid, canceled, incomplete, incomplete_expired, trialing, paused
-            # Ваши статусы в UserSubscription.STATUS_CHOICES
-            if new_status_from_stripe == 'active':
-                user_subscription.status = 'active'
-            elif new_status_from_stripe == 'past_due':
-                user_subscription.status = 'past_due'
-            elif new_status_from_stripe == 'canceled':
-                user_subscription.status = 'canceled'
-            elif new_status_from_stripe == 'unpaid':
-                user_subscription.status = 'past_due' 
-            elif new_status_from_stripe == 'trialing':
-                user_subscription.status = 'trialing' # Убедитесь, что 'trialing' есть в ваших UserSubscription.STATUS_CHOICES
-            elif new_status_from_stripe in ['incomplete', 'incomplete_expired']:
-                    # Убедитесь, что эти статусы есть в UserSubscription.STATUS_CHOICES или сопоставьте их
-                if new_status_from_stripe in [choice[0] for choice in UserSubscription.STATUS_CHOICES]:
-                    user_subscription.status = new_status_from_stripe
-                else:
-                    print(f"  Stripe status '{new_status_from_stripe}' not directly mapped. Keeping local status '{user_subscription.status}'.")
-            else:
-                print(f"  Unhandled Stripe subscription status '{new_status_from_stripe}' for UserSubscription {user_subscription.id}. Keeping current local status '{user_subscription.status}'.")
+            original_local_status = user_subscription.status
 
+            # Обновляем статус из Stripe
+            if new_stripe_status == 'active': user_subscription.status = 'active'
+            elif new_stripe_status == 'past_due': user_subscription.status = 'past_due'
+            elif new_stripe_status == 'canceled': user_subscription.status = 'canceled'
+            elif new_stripe_status == 'unpaid': user_subscription.status = 'past_due' 
+            elif new_stripe_status == 'trialing': user_subscription.status = 'trialing'
+            elif new_stripe_status in ['incomplete', 'incomplete_expired']:
+                if new_stripe_status in [choice[0] for choice in UserSubscription.STATUS_CHOICES]: # Проверяем, есть ли такой статус в нашей модели
+                    user_subscription.status = new_stripe_status
+            
+            print(f"WEBHOOK {event['type']}: New local status for sub id {user_subscription.id} will be: {user_subscription.status}")
+
+            # Обновляем период
             cps_timestamp = subscription_stripe_obj.get('current_period_start')
             cpe_timestamp = subscription_stripe_obj.get('current_period_end')
 
-            if cps_timestamp is not None: # Проверяем, что значение не None
-                user_subscription.current_period_start = timezone.datetime.fromtimestamp(cps_timestamp, tz=timezone.utc)
-            else:
-                print(f"  Warning: 'current_period_start' is None for Stripe subscription {stripe_subscription_id}.")
-                
-            if cpe_timestamp is not None: # Проверяем, что значение не None
-                user_subscription.current_period_end = timezone.datetime.fromtimestamp(cpe_timestamp, tz=timezone.utc)
-            else:
-                print(f"  Warning: 'current_period_end' is None for Stripe subscription {stripe_subscription_id}.")
-                
-                # Безопасно получаем cancel_at_period_end (это boolean)
-            user_subscription.cancel_at_period_end = subscription_stripe_obj.get('cancel_at_period_end', False) # False как дефолтное значение
-                
-                # Проверяем, не нужно ли установить дату отмены, если подписка стала 'canceled'
-            if user_subscription.status == 'canceled' and \
-                'status' in previous_attributes and \
-                previous_attributes.get('status') != 'canceled':
-                if hasattr(user_subscription, 'canceled_at') and user_subscription.canceled_at is None: # Если есть поле и оно не установлено
-                    user_subscription.canceled_at = timezone.now()
+            if cps_timestamp is not None:
+                user_subscription.current_period_start = datetime.fromtimestamp(cps_timestamp, tz=dt_timezone.utc)
+            # else: # Не логируем здесь, чтобы не засорять, если это норма для .created без периода
+                # print(f"WEBHOOK {event['type']}: 'current_period_start' is None for Stripe subscription '{stripe_subscription_id}'.") 
+            
+            if cpe_timestamp is not None:
+                user_subscription.current_period_end = datetime.fromtimestamp(cpe_timestamp, tz=dt_timezone.utc)
+            # else:
+                # print(f"WEBHOOK {event['type']}: 'current_period_end' is None for Stripe subscription '{stripe_subscription_id}'.")
+            
+            user_subscription.cancel_at_period_end = subscription_stripe_obj.get('cancel_at_period_end', False)
+            
+            if stripe_customer_id_from_sub and user_subscription.stripe_customer_id != stripe_customer_id_from_sub:
+                user_subscription.stripe_customer_id = stripe_customer_id_from_sub
             
             user_subscription.save()
-            print(f"UserSubscription {user_subscription.id} updated from customer.subscription.updated. New local status: {user_subscription.status}.")
-            if user_subscription.status == 'canceled' and user_subscription.user:
-                send_subscription_canceled_email_task(user_subscription.id)
+            print(f"WEBHOOK {event['type']}: UserSubscription id={user_subscription.id} updated. New local status: {user_subscription.status}, period_start: {user_subscription.current_period_start}, period_end: {user_subscription.current_period_end}, cancel_at_period_end: {user_subscription.cancel_at_period_end}.")
+
+            # Отправка писем (только если статус действительно изменился и есть пользователь)
+            if user_subscription.user:
+                if user_subscription.status == 'active' and original_local_status != 'active':
+                    # Отправляем письмо о подтверждении/активации, ТОЛЬКО если период УЖЕ установлен
+                    if user_subscription.current_period_start and user_subscription.current_period_end:
+                        send_subscription_confirmation_email_task(user_subscription.id)
+                        print(f"WEBHOOK {event['type']}: Queued subscription confirmation email for UserSubscription id={user_subscription.id} (status became active and period is set).")
+                    else:
+                        # Если подписка стала активной, но период еще не пришел (маловероятно из customer.subscription.updated, но возможно для .created)
+                        # то письмо о подтверждении лучше отложить до момента, когда период будет известен (например, из invoice.paid).
+                        # Или, если статус 'active' уже подразумевает наличие периода от Stripe, то все ок.
+                        print(f"WEBHOOK {event['type']}: UserSubscription id={user_subscription.id} became active, but period might not be set yet. Confirmation email logic might need review if period comes later.")
+                elif user_subscription.status == 'canceled' and original_local_status != 'canceled':
+                    send_subscription_canceled_email_task(user_subscription.id)
+                    print(f"WEBHOOK {event['type']}: Queued subscription canceled email for UserSubscription id={user_subscription.id}")
+
         except UserSubscription.DoesNotExist:
-            # Если подписка была создана в Stripe, но не в вашей БД (маловероятно, если checkout.session.completed работает)
-            # Можно попытаться создать ее здесь, если есть все данные
-            print(f"Webhook Warning: Received customer.subscription.updated for non-existent UserSubscription with Stripe sub ID: {stripe_subscription_id}. Consider creating it if it's a new subscription not caught by checkout.session.completed.")
+            print(f"WEBHOOK {event['type']} CRITICAL ERROR: UserSubscription with stripe_subscription_id='{stripe_subscription_id}' NOT FOUND. This should have been created by checkout.session.completed. This event for subscription '{stripe_subscription_id}' cannot be processed without a prior UserSubscription record.")
+            # Возвращаем 200, чтобы не блокировать Stripe для этого события, т.к. мы не можем его исправить без данных из checkout.session.
+            # Проблема должна быть решена на уровне гарантии обработки checkout.session.completed.
         except Exception as e:
-            print(f"Webhook Error: Failed to process customer.subscription.updated for Stripe sub ID {stripe_subscription_id}. Error: {e}")
+            print(f"WEBHOOK {event['type']} ERROR: Failed to process for Stripe sub ID '{stripe_subscription_id}'. Error: {e}")
+            traceback.print_exc()
+            return HttpResponse(status=500)
+
+    # === Обработчик invoice.paid ===
+    # Основная задача - обновить период, если он новее, и подтвердить статус 'active'
+    # Не должен создавать UserSubscription, если ее нет для billing_reason = subscription_create
+    elif event['type'] == 'invoice.paid':
+        invoice = event['data']['object']
+        stripe_subscription_id_from_invoice = None # Используем новое имя переменной
+
+        # Попытка 1: из invoice.subscription (если Stripe изменит структуру и добавит его)
+        # stripe_subscription_id_from_invoice = invoice.get('subscription') # Маловероятно, что появится, если уже нет
+
+        # Попытка 2: из invoice.parent.subscription_details.subscription
+        if not stripe_subscription_id_from_invoice:
+            parent_details_on_invoice = invoice.get('parent', {}).get('subscription_details', {})
+            if parent_details_on_invoice:
+                stripe_subscription_id_from_invoice = parent_details_on_invoice.get('subscription')
         
-        return HttpResponse(status=200)
-    
+        # Попытка 3: из первой строки инвойса
+        if not stripe_subscription_id_from_invoice and invoice.lines and invoice.lines.data:
+            for line_item_iter in invoice.lines.data: # Перебираем все строки
+                subscription_item_details = line_item_iter.get('parent', {}).get('subscription_item_details', {})
+                if subscription_item_details and subscription_item_details.get('subscription'):
+                    stripe_subscription_id_from_invoice = subscription_item_details.get('subscription')
+                    break # Нашли в одной из строк, выходим
+
+        invoice_id = invoice.get('id')
+        invoice_status = invoice.get('status')
+        billing_reason = invoice.get('billing_reason')
+
+        print(f"WEBHOOK invoice.paid: Final check: invoice_id='{invoice_id}', determined_subscription_id='{stripe_subscription_id_from_invoice}', status='{invoice_status}', billing_reason='{billing_reason}'")
+
+        if invoice_status == 'paid' and stripe_subscription_id_from_invoice:
+            try:
+                user_subscription = UserSubscription.objects.get(stripe_subscription_id=stripe_subscription_id_from_invoice)
+                print(f"WEBHOOK invoice.paid: Found UserSubscription id={user_subscription.id} for subscription_id='{stripe_subscription_id_from_invoice}'. Current local period_end: {user_subscription.current_period_end}")
+
+                new_period_start_dt = None
+                new_period_end_dt = None
+
+                if invoice.lines and invoice.lines.data:
+                    target_line_item = None
+                    for line_item_iter in invoice.lines.data:
+                        line_sub_id_in_item = line_item_iter.get('parent', {}).get('subscription_item_details', {}).get('subscription')
+                        if line_sub_id_in_item == stripe_subscription_id_from_invoice:
+                            target_line_item = line_item_iter
+                            break
+                    
+                    if target_line_item and target_line_item.get('period'):
+                        period_data = target_line_item.get('period')
+                        new_period_start_ts = period_data.get('start')
+                        new_period_end_ts = period_data.get('end')
+                        if new_period_start_ts is not None: new_period_start_dt = datetime.fromtimestamp(new_period_start_ts, tz=dt_timezone.utc)
+                        if new_period_end_ts is not None: new_period_end_dt = datetime.fromtimestamp(new_period_end_ts, tz=dt_timezone.utc)
+                        print(f"WEBHOOK invoice.paid: Period from invoice line for sub '{stripe_subscription_id_from_invoice}': start='{new_period_start_dt}', end='{new_period_end_dt}'")
+
+                        # Обновляем период в UserSubscription, если он действительно установлен из инвойса
+                        # и если он новее (или еще не установлен), чем текущий в БД.
+                        # Это важно, чтобы customer.subscription.updated мог иметь приоритет, если он пришел позже с более актуальными данными.
+                        changed_period = False
+                        if new_period_start_dt:
+                            if not user_subscription.current_period_start or new_period_start_dt >= user_subscription.current_period_start: # >= чтобы обработать тот же период
+                                user_subscription.current_period_start = new_period_start_dt
+                                changed_period = True
+                        if new_period_end_dt:
+                            if not user_subscription.current_period_end or new_period_end_dt >= user_subscription.current_period_end:
+                                user_subscription.current_period_end = new_period_end_dt
+                                changed_period = True
+                        if changed_period:
+                             print(f"WEBHOOK invoice.paid: Period updated for UserSubscription id={user_subscription.id}.")
+                        else:
+                             print(f"WEBHOOK invoice.paid: Period for UserSubscription id={user_subscription.id} not updated from invoice (either no new data or existing data is more recent/same).")
+                    else:
+                         print(f"WEBHOOK invoice.paid: No relevant period data in invoice line item for subscription '{stripe_subscription_id_from_invoice}'.")
+                
+                # Если статус подписки 'incomplete' или 'past_due', и пришел оплаченный инвойс, переводим в 'active'.
+                if user_subscription.status in ['incomplete', 'past_due', 'pending_payment']:
+                    user_subscription.status = 'active'
+                    print(f"WEBHOOK invoice.paid: Set UserSubscription id={user_subscription.id} status to 'active' due to paid invoice.")
+                    # Отправка письма о подтверждении/активации, если это первая активация
+                    if billing_reason == 'subscription_create' and user_subscription.user and user_subscription.current_period_end:
+                        send_subscription_confirmation_email_task(user_subscription.id)
+                        print(f"WEBHOOK invoice.paid: Queued subscription confirmation email for UserSubscription id={user_subscription.id} (status became active after initial invoice).")
+
+
+                # Обновляем stripe_customer_id, если его нет
+                current_stripe_customer_id = invoice.get('customer')
+                if user_subscription.user and current_stripe_customer_id:
+                    if not user_subscription.stripe_customer_id:
+                        user_subscription.stripe_customer_id = current_stripe_customer_id
+                    profile, _ = Profile.objects.get_or_create(user=user_subscription.user)
+                    if not profile.stripe_customer_id:
+                        profile.stripe_customer_id = current_stripe_customer_id
+                        profile.save()
+
+                user_subscription.save()
+                print(f"WEBHOOK invoice.paid: UserSubscription id={user_subscription.id} SAVED. current_period_end: {user_subscription.current_period_end}, status: {user_subscription.status}")
+
+            except UserSubscription.DoesNotExist:
+                print(f"WEBHOOK invoice.paid WARNING: UserSubscription for stripe_subscription_id='{stripe_subscription_id_from_invoice}' NOT FOUND for invoice_id='{invoice_id}'. Race condition likely if billing_reason='subscription_create'.")
+            except Exception as e:
+                print(f"WEBHOOK invoice.paid ERROR: Failed to process for Stripe sub ID '{stripe_subscription_id_from_invoice}', invoice_id='{invoice_id}'. Error: {e}")
+                traceback.print_exc()
+                return HttpResponse(status=500)
+        else:
+            print(f"WEBHOOK invoice.paid: Skipped actual update for invoice_id='{invoice_id}'. Conditions not met: invoice_status='{invoice_status}' or determined_subscription_id='{stripe_subscription_id_from_invoice}' is None.")
+
+    # === Обработчик invoice.payment_failed ===
+    elif event['type'] == 'invoice.payment_failed':
+        invoice = event['data']['object']
+        stripe_subscription_id_from_invoice = None
+        parent_details_on_invoice = invoice.get('parent', {}).get('subscription_details', {})
+        if parent_details_on_invoice: stripe_subscription_id_from_invoice = parent_details_on_invoice.get('subscription')
+        if not stripe_subscription_id_from_invoice and invoice.lines and invoice.lines.data:
+            for line_item_iter in invoice.lines.data:
+                subscription_item_details = line_item_iter.get('parent', {}).get('subscription_item_details', {})
+                if subscription_item_details and subscription_item_details.get('subscription'):
+                    stripe_subscription_id_from_invoice = subscription_item_details.get('subscription'); break
+        
+        invoice_id = invoice.get('id')
+        print(f"WEBHOOK invoice.payment_failed: Processing for Stripe subscription ID: '{stripe_subscription_id_from_invoice}', Invoice ID: '{invoice_id}'")
+        if stripe_subscription_id_from_invoice:
+            try:
+                user_subscription = UserSubscription.objects.get(stripe_subscription_id=stripe_subscription_id_from_invoice)
+                if user_subscription.status != 'canceled':
+                    user_subscription.status = 'past_due'
+                    user_subscription.save()
+                    print(f"WEBHOOK invoice.payment_failed: UserSubscription id={user_subscription.id} status updated to 'past_due'.")
+                    if user_subscription.user:
+                        send_payment_failed_email_task(user_subscription.id)
+                        print(f"WEBHOOK invoice.payment_failed: Queued payment failed email for UserSubscription id={user_subscription.id}")
+                else:
+                    print(f"WEBHOOK invoice.payment_failed: UserSubscription id={user_subscription.id} is already 'canceled'. Not changing status.")
+            except UserSubscription.DoesNotExist:
+                 print(f"WEBHOOK invoice.payment_failed WARNING: Received event for non-existent UserSubscription with Stripe sub ID: '{stripe_subscription_id_from_invoice}'")
+            except Exception as e:
+                 print(f"WEBHOOK invoice.payment_failed ERROR: Failed to process for Stripe sub ID '{stripe_subscription_id_from_invoice}'. Error: {e}")
+                 traceback.print_exc()
+                 return HttpResponse(status=500)
+        else:
+            print(f"WEBHOOK invoice.payment_failed: Event for invoice_id='{invoice_id}' without a discernible subscription ID.")
+
+    # === Обработчик customer.subscription.deleted ===
     elif event['type'] == 'customer.subscription.deleted':
         subscription_stripe_obj = event['data']['object']
         stripe_subscription_id = subscription_stripe_obj.id
-
-        print(f"Processing customer.subscription.deleted for Stripe subscription ID: {stripe_subscription_id}")
-
+        print(f"WEBHOOK customer.subscription.deleted: Processing for Stripe subscription ID: '{stripe_subscription_id}'")
         try:
             user_subscription = UserSubscription.objects.get(stripe_subscription_id=stripe_subscription_id)
-            user_subscription.status = 'canceled' # Подписка удалена = отменена
-            # Можно также обнулить current_period_end или установить дату отмены
-            user_subscription.canceled_at = timezone.now() # Если у вас есть такое поле
+            original_local_status = user_subscription.status
+            user_subscription.status = 'canceled'
+            # if hasattr(user_subscription, 'canceled_at') and user_subscription.canceled_at is None:
+            #    user_subscription.canceled_at = timezone.now() # django.utils.timezone
             user_subscription.save()
-            print(f"UserSubscription {user_subscription.id} status set to 'canceled' due to customer.subscription.deleted.")
-            if user_subscription.user:
+            print(f"WEBHOOK customer.subscription.deleted: UserSubscription id={user_subscription.id} status set to 'canceled'.")
+            if original_local_status != 'canceled' and user_subscription.user:
                 send_subscription_canceled_email_task(user_subscription.id)
-
+                print(f"WEBHOOK customer.subscription.deleted: Queued subscription canceled email for UserSubscription id={user_subscription.id}")
         except UserSubscription.DoesNotExist:
-            print(f"Webhook Warning: Received customer.subscription.deleted for non-existent UserSubscription with Stripe sub ID: {stripe_subscription_id}")
+            print(f"WEBHOOK customer.subscription.deleted WARNING: Received event for non-existent UserSubscription with Stripe sub ID: '{stripe_subscription_id}'")
         except Exception as e:
-            print(f"Webhook Error: Failed to process customer.subscription.deleted for Stripe sub ID {stripe_subscription_id}. Error: {e}")
-
-        return HttpResponse(status=200)
+            print(f"WEBHOOK customer.subscription.deleted ERROR: Failed to process for Stripe sub ID '{stripe_subscription_id}'. Error: {e}")
+            traceback.print_exc()
+            return HttpResponse(status=500)
     
-    else: # event['type'] != 'checkout.session.completed'
-        print(f"Unhandled event type: {event['type']}")
-        return HttpResponse(status=200)
+    else: # Другие, не обрабатываемые типы событий
+        print(f"WEBHOOK: Unhandled event type: {event['type']}")
+    
+    return HttpResponse(status=200)

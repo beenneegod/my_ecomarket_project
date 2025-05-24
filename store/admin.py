@@ -4,7 +4,7 @@ from django.contrib import admin
 from .models import (Category, Product, Order, OrderItem, Profile, SubscriptionBoxType, UserSubscription)
 from import_export.admin import ImportExportModelAdmin
 from .admin_resources import CategoryResource, ProductResource
-
+from django.utils.safestring import mark_safe
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -18,13 +18,26 @@ class CategoryAdmin(admin.ModelAdmin):
 class ProductAdmin(ImportExportModelAdmin):
     # Добавляем 'category' в отображаемые поля и поля для редактирования/фильтрации
     resource_class = ProductResource
-    list_display = ('name', 'category', 'price', 'stock', 'available', 'created_at', 'updated_at')
+    list_display = ('name', 'thumbnail_preview', 'category', 'price', 'stock', 'available', 'created_at', 'updated_at')
     list_filter = ('available', 'category', 'created_at', 'updated_at') # Добавляем фильтр по категории
     list_editable = ('price', 'stock', 'available') # Поле category лучше не делать редактируемым в списке
     search_fields = ('name', 'description')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('thumbnail_display', 'created_at', 'updated_at')
     prepopulated_fields = {'slug': ('name',)}
 
+
+    @admin.display(description='Obrazek') # Или "Изображение" / "Image"
+    def thumbnail_preview(self, obj):
+        if obj.image:
+            return mark_safe(f'<img src="{obj.image.url}" style="max-height: 50px; max-width: 50px;" />')
+        return "-"
+    thumbnail_preview.short_description = 'Miniatura'
+
+    @admin.display(description='Aktualny obrazek') # Для страницы редактирования
+    def thumbnail_display(self, obj):
+        if obj.image:
+            return mark_safe(f'<img src="{obj.image.url}" style="max-height: 200px; max-width: 200px;" />')
+        return "Brak obrazka"
 class OrderItemInline(admin.TabularInline):
     """
     Встраиваемое отображение элементов заказа на странице заказа.
@@ -71,32 +84,31 @@ class OrderAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
-    # Опционально: Запрещаем удаление оплаченных заказов
-    # def has_delete_permission(self, request, obj=None):
-    #     if obj and obj.paid:
-    #         return False # Нельзя удалять оплаченный заказ
-    #     return super().has_delete_permission(request, obj)
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.paid:
+            return False # Нельзя удалять оплаченный заказ
+        return super().has_delete_permission(request, obj)
 
     # Используем существующий метод get_full_name из модели для отображения
-    @admin.display(description='Клиент')
+    @admin.display(description='Klient')
     def get_full_name(self, obj):
         if obj.user:
              # Если есть пользователь, берем его полное имя или username
              return obj.user.get_full_name() or obj.user.username
         # Если пользователя нет (анонимный заказ), берем из полей заказа
-        return f"{obj.first_name} {obj.last_name}" if obj.first_name else '(Анонимно)'
+        return f"{obj.first_name} {obj.last_name}" if obj.first_name else '(Anonymous)'
 
 
-    @admin.display(description='Общая стоимость')
+    @admin.display(description='Suma zamówienia')
     def get_total_cost_display(self, obj):
         return f"{obj.get_total_cost()} PLN"
 
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'avatar', 'bio_short', 'stripe_customer_id')
+    list_display = ('user', 'avatar_preview', 'bio_short', 'stripe_customer_id')
     search_fields = ('user__username', 'user__email', 'stripe_customer_id')
-    readonly_fields = ('user', 'stripe_customer_id')
+    readonly_fields = ('user', 'avatar_display', 'stripe_customer_id')
 
     @admin.display(description='Krótkie Bio')
     def bio_short(self, obj):
@@ -104,6 +116,18 @@ class ProfileAdmin(admin.ModelAdmin):
             return obj.bio[:50] + '...' if len(obj.bio) > 50 else obj.bio
         return "-"
     
+    @admin.display(description='Awatar') # Или "Аватар" / "Avatar"
+    def avatar_preview(self, obj):
+        if obj.avatar and hasattr(obj.avatar, 'url') and obj.avatar.url:
+            return mark_safe(f'<img src="{obj.avatar.url}" style="max-height: 40px; max-width: 40px; border-radius: 50%;" />')
+        return "-"
+    avatar_preview.short_description = 'Miniatura'
+    
+    @admin.display(description='Aktualny awatar')
+    def avatar_display(self, obj):
+        if obj.avatar and hasattr(obj.avatar, 'url') and obj.avatar.url:
+            return mark_safe(f'<img src="{obj.avatar.url}" style="max-height: 150px; max-width: 150px; border-radius: 10px;" />')
+        return "Brak awatara"
 
 
 @admin.register(SubscriptionBoxType)

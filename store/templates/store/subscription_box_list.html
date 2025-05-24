@@ -46,10 +46,15 @@
 
                             {# Радиокнопка для выбора этого бокса #}
                             <div class="form-check mt-auto pt-3 border-top">
-                                <input class="form-check-input visually-hidden" type="radio" name="{{ form.box_type.html_name }}" value="{{ box.id }}" id="box-{{ box.id }}" {% if form.box_type.value == box.id|stringformat:"s" %}checked{% endif %} required>
-                                <label class="form-check-label btn btn-outline-success w-100" for="box-{{ box.id }}">
-                                    Wybieram ten box
-                                </label>
+                                {% if box.id in user_active_subscription_box_ids %}
+                                    <span class="badge bg-success p-2 w-100"><i class="bi bi-check-circle-fill"></i> Już subskrybujesz</span>
+                                    <a href="{% url 'store:order_history' %}" class="btn btn-outline-info btn-sm w-100 mt-2">Zarządzaj</a>
+                                {% else %}
+                                    <input class="form-check-input visually-hidden" type="radio" name="{{ form.box_type.html_name }}" value="{{ box.id }}" id="box-{{ box.id }}" {% if form.box_type.value == box.id|stringformat:"s" %}checked{% endif %} required>
+                                    <label class="form-check-label btn btn-outline-success w-100" for="box-{{ box.id }}">
+                                        Wybieram ten box
+                                    </label>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

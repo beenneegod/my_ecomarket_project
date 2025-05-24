@@ -263,7 +263,18 @@ def process_subscription_checkout(request, box_type_id):
     except SubscriptionBoxType.DoesNotExist:
         messages.error(request, "Wybrany typ boxa jest niedostępny.")
         return redirect('store:subscription_box_list')
+    
+    existing_active_subscriptions = UserSubscription.objects.filter(
+        user=request.user,
+        box_type=selected_box,
+        status__in=['active', 'trialing', 'past_due']
+    ).exists()
 
+    if existing_active_subscriptions:
+        messages.warning(request, f"Posiadasz już aktywną subskrypcję na '{selected_box.name}'. Możesz nią zarządzać w historii zamówień.")
+        # Перенаправляем пользователя на страницу истории заказов/подписок
+        return redirect('store:order_history')
+    
     if not selected_box.stripe_price_id:
         messages.error(request, "Dla tego boxa nie skonfigurowano planu płatności. Prosimy o kontakt.")
         return redirect('store:subscription_box_list')
@@ -288,16 +299,19 @@ def process_subscription_checkout(request, box_type_id):
         'metadata': {
             'django_user_id': str(request.user.id),
             'subscription_box_type_id': str(selected_box.id)
+        },
+        'subscription_data': {
+            'metadata': {
+                'django_user_id': str(request.user.id),
+                'subscription_box_type_id': str(selected_box.id)
+            }
         }
     }
 
     if stripe_customer_id:
         checkout_session_params['customer'] = stripe_customer_id
     else:
-        # Если у пользователя еще нет Stripe Customer ID, Stripe создаст его.
-        # Мы можем передать email, чтобы Stripe связал или создал клиента.
         checkout_session_params['customer_email'] = request.user.email
-        # Или можно создать клиента в Stripe заранее и сохранить его ID
         # try:
         #     customer = stripe.Customer.create(email=request.user.email, name=request.user.get_full_name())
         #     profile.stripe_customer_id = customer.id
@@ -323,6 +337,13 @@ def process_subscription_checkout(request, box_type_id):
 def subscription_box_list(request):
     active_boxes = SubscriptionBoxType.objects.filter(is_active=True)
 
+    user_active_subscription_box_ids = []
+    if request.user.is_authenticated:
+        user_active_subscription_box_ids = list(UserSubscription.objects.filter(
+            user=request.user,
+            status__in=['active', 'trialing', 'past_due']
+        ).values_list('box_type_id', flat=True))
+
     if request.method == 'POST':
         if not request.user.is_authenticated:
             messages.info(request, "Musisz być zalogowany, aby zasubskrybować box.")
@@ -340,7 +361,8 @@ def subscription_box_list(request):
     context = {
         'subscription_boxes': active_boxes,
         'form': form,
-        'page_title': 'Wybierz Swój Eko Box Subskrypcyjny'
+        'page_title': 'Wybierz Swój Eko Box Subskrypcyjny',
+        'user_active_subscription_box_ids': user_active_subscription_box_ids,
     }
     return render(request, 'store/subscription_box_list.html', context)
 

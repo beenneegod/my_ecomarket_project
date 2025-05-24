@@ -35,17 +35,25 @@
                 <div class="col-sm-6">
                     <label for="{{ form.first_name.id_for_label }}" class="form-label">{{ form.first_name.label }}</label>
                     {{ form.first_name }}
-                    <div class="invalid-feedback">
-                        Proszę podać swoje imię. 
-                    </div>
+                    {% if form.first_name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.first_name.errors %} {{ error }} {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="invalid-feedback">Proszę podać swoje imię.</div>
+                    {% endif %}
                 </div>
 
                 <div class="col-sm-6">
                     <label for="{{ form.last_name.id_for_label }}" class="form-label">{{ form.last_name.label }}</label>
                     {{ form.last_name }}
-                    <div class="invalid-feedback">
-                        Proszę podać swoje nazwisko. 
-                    </div>
+                    {% if form.last_name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.last_name.errors %} {{ error }} {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="invalid-feedback">Proszę podać swoje nazwisko.</div>
+                    {% endif %}
                 </div>
 
                 <div class="col-12">
@@ -59,38 +67,60 @@
                 <div class="col-12">
                     <label for="{{ form.address_line_1.id_for_label }}" class="form-label">{{ form.address_line_1.label }}</label>
                     {{ form.address_line_1 }}
-                    <div class="invalid-feedback">
-                        Proszę podać swój adres.
-                    </div>
+                    <div class="form-text">Proszę podać pełny adres, w tym ulicę i numer domu/mieszkania.</div>
+                    {% if form.address_line_1.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.address_line_1.errors %} {{ error }} {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
 
                 <div class="col-12">
                     <label for="{{ form.address_line_2.id_for_label }}" class="form-label">{{ form.address_line_2.label }} <span class="text-body-secondary">(Opcjonalnie)</span></label> 
                     {{ form.address_line_2 }}
+                    <div class="form-text">Możesz podać dodatkowe informacje o adresie, np. kod dostępu do budynku.</div>
+                    {% if form.address_line_2.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.address_line_2.errors %} {{ error }} {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
 
                 <div class="col-md-5">
                     <label for="{{ form.postal_code.id_for_label }}" class="form-label">{{ form.postal_code.label }}</label>
                     {{ form.postal_code }}
-                    <div class="invalid-feedback">
-                        Proszę podać kod pocztowy. 
-                    </div>
+                    
+                    {% if form.postal_code.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.postal_code.errors %} {{ error }} {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="invalid-feedback">Proszę podać kod pocztowy.</div>
+                    {% endif %}
                 </div>
 
                 <div class="col-md-4">
                     <label for="{{ form.city.id_for_label }}" class="form-label">{{ form.city.label }}</label>
                     {{ form.city }}
-                    <div class="invalid-feedback">
-                        Proszę podać miasto. 
-                    </div>
+                    {% if form.city.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.city.errors %} {{ error }} {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="invalid-feedback">Proszę podać miasto.</div>
+                    {% endif %}
                 </div>
 
                 <div class="col-md-3">
                     <label for="{{ form.country.id_for_label }}" class="form-label">{{ form.country.label }}</label>
                     {{ form.country }}
-                    <div class="invalid-feedback">
-                        Proszę wybrać kraj. 
-                    </div>
+                    {% if form.country.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.country.errors %} {{ error }} {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="invalid-feedback">Proszę wybrać kraj.</div>
+                    {% endif %}
                 </div>
             </div>
 

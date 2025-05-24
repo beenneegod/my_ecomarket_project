@@ -79,7 +79,7 @@ a:hover {
     font-family: var(--font-secondary);
     font-weight: 700; /* Bold Montserrat */
     font-size: 1.75rem;
-    color: var(--color-primary) !important; /* !important, чтобы переопределить Bootstrap */
+    color: var(--color-primary) !important;
 }
 .navbar-brand:hover {
     color: var(--color-primary-light) !important;
