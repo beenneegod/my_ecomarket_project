@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Twoja subskrypcja została anulowana - EcoMarket</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.5; color: #333; }
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        h2 { color: #333; }
+        .footer { margin-top: 20px; font-size: 0.9em; color: #777; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Subskrypcja "{{ user_subscription.box_type.name }}" anulowana</h2>
+        <p>Witaj {% if user_subscription.user %}{{ user_subscription.user.get_full_name|default:user_subscription.user.username }}{% else %}Kliencie{% endif %},</p>
+        <p>Z przykrością informujemy, że Twoja subskrypcja na <strong>"{{ user_subscription.box_type.name }}"</strong> została anulowana.</p>
+        <p>ID Twojej subskrypcji Stripe: <strong>{{ user_subscription.stripe_subscription_id }}</strong>.</p>
+        <p>Aktualny status Twojej subskrypcji to: <strong>{{ user_subscription.get_status_display }}</strong>.</p>
+        {% if user_subscription.current_period_end %}
+            <p>Data, do której subskrypcja była/jest aktywna (koniec opłaconego okresu): {{ user_subscription.current_period_end|date:"d.m.Y" }}</p>
+        {% endif %}
+        <p>Jeśli uważasz, że anulowanie nastąpiło przez pomyłkę, lub jeśli masz jakiekolwiek pytania, prosimy o kontakt z naszym działem obsługi klienta.</p>
+        <p>Dziękujemy za czas, który spędziłeś z EcoMarket. Mamy nadzieję, że wrócisz do nas w przyszłości!</p>
+        <p class="footer">Z pozdrowieniami,<br>Zespół EcoMarket</p>
+    </div>
+</body>
+</html>

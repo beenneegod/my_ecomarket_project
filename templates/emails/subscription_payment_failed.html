@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Problem z płatnością za subskrypcję - EcoMarket</title>
+    <style> body { font-family: sans-serif; line-height: 1.5; color: #333; }
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .details { margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 4px;}
+        .details p { margin: 5px 0; }
+        .footer { margin-top: 20px; font-size: 0.9em; color: #777; text-align: center; } </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Problem z płatnością za subskrypcję "{{ user_subscription.box_type.name }}"</h2>
+        <p>Witaj {% if user_subscription.user %}{{ user_subscription.user.get_full_name|default:user_subscription.user.username }}{% else %}Kliencie{% endif %},</p>
+        <p>Niestety, napotkaliśmy problem podczas próby przetworzenia płatności za Twoją subskrypcję na <strong>"{{ user_subscription.box_type.name }}"</strong>.</p>
+        <p>ID Twojej subskrypcji Stripe: <strong>{{ user_subscription.stripe_subscription_id }}</strong>.</p>
+        <p>Obecny status Twojej subskrypcji to: <strong>{{ user_subscription.get_status_display }}</strong>.</p>
+        <p>Prosimy o sprawdzenie i zaktualizowanie swoich danych płatniczych. Możesz to zrobić poprzez portal klienta Stripe (jeśli zintegrowany) lub kontaktując się z naszym wsparciem.</p>
+        <p>Jeśli płatność została już pomyślnie dokonana lub problem został rozwiązany, prosimy zignorować tę wiadomość.</p>
+        <p class="footer">Z pozdrowieniami,<br>Zespół EcoMarket</p>
+    </div>
+</body>
+</html>

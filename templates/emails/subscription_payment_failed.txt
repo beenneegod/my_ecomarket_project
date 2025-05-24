@@ -1,0 +1,17 @@
+Witaj {{ user_subscription.user.get_full_name|default:user_subscription.user.username }},
+
+Informujemy o problemie z przetworzeniem płatności za Twoją subskrypcję "{{ user_subscription.box_type.name }}" w EcoMarket.
+
+Szczegóły subskrypcji:
+--------------------
+Nazwa Boxa: {{ user_subscription.box_type.name }}
+ID Subskrypcji Stripe: {{ user_subscription.stripe_subscription_id }}
+Status: {{ user_subscription.get_status_display }}
+--------------------
+
+Prosimy o jak najszybsze zaktualizowanie danych płatniczych w panelu Stripe (link do zarządzania płatnościami pojawi się wkrótce) lub skontaktowanie się z nami, aby uniknąć przerwania subskrypcji.
+
+Jeśli płatność została już uregulowana, zignoruj tę wiadomość.
+
+Dziękujemy,
+Zespół EcoMarket
