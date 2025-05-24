@@ -3,6 +3,7 @@
 from django.db import models
 from django.conf import settings # Для ссылки на модель пользователя
 from django.urls import reverse
+from django.utils.text import slugify
 
 class Category(models.Model):
     """Модель категории товаров"""
@@ -30,8 +31,8 @@ class Product(models.Model):
                                  on_delete=models.SET_NULL, # При удалении категории, у товара поле category станет NULL
                                  null=True, # Разрешаем NULL в БД (товар может быть без категории)
                                  blank=True, # Разрешаем оставлять поле пустым в формах (админке)
-                                 verbose_name="Категория")
-    name = models.CharField(max_length=255, verbose_name="Название")
+                                 verbose_name="Kategoria")
+    name = models.CharField(max_length=255, verbose_name="Nazwa")
     slug = models.SlugField(max_length=255,
                             unique=True,       # Слаги должны быть уникальными
                             db_index=True,     # Индекс для быстрого поиска по слагу
@@ -46,7 +47,6 @@ class Product(models.Model):
     available = models.BooleanField(default=True, verbose_name="Доступен") # Флаг доступности товара
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания") # Дата добавления (автоматически при создании)
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления") # Дата последнего обновления (автоматически при сохранении)
-
     class Meta:
         verbose_name = "Товар"
         verbose_name_plural = "Товары"
@@ -58,6 +58,28 @@ class Product(models.Model):
     def get_absolute_url(self):
         """Возвращает канонический URL для страницы деталей товара."""
         return reverse('store:product_detail', args=[self.slug])
+    
+    def save(self, *args, **kwargs):
+        if not self.slug and self.name: # Генерируем слаг, только если он не установлен и есть имя
+            self.slug = slugify(self.name)
+            # Начальная проверка на уникальность и добавление суффикса, если необходимо
+            # Это базовая реализация, для высокой нагрузки может потребоваться более сложная логика
+            original_slug = self.slug
+            counter = 1
+            # Проверяем, существует ли уже такой слаг (исключая текущий объект, если он уже сохранен)
+            queryset = Product.objects.filter(slug=self.slug)
+            if self.pk: # Если объект уже существует в БД
+                queryset = queryset.exclude(pk=self.pk)
+
+            while queryset.exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
+                # Обновляем queryset для следующей проверки
+                queryset = Product.objects.filter(slug=self.slug)
+                if self.pk:
+                    queryset = queryset.exclude(pk=self.pk)
+
+        super().save(*args, **kwargs)
 
 class Order(models.Model):
     """Модель заказа"""

@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(error => {
             console.error('Fetch Error during delete:', error);
             Toastify({
-                text: `Błąd usunięcia produktu: ${error.message}`,
+                text: 'Wystąpił błąd podczas usuwania produktu. Spróbuj ponownie.',
                 duration: 3000,
                 gravity: "top",
                 position: "right",

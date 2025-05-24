@@ -1,66 +1,60 @@
-# test_stripe.py
-import os
-import stripe
-import dotenv
-from decimal import Decimal
+# payments/tests.py
+from django.test import TestCase, Client
+from django.urls import reverse
+from unittest.mock import patch, MagicMock # Для мокирования Stripe API
+from store.models import Product, Category # Для создания тестовых продуктов в корзине
+from store.cart import Cart # Для работы с корзиной
+from django.conf import settings
 
-def main_test_logic(): # Обернем основную логику в функцию
-    print("Loading .env file...")
-    dotenv.load_dotenv()
+class PaymentCheckoutTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.category = Category.objects.create(name="Gadgets", slug="gadgets")
+        self.product = Product.objects.create(
+            name="Test Gadget", slug="test-gadget", category=self.category, price="100.00", stock=10
+        )
+        self.checkout_url = reverse('payments:checkout')
 
-    print("Setting Stripe API key...")
-    stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+        # Добавим товар в корзину для теста
+        cart = Cart(self.client.session) # Получаем корзину через self.client.session
+        cart.add(product=self.product, quantity=1)
+        self.client.session.save() # Важно сохранить сессию после изменений
 
-    if not stripe.api_key:
-        print("!!! Ошибка: Не найден STRIPE_SECRET_KEY в .env файле.")
-        exit()
+    @patch('stripe.checkout.Session.create') # Мокируем метод Stripe API
+    def test_checkout_and_payment_post_success(self, mock_stripe_session_create):
+        # Настраиваем, что будет возвращать мок-объект Stripe
+        mock_session = MagicMock()
+        mock_session.id = 'cs_test_123'
+        mock_session.url = 'https://stripe.com/test_payment_url'
+        mock_stripe_session_create.return_value = mock_session
 
-    print("Attempting to create Stripe Checkout session...")
-
-# Минимальные данные для создания сессии
-    session_data = {
-            'mode': 'payment',
-            'success_url': 'https://example.com/success?session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url': 'https://example.com/cancel',
-            'line_items': [
-                {
-                    'price_data': {
-                        'unit_amount': int(Decimal('15.99') * 100),
-                        'currency': 'pln',
-                        'product_data': {
-                            'name': 'Minimal Test Product ASCII',
-                            'metadata': {'product_db_id': 'test1'}
-                        },
-                    },
-                    'quantity': 1,
-                }
-            ],
+        # Данные формы для POST-запроса
+        form_data = {
+            'first_name': 'Test',
+            'last_name': 'User',
+            'email': 'test@example.com',
+            'address_line_1': '123 Main St',
+            'postal_code': '00-000',
+            'city': 'Test City',
+            'country': 'Polska'
         }
-    try:
-        session = stripe.checkout.Session.create(**session_data)
-        print("\n--- УСПЕХ! ---")
-        print(f"Session ID: {session.id}")
-        print(f"Session URL: {session.url}")
 
-    except stripe.error.StripeError as e:
-        print("\n--- ОШИБКА Stripe API ---")
-        print(f"Stripe Error Type: {type(e)}")
-        print(f"Error Message: {e}")
-        # Попробуем вывести детали, если это ошибка API
-        if hasattr(e, 'http_body') and e.http_body:
-            print(f"HTTP Body: {e.http_body}")
-        if hasattr(e, 'json_body') and e.json_body:
-            print(f"JSON Body: {e.json_body}")
+        response = self.client.post(self.checkout_url, form_data)
 
-    except Exception as e:
-        print("\n--- ОБЩАЯ ОШИБКА Python ---")
-        print(f"Error Type: {type(e)}")
-        print(f"Error Message: {e}")
-        import traceback
-        print("\nTraceback:")
-        traceback.print_exc() # Печатаем полный трейсбек
+        # Проверяем, что был вызван метод Stripe API
+        mock_stripe_session_create.assert_called_once()
+        called_args, called_kwargs = mock_stripe_session_create.call_args
+        
+        # Проверяем некоторые параметры, переданные в Stripe
+        self.assertEqual(called_kwargs['mode'], 'payment')
+        self.assertIn('line_items', called_kwargs)
+        self.assertEqual(len(called_kwargs['line_items']), 1)
+        self.assertEqual(called_kwargs['line_items'][0]['price_data']['product_data']['name'], self.product.name)
+        self.assertEqual(called_kwargs['metadata']['email'], 'test@example.com') # Проверяем, что email передан (в примере кода Stripe это customer_email)
+                                                                                # или metadata, если вы так настроили
 
-# Этот блок гарантирует, что main_test_logic() вызовется только при прямом запуске файла
-if __name__ == "__main__":
-    main_test_logic()
+        # Проверяем, что произошло перенаправление на URL Stripe
+        self.assertEqual(response.status_code, 303) # 303 See Other - стандарт для редиректа после POST
+        self.assertEqual(response.url, mock_session.url)
 
+        print("Тест test_checkout_and_payment_post_success пройден.")

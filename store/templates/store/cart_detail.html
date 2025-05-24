@@ -99,9 +99,9 @@
 
     {% else %}
         <div class="alert alert-info" role="alert"> {# Используем alert Bootstrap #}
-            Ваша корзина пуста.
+            Twój koszyk jest pusty. Dodaj produkty, aby rozpocząć zakupy.
         </div>
-        <p><a href="{% url 'store:product_list' %}" class="btn btn-primary"><i class="bi bi-cart-plus"></i> Начать покупки</a></p>
+        <p><a href="{% url 'store:product_list' %}" class="btn btn-primary"><i class="bi bi-cart-plus"></i> Rozpocznij zakupy</a></p>
     {% endif %}
 
     {# Подключаем JS для корзины (если еще не подключен глобально в base.html или нужен специфичный) #}
