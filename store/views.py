@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse # Для AJAX ответов
 from django.views.decorators.csrf import ensure_csrf_cookie # Импортируем декоратор
-from .models import Product, Order, Category, Profile, SubscriptionBoxType # Импортируем модели Product и Order
+from .models import Product, Order, Category, Profile, SubscriptionBoxType, UserSubscription # Импортируем модели Product и Order
 from .cart import Cart # Импортируем наш класс Cart
 from decimal import Decimal
 from django.contrib.auth import login # Функция для автоматического входа пользователя
@@ -110,9 +110,11 @@ def order_history(request):
     # OrderItem и связанные с ними Product одним-двумя запросами, вместо
     # множества запросов внутри цикла в шаблоне.
     orders = Order.objects.filter(user=request.user).prefetch_related('items__product').order_by('-created_at')
-
+    user_subscriptions = UserSubscription.objects.filter(user=request.user).select_related('box_type').order_by('-start_date')
     context = {
-        'orders': orders
+        'orders': orders,
+        'user_subscriptions': user_subscriptions,
+        'page_title': 'Historia Zamówień i Subskrypcji'
     }
     return render(request, 'store/order_history.html', context)
 
@@ -363,3 +365,54 @@ def subscription_success(request):
 def subscription_canceled(request):
     messages.warning(request, "Proces subskrypcji został anulowany.")
     return render(request, 'store/subscription_feedback.html', {'feedback_title': "Subskrypcja Anulowana", 'feedback_message': "Możesz spróbować ponownie w dowolnym momencie."})
+
+
+
+@login_required
+def cancel_subscription(request, subscription_id):
+    """
+    Обрабатывает запрос пользователя на отмену подписки (в конце периода).
+    """
+    # Находим локальную запись о подписке
+    user_subscription = get_object_or_404(UserSubscription, id=subscription_id, user=request.user)
+
+    if not user_subscription.stripe_subscription_id:
+        messages.error(request, "Для этой подписки отсутствует ID в системе Stripe. Обратитесь в поддержку.")
+        return redirect('store:order_history')
+
+    if user_subscription.status == 'canceled' or user_subscription.cancel_at_period_end:
+        messages.info(request, f"Подписка на '{user_subscription.box_type.name}' уже отменена или запланирована к отмене.")
+        return redirect('store:order_history')
+
+    if request.method == 'POST':
+        try:
+            # Устанавливаем флаг отмены в конце периода в Stripe
+            # stripe.api_key = settings.STRIPE_SECRET_KEY # Уже должно быть установлено глобально при импорте stripe
+            stripe.Subscription.modify(
+                user_subscription.stripe_subscription_id,
+                cancel_at_period_end=True
+            )
+
+            # Обновляем локальную запись (флаг cancel_at_period_end обновится через вебхук customer.subscription.updated)
+            # Но можно и сразу установить для немедленной обратной связи в UI,
+            # хотя вебхук должен быть основным источником правды.
+            # user_subscription.cancel_at_period_end = True
+            # user_subscription.save(update_fields=['cancel_at_period_end'])
+
+            messages.success(request, f"Ваша подписка на '{user_subscription.box_type.name}' будет отменена в конце текущего расчетного периода.")
+            print(f"User {request.user.id} requested to cancel Stripe subscription {user_subscription.stripe_subscription_id} at period end.")
+
+        except stripe.error.StripeError as e:
+            messages.error(request, f"Произошла ошибка при отмене подписки в Stripe: {e}")
+            print(f"StripeError cancelling subscription {user_subscription.stripe_subscription_id}: {e}")
+        except Exception as e:
+            messages.error(request, f"Произошла непредвиденная ошибка: {e}")
+            print(f"Error cancelling subscription {user_subscription.stripe_subscription_id}: {e}")
+
+        return redirect('store:order_history')
+    else:
+        # Для GET-запроса можно показать страницу подтверждения отмены,
+        # но для простоты мы будем использовать POST-запрос напрямую с кнопки.
+        # Если нужна страница подтверждения, здесь нужно будет рендерить шаблон.
+        messages.warning(request, "Для отмены подписки используйте соответствующую кнопку.")
+        return redirect('store:order_history')
