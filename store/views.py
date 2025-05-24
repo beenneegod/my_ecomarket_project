@@ -276,7 +276,7 @@ def process_subscription_checkout(request, box_type_id):
 
     checkout_session_params = {
         'mode': 'subscription',
-        'payment_method_types': ['card', 'p24'], # Добавь p24 или другие нужные методы
+        'payment_method_types': ['card'], # Добавь p24 или другие нужные методы
         'line_items': [{
             'price': selected_box.stripe_price_id,
             'quantity': 1,
@@ -341,6 +341,18 @@ def subscription_box_list(request):
         'page_title': 'Wybierz Swój Eko Box Subskrypcyjny'
     }
     return render(request, 'store/subscription_box_list.html', context)
+
+
+def subscription_box_detail(request, slug):
+    """
+    Представление для отображения детальной страницы типа подписочного бокса.
+    """
+    box_type = get_object_or_404(SubscriptionBoxType, slug=slug, is_active=True)
+    context = {
+        'box_type': box_type,
+        'page_title': box_type.name # Для тега <title>
+    }
+    return render(request, 'store/subscription_box_detail.html', context)
     
 
 def subscription_success(request):

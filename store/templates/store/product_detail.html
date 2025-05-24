@@ -33,7 +33,7 @@
                             <input type="number" id="quantity-{{ product.id }}" name="quantity" value="1" min="1" max="{{ product.stock }}" class="form-control quantity-input-detail" style="width: 80px;">
                         </div>
                         <div class="col-auto">
-                            <button class="btn btn-primary add-to-cart-btn" data-product-id="{{ product.id }}">
+                            <button class="btn btn-primary add-to-cart-btn" data-product-id="{{ product.id }}" data-add-url="{% url 'store:cart_add' product_id=product.id %}">
                                 <i class="bi bi-cart-plus"></i> Dodaj do koszyka
                             </button>
                         </div>

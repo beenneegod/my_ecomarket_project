@@ -34,7 +34,9 @@
                             <img src="{% static 'img/placeholder_box.png' %}" class="card-img-top" alt="Domyślny obrazek boxa" style="height: 220px; object-fit: cover; background-color: #f0f0f0;">
                         {% endif %}
                         <div class="card-body d-flex flex-column p-4">
-                            <h4 class="card-title h5 fw-bold mb-2">{{ box.name }}</h4>
+                            <h4 class="card-title h5 fw-bold mb-2">
+                                <a href="{{ box.get_absolute_url }}" class="text-decoration-none text-dark stretched-link-style-issue">{{ box.name }}</a>
+                            </h4>
                             <p class="card-text text-muted small mb-3">{{ box.description|truncatewords:20 }}</p>
 
                             <div class="mb-3">
@@ -45,7 +47,7 @@
                             {# Радиокнопка для выбора этого бокса #}
                             <div class="form-check mt-auto pt-3 border-top">
                                 <input class="form-check-input visually-hidden" type="radio" name="{{ form.box_type.html_name }}" value="{{ box.id }}" id="box-{{ box.id }}" {% if form.box_type.value == box.id|stringformat:"s" %}checked{% endif %} required>
-                                <label class="form-check-label stretched-link btn btn-outline-success w-100" for="box-{{ box.id }}">
+                                <label class="form-check-label btn btn-outline-success w-100" for="box-{{ box.id }}">
                                     Wybieram ten box
                                 </label>
                             </div>

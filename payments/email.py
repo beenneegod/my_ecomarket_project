@@ -28,7 +28,6 @@ def send_order_confirmation_email(order: Order):
         plain_message = render_to_string('emails/order_confirmation.txt', context)
         # Опционально: Рендерим HTML версию письма (создадим шаблон позже)
         html_message = render_to_string('emails/order_confirmation.html', context)
-        html_message = None # Пока без HTML версии
 
         send_mail(
             subject,

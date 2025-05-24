@@ -12,8 +12,10 @@
         <a href="{% url 'store:product_detail' product.slug %}" class="text-decoration-none">{{ product.name }}</a>
         </h5>
         <p class="card-text mt-auto"><strong>{{ product.price }} PLN</strong></p>
-        <button class="btn btn-primary add-to-cart-btn mt-2" data-product-id="{{ product.id }}">
-            Dodaj do koszyka
+        <button class="btn btn-primary add-to-cart-btn mt-2"
+                data-product-id="{{ product.id }}"
+                data-add-url="{% url 'store:cart_add' product_id=product.id %}">
+            Dodaj do koszyka  {# Текст без тега trans #}
         </button>
     </div>
 </div>

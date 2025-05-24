@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    {{ page_title|default:box_type.name }} - EcoMarket
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5" data-aos="fade-in">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <div class="card shadow-lg">
+                <div class="row g-0">
+                    <div class="col-md-5">
+                        {% if box_type.image %}
+                            <img src="{{ box_type.image.url }}" class="img-fluid rounded-start" alt="{{ box_type.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            <img src="{% static 'img/placeholder_box.png' %}" class="img-fluid rounded-start" alt="Domyślny obrazek boxa" style="width: 100%; height: 100%; object-fit: cover; background-color: #f0f0f0;">
+                        {% endif %}
+                    </div>
+                    <div class="col-md-7 d-flex flex-column">
+                        <div class="card-body p-4 p-md-5">
+                            <h1 class="card-title display-5 fw-bold mb-3">{{ box_type.name }}</h1>
+                            
+                            <div class="mb-4">
+                                <span class="display-4 fw-bold text-primary">{{ box_type.price }} PLN</span>
+                                <span class="text-muted fs-5">/ {{ box_type.get_billing_period_display }}</span>
+                            </div>
+
+                            <p class="card-text lead mb-4">{{ box_type.description }}</p>
+                            
+                            <h5 class="fw-medium">Co może znaleźć się w Twoim Eko Boxie?</h5>
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Świeże, sezonowe warzywa i owoce</li>
+                                <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Produkty od lokalnych rolników</li>
+                                <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Ekologiczne przekąski i napoje</li>
+                                <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Zdrowe dodatki do codziennej diety</li>
+                                <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Niespodzianki w każdym pudełku!</li>
+                                </ul>
+
+                            {% if box_type.is_active %}
+                                {% if user.is_authenticated %}
+                                    <form action="{% url 'store:process_subscription_checkout' box_type_id=box_type.id %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                                            <i class="bi bi-box-arrow-in-right me-2"></i> Subskrybuj ten Box
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary btn-lg w-100">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i> Zaloguj się, aby subskrybować
+                                    </a>
+                                {% endif %}
+                            {% else %}
+                                <div class="alert alert-warning" role="alert">
+                                    Ten Eko Box jest obecnie niedostępny.
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent border-0 p-4 p-md-5 pt-0">
+                            <a href="{% url 'store:subscription_box_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Wróć do listy Eko Boxów
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
