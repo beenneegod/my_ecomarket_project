@@ -5,14 +5,14 @@ import stripe # Импортируем библиотеку Stripe
 from decimal import Decimal # Для работы с ценами
 from django.conf import settings # Для доступа к ключам API и другим настройкам
 from django.shortcuts import render, redirect, reverse, get_object_or_404
-from store.models import Product, Order, OrderItem # Импортируем модель Order (пока не используем, но понадобится)
+from store.models import Product, Order, OrderItem, SubscriptionBoxType, Profile, UserSubscription # Импортируем модель Order (пока не используем, но понадобится)
 from store.cart import Cart # Импортируем нашу корзину
 from django.contrib import messages
 from django.http import HttpResponse # Для отправки ответа Stripe
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 from store.forms import OrderCreateForm
-from .email import send_order_confirmation_email
+from .tasks import send_order_confirmation_email_task, send_subscription_confirmation_email_task
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -156,7 +156,6 @@ def stripe_webhook(request):
     # Проверка наличия секрета
     if not endpoint_secret:
          print("!!! Webhook Error: Stripe Webhook Secret not configured.")
-         # Возвращаем 500, т.к. это ошибка конфигурации сервера
          return HttpResponse(status=500)
 
     # Проверка подписи и парсинг события
@@ -175,119 +174,164 @@ def stripe_webhook(request):
     # Обработка конкретного события checkout.session.completed
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
+        session_id = session.id
+        session_mode = session.get('mode')
         print(f"Processing checkout.session.completed for session: {session.id}")
 
         if session.payment_status == "paid":
-            try:
-                # Проверяем дубликат
-                if Order.objects.filter(stripe_id=session.id).exists():
-                    print(f"Order for session {session.id} already exists.")
+            if session_mode == 'subscription':
+                try:
+                    if UserSubscription.objects.filter(stripe_subscription_id=session.get('subscription')).exists():
+                        print(f"UserSubscription for Stripe subscription {session.get('subscription')} already exists.")
+                        return HttpResponse(status=200)
+
+                    metadata = session.get('metadata', {})
+                    django_user_id = metadata.get('django_user_id')
+                    box_type_id = metadata.get('subscription_box_type_id')
+                    stripe_subscription_id = session.get('subscription')
+                    stripe_customer_id = session.get('customer')
+
+                    if not all([django_user_id, box_type_id, stripe_subscription_id, stripe_customer_id]):
+                        print(f"Webhook Error: Missing required metadata for subscription session {session_id}. Metadata: {metadata}")
+                        return HttpResponse(status=400)
+
+                    User = get_user_model()
+                    user = None
+                    if django_user_id and django_user_id != 'None':
+                        try:
+                            user = User.objects.get(id=int(django_user_id))
+                        except (User.DoesNotExist, ValueError, TypeError):
+                            print(f"Webhook Warning: User with id='{django_user_id}' not found for subscription session {session_id}.")
+                            return HttpResponse(status=400)
+
+                    box_type = get_object_or_404(SubscriptionBoxType, id=box_type_id)
+
+                    with transaction.atomic():
+                        # Обновляем или создаем профиль клиента Stripe
+                        if user:
+                            profile, _ = Profile.objects.get_or_create(user=user)
+                            if not profile.stripe_customer_id:
+                                profile.stripe_customer_id = stripe_customer_id
+                                profile.save()
+                            print(f"Profile updated/retrieved for user {user.id} with Stripe customer ID {stripe_customer_id}")
+
+                        # Создаем или обновляем запись о подписке пользователя
+                        # (логика может зависеть от того, обрабатываете ли вы customer.subscription.created/updated отдельно)
+                        subscription, created = UserSubscription.objects.update_or_create(
+                            stripe_subscription_id=stripe_subscription_id,
+                            defaults={
+                                'user': user,
+                                'box_type': box_type,
+                                'stripe_customer_id': stripe_customer_id,
+                                'status': 'active', # Считаем активной после успешной оплаты
+                                # current_period_start/end лучше получать из события customer.subscription.updated или invoice.paid
+                            }
+                        )
+                        if created:
+                            print(f"UserSubscription record CREATED for Stripe sub ID {stripe_subscription_id}")
+                        else:
+                            print(f"UserSubscription record UPDATED for Stripe sub ID {stripe_subscription_id}")
+
+                        # Отправляем email с подтверждением подписки
+                        send_subscription_confirmation_email_task.delay(subscription.id) # Используем .delay() для фоновой задачи
+
+                    print(f"Subscription session {session_id} processed successfully.")
                     return HttpResponse(status=200)
 
-                metadata = session.get('metadata', {})
-                user_id_from_metadata = metadata.get('user_id')
-                first_name = metadata.get('first_name', '')
-                last_name = metadata.get('last_name', '')
-                # Email берем из customer_details (Stripe его часто сам получает) или из метаданных
-                email = session.customer_details.email if session.customer_details else metadata.get('email', '')
-                address_line_1 = metadata.get('address_line_1', '')
-                address_line_2 = metadata.get('address_line_2', '')
-                postal_code = metadata.get('postal_code', '')
-                city = metadata.get('city', '')
-                country = metadata.get('country', '')
+                except Exception as e:
+                    print(f"Webhook Error: Failed to process PAID subscription session {session_id}. Error: {e}")
+                    return HttpResponse(status=500)
 
-                # Получаем пользователя
-                User = get_user_model()
-                user = None
-                if user_id_from_metadata:
-                        # Если user_id_from_metadata не пустой, не состоит только из пробелов и не строка "None"
-                    try:
-                        user = User.objects.get(id=int(user_id_from_metadata))
-                        print(f"User {user} found for order.")
-                    except (User.DoesNotExist, ValueError, TypeError):
-                        print(f"Webhook Warning: User with id='{user_id_from_metadata}' (from metadata) not found or invalid for session {session.id}.")
-                        user = None # Если не нашли или ID некорректный, заказ будет анонимным
-                else:
-                    print(f"Webhook Info: No valid user_id in metadata for session {session.id}. Order will be anonymous.")
-                    user = None
-
-                # Запрашиваем line_items
-                print(f"Fetching line items for session {session.id}...")
+            elif session_mode == 'payment':
                 try:
-                    line_items_response = stripe.checkout.Session.list_line_items(
-                        session.id, limit=50, expand=['data.price.product']
-                    )
-                    if not line_items_response or not line_items_response.data:
-                         print(f"Webhook Error: Could not retrieve line items for session {session.id}")
-                         return HttpResponse(status=500) # Ошибка сервера, не можем создать заказ
-                    print(f"Line items fetched successfully: {len(line_items_response.data)} items.")
-                except stripe.error.StripeError as e:
-                    print(f"Webhook Error: Stripe API error fetching line items for session {session.id}: {e}")
-                    return HttpResponse(status=500) # Ошибка сервера
+                    if Order.objects.filter(stripe_id=session_id).exists():
+                        print(f"Order for payment session {session_id} already exists.")
+                        return HttpResponse(status=200)
 
-                # Создаем заказ и элементы в транзакции
-                with transaction.atomic():
-                    order = Order.objects.create(
-                        user=user,
-                        paid=True,
-                        stripe_id=session.id,
-                        first_name=metadata.get('first_name', ''), # Используем get для безопасности
-                        last_name=metadata.get('last_name', ''),
-                        email=session.customer_details.email if session.customer_details else metadata.get('email', ''),
-                        address_line_1=metadata.get('address_line_1', ''),
-                        address_line_2=metadata.get('address_line_2', ''),
-                        postal_code=metadata.get('postal_code', ''),
-                        city=metadata.get('city', ''),
-                        country=metadata.get('country', '')
-                    )
-                    items_to_create = []
-                    products_stock_update = {}
-                    for item_data in line_items_response.data:
-                        # ... (логика внутри цикла как была, с try/except Product.DoesNotExist) ...
-                         try:
-                            price_info = item_data.get('price', {})
-                            product_info = price_info.get('product', {})
-                            metadata = product_info.get('metadata', {})
-                            product_db_id = metadata.get('product_db_id')
-                            if not product_db_id: raise ValueError("Missing product ID in metadata")
+                    metadata = session.get('metadata', {})
+                    User = get_user_model()
+                    user = None
+                    user_id_from_metadata = metadata.get('user_id')
+                    if user_id_from_metadata and user_id_from_metadata != 'None': # Проверка, что не строка "None"
+                        try:
+                            user = User.objects.get(id=int(user_id_from_metadata))
+                        except (User.DoesNotExist, ValueError, TypeError):
+                            user = None
 
-                            product = Product.objects.get(id=product_db_id)
-                            quantity = item_data.get('quantity', 0)
-                            unit_amount = price_info.get('unit_amount', 0)
-                            price_paid = Decimal(unit_amount) / 100
+                    print(f"Fetching line items for payment session {session_id}...")
+                    try:
+                        line_items_response = stripe.checkout.Session.list_line_items(
+                            session_id, limit=50, expand=['data.price.product']
+                        )
+                        if not line_items_response or not line_items_response.data:
+                            print(f"Webhook Error: Could not retrieve line items for payment session {session_id}")
+                            return HttpResponse(status=500)
+                        print(f"Line items fetched successfully: {len(line_items_response.data)} items.")
+                    except stripe.error.StripeError as e:
+                        print(f"Webhook Error: Stripe API error fetching line items for payment session {session_id}: {e}")
+                        return HttpResponse(status=500)
 
-                            items_to_create.append(OrderItem(
-                                order=order, product=product, price=price_paid, quantity=quantity
-                            ))
-                            products_stock_update[product.id] = products_stock_update.get(product.id, 0) + quantity
-                         except Product.DoesNotExist:
-                            print(f"Webhook Error: Product with id={product_db_id} not found (session {session.id}). Order creation failed.")
-                            raise ValueError(f"Product {product_db_id} not found") # Это откатит транзакцию
-                         except Exception as e:
-                            print(f"Webhook Error: Problem processing line item: {e}")
-                            raise # Откатываем транзакцию
+                    with transaction.atomic():
+                        order = Order.objects.create(
+                            user=user,
+                            paid=True,
+                            stripe_id=session_id,
+                            first_name=metadata.get('first_name', ''),
+                            last_name=metadata.get('last_name', ''),
+                            email=session.customer_details.email if session.customer_details else metadata.get('email', ''),
+                            address_line_1=metadata.get('address_line_1', ''),
+                            address_line_2=metadata.get('address_line_2', ''),
+                            postal_code=metadata.get('postal_code', ''),
+                            city=metadata.get('city', ''),
+                            country=metadata.get('country', '')
+                        )
+                        items_to_create = []
+                        products_stock_update = {}
+                        for item_data in line_items_response.data:
+                            try:
+                                price_info = item_data.get('price', {})
+                                product_info = price_info.get('product', {}) # Это Stripe Product
+                                stripe_product_metadata = product_info.get('metadata', {})
+                                product_db_id = stripe_product_metadata.get('product_db_id')
 
-                    if items_to_create: OrderItem.objects.bulk_create(items_to_create)
-                    for prod_id, qty_decrement in products_stock_update.items():
-                        Product.objects.filter(id=prod_id).update(stock=F('stock') - qty_decrement)
+                                if not product_db_id:
+                                    print(f"Webhook Error: Payment line item from Stripe Product {product_info.id} does not contain product_db_id. Metadata: {stripe_product_metadata}")
+                                    raise ValueError("Missing product_db_id in payment line item metadata")
 
-                # Если транзакция прошла успешно:
-                print(f"Order {order.id} successfully created from webhook for session {session.id}")
-                print(f"Attempting to send confirmation email for Order #{order.id}...")
-                send_order_confirmation_email(order)
-                return HttpResponse(status=200)
-                # ------------------------------------------
+                                product = Product.objects.get(id=product_db_id)
+                                quantity = item_data.get('quantity', 0)
+                                price_paid = Decimal(item_data.get('amount_total', 0)) / 100 # Используем amount_total для общей суммы позиции
+                                                                                            # или item_data.price.unit_amount если это цена за единицу
 
-            except Exception as e:
-                # Ошибка во время обработки (получения пользователя, запроса line_items, транзакции)
-                print(f"Webhook Error: Failed to process PAID session {session.id}. Error: {e}")
-                return HttpResponse(status=500) # Ошибка сервера
-            # --- КОНЕЦ ОБРАБОТКИ ОПЛАЧЕННОЙ СЕССИИ ---
+                                items_to_create.append(OrderItem(
+                                    order=order, product=product, price=price_paid / quantity if quantity else 0, quantity=quantity
+                                )) # Убедитесь, что price это цена за единицу
+                                products_stock_update[product.id] = products_stock_update.get(product.id, 0) + quantity
+                            except Product.DoesNotExist:
+                                print(f"Webhook Error: Product with id={product_db_id} not found (session {session_id}). Order creation failed.")
+                                raise ValueError(f"Product {product_db_id} not found") # Откатит транзакцию
+                            except Exception as e:
+                                print(f"Webhook Error: Problem processing payment line item: {e}")
+                                raise # Откатываем транзакцию
 
-        else: # Если payment_status != "paid"
-             print(f"Payment status for session {session.id} is '{session.payment_status}', not creating order.")
-             return HttpResponse(status=200) # OK, обработали (проигнорировали)
+                        if items_to_create: OrderItem.objects.bulk_create(items_to_create)
+                        for prod_id, qty_decrement in products_stock_update.items():
+                            Product.objects.filter(id=prod_id).update(stock=F('stock') - qty_decrement)
 
-    else: # Если event['type'] НЕ 'checkout.session.completed'
+                    print(f"Order {order.id} successfully created from webhook for payment session {session_id}")
+                    send_order_confirmation_email_task.delay(order.id) # Используем .delay()
+                    return HttpResponse(status=200)
+
+                except Exception as e:
+                    print(f"Webhook Error: Failed to process PAID payment session {session_id}. Error: {e}")
+                    return HttpResponse(status=500)
+            else:
+                print(f"Webhook Error: Unknown session mode '{session_mode}' for session {session_id}")
+                return HttpResponse(status=400) # Неизвестный режим сессии
+
+        else: # payment_status != "paid"
+            print(f"Payment status for session {session_id} is '{session.payment_status}', not creating order/subscription.")
+            return HttpResponse(status=200)
+    else: # event['type'] != 'checkout.session.completed'
         print(f"Unhandled event type: {event['type']}")
-        return HttpResponse(status=200) # OK, обработали (проигнорировали)
+        return HttpResponse(status=200)

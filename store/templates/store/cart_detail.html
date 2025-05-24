@@ -37,14 +37,14 @@
                             </td>
                             <td>
                                 <div class="input-group input-group-sm" style="max-width: 130px;"> {# input-group для объединения поля и кнопок (если будете добавлять кнопки +/-) #}
-                                    <input type="number" value="{{ item.quantity }}" min="0" max="{{ product.stock }}" class="form-control quantity-input text-center" data-product-id="{{ product.id }}">
+                                    <input type="number" value="{{ item.quantity }}" min="0" max="{{ product.stock }}" class="form-control quantity-input text-center" data-product-id="{{ product.id }}" data-update-url="{% url 'store:cart_add' product_id=product.id %}">
                                     {# Можно добавить кнопки +/- сюда позже #}
                                 </div>
                             </td>
                             <td class="text-end">{{ item.price }} PLN</td>
                             <td class="text-end item-total-price">{{ item.total_price }} PLN</td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-outline-danger remove-from-cart-btn" data-product-id="{{ product.id }}" title="Удалить товар">
+                                <button class="btn btn-sm btn-outline-danger remove-from-cart-btn" data-product-id="{{ product.id }}" data-remove-url="{% url 'store:cart_remove' product_id=product.id %}" title="Usuń produkt">
                                     <i class="bi bi-trash"></i> {# Bootstrap Icon #}
                                 </button>
                             </td>

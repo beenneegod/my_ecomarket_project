@@ -38,9 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Функция для фактического выполнения AJAX-запроса на удаление ---
-    function performDeleteRequest(productId, cartItemRow) {
-        const url = `/store/cart/remove/${productId}/`;
-
+    function performDeleteRequest(productId, url, cartItemRow) {
         fetch(url, {
             method: 'POST',
             headers: {
@@ -112,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!btn) return;
 
             const productId = btn.dataset.productId;
-            const url = `/store/cart/add/${productId}/`;
+            const url = btn.dataset.addUrl;
 
             const formContainer = btn.closest('.add-to-cart-form');
             let quantityInput = null;
@@ -234,13 +232,13 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', event => {
             const currentButton = event.target.closest('.remove-from-cart-btn');
             if (!currentButton) {
-                console.error("Could not find '.remove-from-cart-btn'");
                 return;
             }
             const productId = currentButton.dataset.productId;
+            const removeUrl = currentButton.dataset.removeUrl;
             const cartItemRow = currentButton.closest('.cart-item');
 
-            if (!productId) {
+            if (!productId || !removeUrl) {
                 console.error("Product ID is undefined for remove button:", currentButton);
                 Toastify({
                     text: "Nie udało się określić ID produktu do usunięcia.",
@@ -263,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cancelButtonColor: 'var(--color-text-medium)',
             }).then((result) => {
                 if (result.isConfirmed) {
-                    performDeleteRequest(productId, cartItemRow);
+                    performDeleteRequest(productId, removeUrl, cartItemRow);
                 }
             });
         });
@@ -274,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('change', event => {
             const productId = event.target.dataset.productId;
             const newQuantity = parseInt(event.target.value);
-            const url = `/store/cart/add/${productId}/`; // Используется тот же URL, что и для добавления
+            const url = event.target.dataset.updateUrl; // Используется тот же URL, что и для добавления
             const cartItemRow = event.target.closest('.cart-item');
 
             if (isNaN(newQuantity) || newQuantity < 0) {

@@ -1,0 +1,23 @@
+Witaj {{ user_subscription.user.get_full_name|default:user_subscription.user.username }}!
+
+Dziękujemy za subskrypcję "{{ user_subscription.box_type.name }}" w EcoMarket!
+
+Twoja subskrypcja została pomyślnie aktywowana.
+ID Twojej subskrypcji: {{ user_subscription.stripe_subscription_id }}
+
+Szczegóły subskrypcji:
+--------------------
+Nazwa Boxa: {{ user_subscription.box_type.name }}
+Cena: {{ user_subscription.box_type.price }} PLN / {{ user_subscription.box_type.get_billing_period_display }}
+Status: {{ user_subscription.get_status_display }}
+{% if user_subscription.current_period_start and user_subscription.current_period_end %}
+Bieżący okres: {{ user_subscription.current_period_start|date:"d.m.Y" }} - {{ user_subscription.current_period_end|date:"d.m.Y" }}
+{% endif %}
+--------------------
+
+{% if user_subscription.user %}
+Możesz zarządzać swoją subskrypcją w panelu użytkownika na naszej stronie (funkcjonalność wkrótce).
+{% endif %}
+
+Dziękujemy,
+Zespół EcoMarket

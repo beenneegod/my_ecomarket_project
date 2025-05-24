@@ -14,6 +14,7 @@ urlpatterns = [
     path('orders/', views.order_history, name='order_history'),
     path('profile/edit/', views.profile_update, name='profile_update'),
     path('subscription-boxes/', views.subscription_box_list, name='subscription_box_list'),
+    path('subscription-box/<slug:slug>/', views.subscription_box_detail, name='subscription_box_detail'),
     path('subscription/checkout/<int:box_type_id>/', views.process_subscription_checkout, name='process_subscription_checkout'),
     path('subscription/success/', views.subscription_success, name='subscription_success'),
     path('subscription/canceled/', views.subscription_canceled, name='subscription_canceled'),
