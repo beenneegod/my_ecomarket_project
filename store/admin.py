@@ -140,20 +140,31 @@ class SubscriptionBoxTypeAdmin(admin.ModelAdmin):
 
 @admin.register(UserSubscription)
 class UserSubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'box_type', 'status', 'start_date', 'current_period_end', 'stripe_subscription_id', 'stripe_customer_id')
+    list_display = ('user', 'box_type', 'status', 'start_date', 'current_period_end', 'stripe_subscription_id', 'get_stripe_customer_id_from_profile') # Изменено
     list_filter = ('status', 'box_type', 'start_date', 'current_period_end')
-    search_fields = ('user__username', 'box_type__name', 'stripe_subscription_id', 'stripe_customer_id')
-    list_select_related = ('user', 'box_type')
-    readonly_fields = ('user', 'box_type', 'start_date', 'stripe_subscription_id', 'stripe_customer_id', 'current_period_start', 'current_period_end', 'cancel_at_period_end')
+    search_fields = ('user__username', 'box_type__name', 'stripe_subscription_id', 'user__profile__stripe_customer_id') 
+    list_select_related = ('user', 'box_type', 'user__profile')
+    readonly_fields = ('user', 'box_type', 'start_date', 'stripe_subscription_id', 
+                       'current_period_start', 'current_period_end', 'cancel_at_period_end',
+                       'get_stripe_customer_id_from_profile') 
+
+    @admin.display(description='Stripe Customer ID (z Profilu)') # Описание для колонки
+    def get_stripe_customer_id_from_profile(self, obj):
+        if obj.user and hasattr(obj.user, 'profile') and obj.user.profile.stripe_customer_id:
+            return obj.user.profile.stripe_customer_id
+        return "-"
+    # get_stripe_customer_id_from_profile.short_description = 'Stripe Customer ID (z Profilu)' # Альтернативный способ задания имени колонки
+
+    def get_queryset(self, request):
+        # Оптимизируем запрос, чтобы сразу подгружать связанные профили
+        return super().get_queryset(request).select_related('user__profile')
 
     def get_readonly_fields(self, request, obj=None):
+        # Получаем базовый набор readonly полей из определения класса
+        base_readonly_fields = list(self.readonly_fields)
         if obj: # При редактировании существующего объекта
-            return self.readonly_fields + ('status',) # Статус тоже лучше менять через логику, а не вручную
-        return self.readonly_fields
-# Базовая регистрация OrderItem (не обязательно, т.к. он встроен в Order)
-# Если хотите видеть OrderItem отдельно:
-# @admin.register(OrderItem)
-# class OrderItemAdmin(admin.ModelAdmin):
-#     list_display = ('order', 'product', 'price', 'quantity')
-#     list_filter = ('order__created_at',) # Фильтр по дате связанного заказа
-#     search_fields = ('order__id', 'product__name')
+            # Статус тоже лучше менять через логику, а не вручную
+            # Убедимся, что 'status' не дублируется, если он уже есть в self.readonly_fields
+            if 'status' not in base_readonly_fields:
+                 base_readonly_fields.append('status')
+        return base_readonly_fields

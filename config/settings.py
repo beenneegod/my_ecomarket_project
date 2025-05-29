@@ -16,11 +16,18 @@ else:
 # -----------------------------------------------------
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
+
+if not DEBUG:
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+else:
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+
 if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000 # 1 год в секундах
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = True # Если используешь HTTPS, установи True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -52,6 +59,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'background_task',
+    'axes',
+    'rest_framework',
+    'rest_framework.authtoken',
     # Наши приложения:
     'store.apps.StoreConfig', # Регистрируем приложение store
     'payments.apps.PaymentsConfig',
@@ -65,6 +75,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -153,9 +164,46 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Media files (User uploaded files like product images)
 # https://docs.djangoproject.com/en/stable/howto/static-files/
 
-MEDIA_URL = '/media/'
-# Папка, куда будут сохраняться загруженные пользователем файлы
-MEDIA_ROOT = BASE_DIR / 'media'
+if not DEBUG: # Настройки для ПРОДАКШЕНА (используем S3)
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME') 
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL') # Для S3-совместимых хранилищ, если не AWS S3
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN') # Если используешь CDN или свой домен для бакета
+    
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400', # Пример: кеширование объектов на 1 день
+    }
+    AWS_LOCATION = 'media' # Подпапка в бакете для медиафайлов (опционально, но рекомендуется)
+
+    AWS_DEFAULT_ACL = 'private'
+    # Формирование MEDIA_URL
+    if AWS_S3_CUSTOM_DOMAIN:
+        # Убедись, что AWS_LOCATION заканчивается на слеш, если он не пустой
+        location_path = f"{AWS_LOCATION.strip('/')}/" if AWS_LOCATION else ""
+        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{location_path}'
+    else:
+        # Базовый URL для S3-совместимого хранилища
+        base_s3_url = AWS_S3_ENDPOINT_URL if AWS_S3_ENDPOINT_URL else f'https://s3.{AWS_S3_REGION_NAME}.amazonaws.com'
+        # Убедись, что AWS_LOCATION НЕ начинается и НЕ заканчивается на слеш для этого формата URL
+        location_path = f"{AWS_LOCATION.strip('/')}/" if AWS_LOCATION else ""
+        # URL для стандартного AWS S3 или S3-совместимого без кастомного домена
+        MEDIA_URL = f'{base_s3_url}/{AWS_STORAGE_BUCKET_NAME}/{location_path}'
+        # Для некоторых S3-совместимых хранилищ (например, Yandex) может быть так:
+        # MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/{location_path}'
+        # Всегда проверяй документацию твоего S3-провайдера по формату URL!
+
+    # Проверка наличия основных переменных для S3 в продакшене
+    # (Можно использовать logging.warning или raise ValueError для более строгой проверки)
+    if not all([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME, AWS_S3_REGION_NAME]):
+        print("WARNING: Production S3 settings (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME, AWS_S3_REGION_NAME) are not fully configured. Check .env variables.")
+        # Если хочешь, чтобы приложение падало при отсутствии настроек:
+        # raise ValueError("Production S3 settings must be fully configured.")
+
+else: # Настройки для РАЗРАБОТКИ (локальное хранение)
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # Default primary key field type
@@ -163,6 +211,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CART_SESSION_ID = 'cart'
+
 # --- Stripe Keys ---
 STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
@@ -197,3 +246,117 @@ EMAIL_TIMEOUT = 60 # Время ожидания ответа от сервер�
 # Проверка наличия основных настроек для SMTP
 if not all([EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD]):
     print("Warning: SMTP Email settings (EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD) are not fully configured in .env. Real email sending might fail.")
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+AXES_FAILURE_LIMIT = 10
+AXES_COOLOFF_TIME = 0.25
+AXES_LOCKOUT_TEMPLATE = 'registration/lockout.html'
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]
+AXES_VERBOSE = True 
+AXES_ENABLE_ADMIN = True
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '[{levelname}] {asctime} {name} | {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO', # Для локальной разработки можно поставить 'DEBUG'
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file_info': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler', # Ротация файлов по размеру
+            'filename': BASE_DIR / 'logs/info.log',        # Убедись, что папка logs существует
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,              # Хранить 5 старых файлов логов
+            'formatter': 'verbose',
+            'encoding': 'utf-8',           # Явно указываем кодировку
+        },
+        'file_error': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs/error.log',      # Убедись, что папка logs существует
+            'maxBytes': 1024 * 1024 * 5,   # 5 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+    },
+    'root': { # Корневой логгер
+        'handlers': ['console', 'file_info', 'file_error'], # Куда отправлять логи по умолчанию
+        'level': 'INFO', # Общий уровень для корневого логгера
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file_info', 'file_error'],
+            'level': 'INFO', # Логи от Django (запросы, ошибки и т.д.)
+            'propagate': False, # Не передавать выше, чтобы не дублировать в root
+        },
+        'django.request': { # Отдельно для ошибок запросов, чтобы не пропустить
+            'handlers': ['console', 'file_error'], # Ошибки запросов пишем и в консоль, и в error.log
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security': { # Логи безопасности
+            'handlers': ['console', 'file_error'],
+            'level': 'WARNING', # Или ERROR, если не хочешь видеть все предупреждения
+            'propagate': False,
+        },
+        # Логгеры для AWS SDK (boto3)
+        'boto3': {
+            'handlers': ['console', 'file_info'], # Или только file_info/file_error
+            'level': 'WARNING', # Покажет только предупреждения и ошибки от boto3
+            'propagate': True, # Можно оставить True, чтобы они также попадали в root, если нужно
+        },
+        'botocore': {
+            'handlers': ['console', 'file_info'],
+            'level': 'WARNING', # Аналогично для botocore
+            'propagate': True,
+        },
+        's3transfer': {
+            'handlers': ['console', 'file_info'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+        # Логгеры для твоих приложений (замени 'store', 'payments', 'blog' на реальные имена)
+        'store': {
+            'handlers': ['console', 'file_info', 'file_error'],
+            'level': 'INFO', # Или DEBUG во время активной разработки этого приложения
+            'propagate': False,
+        },
+        'payments': {
+            'handlers': ['console', 'file_info', 'file_error'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'blog': {
+            'handlers': ['console', 'file_info', 'file_error'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Логгер для django-axes (если хочешь его логи отдельно или с другим уровнем)
+        'axes': {
+            'handlers': ['console', 'file_info'], # О попытках входа
+            'level': 'INFO',
+            'propagate': False,
+        }
+        # Добавь другие логгеры для сторонних библиотек, если нужно
+    },
+}

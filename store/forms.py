@@ -114,6 +114,8 @@ class CustomSetPasswordForm(SetPasswordForm):
     #     return email
 
 class ProfileUpdateForm(forms.ModelForm):
+    MAX_AVATAR_SIZE = 2 * 1024 * 1024 # 2 MB
+    ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/gif']
     class Meta:
         model = Profile
         fields = ['avatar', 'bio'] # Поля, которые пользователь сможет редактировать
@@ -125,6 +127,15 @@ class ProfileUpdateForm(forms.ModelForm):
             'avatar': 'Zmień awatar',
             'bio': 'O Tobie',
         }
+
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get('avatar')
+        if avatar: # Проверяем, только если файл был загружен/изменен
+            if avatar.size > self.MAX_AVATAR_SIZE:
+                raise forms.ValidationError(f"Rozmiar pliku awatara nie może przekraczać {self.MAX_AVATAR_SIZE // 1024 // 1024} MB.")
+            if avatar.content_type not in self.ALLOWED_AVATAR_TYPES:
+                raise forms.ValidationError(f"Niedozwolony typ pliku. Proszę загрузить JPEG, PNG lub GIF.")
+        return avatar
 
 class SubscriptionChoiceForm(forms.Form):
     # Поле для выбора типа подписочного бокса.

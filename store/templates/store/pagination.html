@@ -1,3 +1,4 @@
+
 {% if page.has_other_pages %}
     <nav aria-label="Page navigation">
         <ul class="pagination justify-content-center mt-4"> {# Классы Bootstrap: pagination и justify-content-center #}
@@ -10,8 +11,6 @@
                 </a>
             </li>
 
-            {# --- Номера страниц (упрощенная логика для примера) --- #}
-            {# Вы можете добавить более сложную логику для отображения ... если страниц много #}
             {% for i in page.paginator.page_range %}
                 {% if page.number == i %}
                     <li class="page-item active" aria-current="page"><span class="page-link">{{ i }}</span></li>

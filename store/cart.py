@@ -57,22 +57,26 @@ class Cart:
             self.save()
 
     def __iter__(self):
-        """
-        Перебор элементов в корзине и получение товаров из базы данных.
-        """
         product_ids = self.cart.keys()
-        # Получаем объекты товаров и добавляем их в корзину
         products = Product.objects.filter(id__in=product_ids)
+        cart = self.cart.copy()
 
-        cart = self.cart.copy() # Создаем копию словаря корзины
+        products_in_cart = []
         for product in products:
-            cart[str(product.id)]['product'] = product # Добавляем объект Product
+            item_data = cart[str(product.id)]
+            item_data['product_obj'] = product # Используем product_obj в шаблоне
+            item_data['total_price'] = Decimal(item_data['price']) * item_data['quantity']
+            products_in_cart.append(item_data)
 
-        # Перебираем копию корзины, чтобы выдать элементы
-        for item in cart.values():
-            item['price'] = Decimal(item['price']) # Конвертируем цену обратно в Decimal
-            item['total_price'] = item['price'] * item['quantity'] # Считаем общую стоимость для элемента
-            yield item # Возвращаем элемент (как генератор)
+         # Удалить из сессии корзины товары, которых уже нет в БД
+        current_product_ids_in_db = [str(p.id) for p in products]
+        for product_id_in_session in list(cart.keys()): # list() для безопасного удаления при итерации
+            if product_id_in_session not in current_product_ids_in_db:
+                del self.cart[product_id_in_session]
+        if len(products_in_cart) != len(cart): # Если что-то удалили
+            self.save() # Сохранить изменения в сессии
+
+        return iter(products_in_cart)
 
     def __len__(self):
         """

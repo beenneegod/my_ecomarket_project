@@ -5,6 +5,88 @@ from django.urls import reverse_lazy # Not strictly needed here, but good for ge
 from django.contrib import messages
 from .models import Post, Comment
 from .forms import CommentForm # Assuming CommentForm will be created later
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated # Или кастомный permission для API-ключа
+from rest_framework.authentication import TokenAuthentication
+from .serializers import PostCreateSerializer
+from .models import Post # Уже импортирован
+from django.contrib.auth import get_user_model
+from django.utils.text import slugify
+from django.utils import timezone
+
+User = get_user_model()
+
+class CreatePostAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = PostCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            # Данные валидны, теперь нужно установить автора и сгенерировать слаг.
+            # Предположим, у вас есть специальный пользователь для постов, создаваемых API.
+            # Либо вы будете идентифицировать "автора" на основе API-ключа/токена.
+            try:
+                # ЗАГЛУШКА: Используем первого суперпользователя как автора.
+                # В реальной системе здесь должна быть логика определения автора,
+                # например, по API-ключу или это будет фиксированный "системный" пользователь.
+                api_user = User.objects.filter(is_superuser=True).first()
+                if not api_user:
+                    # Если нет суперпользователя, можно создать специального пользователя "API Bot"
+                    # или вернуть ошибку.
+                    return Response(
+                        {"error": "API user not configured on the server."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            except Exception as e:
+                return Response(
+                    {"error": f"Could not determine API user: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            title = serializer.validated_data['title']
+            new_slug = slugify(title)
+            # Проверка на уникальность слага и добавление суффикса, если необходимо
+            original_slug = new_slug
+            counter = 1
+            while Post.objects.filter(slug=new_slug).exists():
+                new_slug = f"{original_slug}-{counter}"
+                counter += 1
+            
+            # Устанавливаем published_at, если не передано или если хотим текущее время
+            published_at = serializer.validated_data.get('published_at', timezone.now())
+            # Устанавливаем статус, если не передан
+            post_status = serializer.validated_data.get('status', 'published')
+
+
+            # Сохраняем пост с нужным автором и слагом
+            # Мы не вызываем serializer.save() напрямую, так как нам нужно добавить author и slug.
+            # Вместо этого, создаем объект Post вручную.
+            try:
+                post = Post.objects.create(
+                    author=api_user,
+                    title=title,
+                    slug=new_slug,
+                    body=serializer.validated_data['body'],
+                    image=serializer.validated_data.get('image'), # get, так как image опционально
+                    status=post_status,
+                    published_at=published_at
+                )
+                # Возвращаем данные созданного поста (можно использовать другой сериализатор для ответа)
+                # Для простоты вернем только ID и slug
+                return Response(
+                    {"id": post.id, "slug": post.slug, "title": post.title},
+                    status=status.HTTP_201_CREATED
+                )
+            except Exception as e:
+                return Response(
+                    {"error": f"Failed to create post: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PostListView(ListView):
     model = Post

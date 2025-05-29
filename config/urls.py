@@ -1,22 +1,17 @@
 # config/urls.py
 from django.contrib import admin
-from django.urls import path, include # Добавляем include
 from django.conf import settings # Импортируем настройки
 from django.conf.urls.static import static # Импортируем помощник для статики/медиа
 from store import views as store_views
 from django.contrib.auth import views as auth_views # Импортируем auth_views
 from store.forms import CustomAuthenticationForm, CustomPasswordResetForm, CustomSetPasswordForm
 from django.urls import path, include, reverse_lazy
-from store import views as store_views
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', store_views.homepage, name='homepage'),
     path('store/', include('store.urls', namespace='store')),
-    #path('cart/', include('payments.urls', namespace='cart')),
-    # Подключаем все URL из приложения store по корневому пути ''
-    # path('store/', include('store.urls', namespace='store')),
     path('payment/', include('payments.urls', namespace='payments')),
     path('blog/', include('blog.urls', namespace='blog')), # Added blog URLs
     path('accounts/login/', auth_views.LoginView.as_view(
@@ -50,6 +45,6 @@ urlpatterns = [
 ]
 
 # В режиме разработки (DEBUG=True) добавляем обработку медиа-файлов
-if settings.DEBUG:
+if settings.DEBUG is False:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    # urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    #urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
