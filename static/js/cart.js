@@ -387,4 +387,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-}); // Конец DOMContentLoaded
+});

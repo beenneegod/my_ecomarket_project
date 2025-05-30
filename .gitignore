@@ -60,10 +60,9 @@ coverage.xml
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-media/          # Обычно медиафайлы (загруженные пользователями) не хранят в Git
-staticfiles/    # Собранные статические файлы тоже обычно не хранят
-.env            # Файл с секретными ключами и настройками
-
+media/
+staticfiles/
+.env
 # Файлы IDE
 .idea/
 .vscode/
