@@ -178,7 +178,7 @@ if not DEBUG: # Настройки для ПРОДАКШЕНА (использу
         'CacheControl': 'max-age=86400', # Кеширование на 1 день
     }
     AWS_LOCATION = 'media' # Файлы будут в s3://<bucket_name>/media/
-    AWS_DEFAULT_ACL = 'public-read' # Сделать файлы публично читаемыми
+    AWS_DEFAULT_ACL = None # Сделать файлы публично читаемыми
 
     # Формирование MEDIA_URL
     if AWS_S3_CUSTOM_DOMAIN:

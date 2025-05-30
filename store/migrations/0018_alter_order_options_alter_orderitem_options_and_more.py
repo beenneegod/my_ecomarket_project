@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('store', '0017_alter_product_slug'),
+        ('store', '0016_remove_usersubscription_stripe_customer_id_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
