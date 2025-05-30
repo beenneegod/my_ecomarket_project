@@ -1,44 +1,77 @@
-# .gitignore
-
-# Environment variables
-.env*
-*.env
-
-# Python cache & compiled files
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Django media files (если не версионируем)
-/media/  # Для диплома, если медиа немного, МОЖНО включить их в Git, закомментировав эту строку
+# C extensions
+*.so
 
-# Django staticfiles (собранные для production)
-/staticfiles/
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# IDE & Editor files
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/          # Обычно медиафайлы (загруженные пользователями) не хранят в Git
+staticfiles/    # Собранные статические файлы тоже обычно не хранят
+.env            # Файл с секретными ключами и настройками
+
+# Файлы IDE
 .idea/
 .vscode/
 *.swp
-*.sublime-workspace
-*.sublime-project
+*.swo
 
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Virtual environment
+# Виртуальное окружение
 venv/
-env/
 .venv/
-venv_py311/
-venv_py312/
-# SQLite database (если использовался локально)
-db.sqlite3
-*.sqlite3
-
-# Локальные логи и временные файлы
-*.log
-local_settings.py
-
-# Stripe CLI config (если создается в проекте)
-.stripe/
+env/
+ENV/

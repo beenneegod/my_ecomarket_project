@@ -3,236 +3,187 @@
 import os
 import random
 import re
-import json
+import json # Убедись, что json импортирован
 import traceback
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.utils.text import slugify
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from blog.models import Post # Ensure your Post model is correctly imported
+from blog.models import Post
 import google.generativeai as genai
+import logging
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 # --- Configuration Constants ---
 # Имя переменной окружения для ключа Gemini API (оставим, но не будем главным)
 ENV_GEMINI_API_KEY = "GEMINI_API_KEY_FOR_BLOG"
 
-DEFAULT_GEMINI_API_KEY = "AIzaSyCNqV54G4iLBGi2c431UhQvWXXJdhdTjyM"
 # Django username for attributing AI-generated posts
-AI_AUTHOR_USERNAME = 'beenneegod' # Ensure this user exists in your database
+AI_AUTHOR_USERNAME = 'api_content_bot' # Ensure this user exists in your database
 
 # Gemini Model Names
 PRIMARY_GEMINI_MODEL = 'gemini-1.5-flash-latest' # Primary model to use
 FALLBACK_GEMINI_MODEL = 'gemini-pro'
 
-# --- Function for Generating Content with Gemini ---
-def generate_content_with_gemini(topic_prompt: str, gemini_api_key: str) -> dict | None:
-    print(f"INFO: Contacting Gemini API to generate a post on: '{topic_prompt}'...")
 
-    if not gemini_api_key or gemini_api_key == "AIzaSyYOUR_API_KEY_HERE_REPLACE_ME": # Проверка на плейсхолдер
-        print("ERROR: Gemini API key is missing or is a placeholder. Please set a valid API key in the script.")
+def load_prompt_template(topic_prompt_str: str, topic_slug_for_hashtag_str: str) -> str | None:
+    # Путь к файлу шаблона промпта относительно директории этой команды
+    command_dir = os.path.dirname(__file__)
+    file_path = os.path.join(command_dir, 'gemini_blog_prompt.txt')
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            prompt_template = f.read()
+        return prompt_template.format(
+            topic_prompt=topic_prompt_str,
+            topic_slug_for_hashtag=topic_slug_for_hashtag_str
+        )
+    except FileNotFoundError:
+        logger.error(f"Файл шаблона промпта не найден по пути: {file_path}")
+        return None
+    except KeyError as e:
+        logger.error(f"Ключ форматирования не найден в шаблоне промпта: {e}. Убедись, что {{topic_prompt}} и {{topic_slug_for_hashtag}} присутствуют.")
+        return None
+    except Exception as e:
+        logger.error(f"Не удалось загрузить или отформатировать шаблон промпта: {e}")
+        return None
+
+# --- Function for Generating Content with Gemini ---
+def generate_content_with_gemini(topic_prompt_text: str, gemini_api_key: str) -> dict | None:
+    logger.info(f"Обращение к Gemini API для генерации поста на тему: '{topic_prompt_text}'...")
+
+    if not gemini_api_key: # Проверка на пустой ключ (из get_gemini_api_key)
+        logger.error("Ключ Gemini API отсутствует. Генерация отменена.")
         return None
 
     try:
-        # Configure the API key specifically for this function call
         genai.configure(api_key=gemini_api_key)
-        print("INFO: Gemini API key configured successfully for this call.")
+        logger.debug("Ключ Gemini API успешно сконфигурирован для этого вызова.")
     except Exception as e:
-        print(f"ERROR: Failed to configure Gemini API with the provided key: {e}")
-        traceback.print_exc()
+        logger.exception(f"Не удалось сконфигурировать Gemini API с предоставленным ключом: {e}")
         return None
 
     model = None
     try:
-        print(f"INFO: Attempting to initialize primary Gemini model ('{PRIMARY_GEMINI_MODEL}')...")
+        logger.debug(f"Попытка инициализации основной модели Gemini ('{PRIMARY_GEMINI_MODEL}')...")
         model = genai.GenerativeModel(PRIMARY_GEMINI_MODEL)
     except Exception as e_primary:
-        print(f"WARNING: Failed to initialize primary Gemini model ('{PRIMARY_GEMINI_MODEL}'): {e_primary}")
+        logger.warning(f"Не удалось инициализировать основную модель Gemini ('{PRIMARY_GEMINI_MODEL}'): {e_primary}")
         try:
-            print(f"INFO: Attempting to use fallback model ('{FALLBACK_GEMINI_MODEL}')...")
+            logger.info(f"Попытка использовать запасную модель ('{FALLBACK_GEMINI_MODEL}')...")
             model = genai.GenerativeModel(FALLBACK_GEMINI_MODEL)
         except Exception as e_fallback:
-            print(f"ERROR: Failed to initialize fallback Gemini model ('{FALLBACK_GEMINI_MODEL}'): {e_fallback}")
-            traceback.print_exc()
+            logger.exception(f"Не удалось инициализировать запасную модель Gemini ('{FALLBACK_GEMINI_MODEL}'): {e_fallback}")
             return None
-    
+
     if not model:
-        print("ERROR: Gemini model could not be initialized.")
+        logger.error("Модель Gemini не может быть инициализирована.")
         return None
 
-    topic_slug_for_hashtag = slugify(topic_prompt, allow_unicode=True).replace("-", "_") if topic_prompt else "ecotips"
+    topic_slug = slugify(topic_prompt_text, allow_unicode=True).replace("-", "_") if topic_prompt_text else "ecotips"
 
-    prompt = f"""
-    Proszę, wciel się w rolę content managera bloga sklepu internetowego "EcoMarket", który specjalizuje się w produktach organicznych i zdrowym stylu życia.
-    Twoim zadaniem jest napisanie posta na bloga na następujący temat:
-    "{topic_prompt}"
+    formatted_prompt = load_prompt_template(topic_prompt_text, topic_slug)
+    if not formatted_prompt:
+        return None # Ошибка уже залогирована в load_prompt_template
 
-    Wymagania dotyczące artykułu:
-    1.  **Tytuł:** Stwórz angażujący i przyciągający uwagę tytuł (od 5 do 15 słów).
-    2.  **Tekst artykułu:** Napisz główną część artykułu, około 300-500 słów. Tekst powinien być:
-        * Informacyjny i użyteczny dla czytelników.
-        * Napisany przyjaznym i przystępnym językiem.
-        * Ustrukturyzowany (np. używając krótkich akapitów, ewentualnie list, jeśli pasuje to do tematu).
-        * Unikalny (unikaj bezpośredniego kopiowania).
-        * Zawierać praktyczne porady lub informacje, które mogą zainteresować czytelników EcoMarket.
-        * Jeśli to możliwe, dodaj kilka ciekawostek lub faktów związanych z tematem.
-        * Jeśli temat dotyczy produktów, możesz wspomnieć o nich, ale nie rób tego w sposób nachalny.
-        * Unikaj bezpośrednich reklam produktów EcoMarket, skup się na wartości merytorycznej.
-        * Jeśli temat dotyczy zdrowego stylu życia, ekologii lub zrównoważonego rozwoju, postaraj się uwzględnić te aspekty.
-        * Jeśli temat dotyczy sezonowych produktów, możesz wspomnieć o ich dostępności w EcoMarket.
-        * Jeśli temat dotyczy przepisów kulinarnych, możesz podać przykładowy przepis lub składniki, które można znaleźć w EcoMarket.
-        * W języku polskim, z użyciem polskich znaków diakrytycznych.
-    5.  **Styl:** Przyjazny, profesjonalny, zrozumiały dla szerokiego grona odbiorców.
-    11. **Formatowanie:** Użyj prostego formatowania tekstu, takiego jak:
-        * Nagłówki (H2, H3) dla sekcji artykułu.
-        * Listy punktowane lub numerowane, jeśli pasuje do treści.
-        * Pogrubienia lub kursywy dla podkreślenia ważnych informacji.
-        * Piękne akapity, aby tekst był czytelny i przyjemny dla oka.
-    6.  **Długość:** Cały artykuł powinien mieć od 300 do 500 słów.
-    7.  **Struktura:** Artykuł powinien być podzielony na logiczne sekcje, z nagłówkami, jeśli to możliwe.
-    8.  **Hasła SEO:** Użyj naturalnie słów kluczowych związanych z tematem, ale nie przesadzaj z ich ilością.
-    9.  **Cytaty i źródła:** Jeśli używasz danych lub statystyk, podaj źródła lub linki do nich.
-    10. **Linki:** Jeśli to możliwe, dodaj linki do powiązanych artykułów na blogu EcoMarket lub do produktów, ale nie rób tego w sposób nachalny.
-    3.  **Hashtagi:** Na końcu artykułu dodaj 3-4 odpowiednie hashtagi (np. #ecomarket #zdrowejedzenie #{topic_slug_for_hashtag}).
-    4.  **Format odpowiedzi:** Całą odpowiedź przekaż ŚCIŚLE w formacie JSON o następującej strukturze:
-        {{
-          "title": "Twój wygenerowany tytuł",
-          "body": "Twój wygenerowany pełny tekst artykułu, zawierający hashtagi na końcu."
-        }}
-    Proszę nie dodawać żadnych innych wyjaśnień ani tekstu przed lub po obiekcie JSON. Tylko sam JSON.
-    """
+    logger.info(f"Отправка отформатированного промпта в Gemini API (длина: {len(formatted_prompt)} символов)...")
 
-    print(f"INFO: Sending prompt to Gemini API (prompt length: {len(prompt)} characters)...")
-    
     try:
-        generation_config = genai.types.GenerationConfig(temperature=0.7) # type: ignore
-        response = model.generate_content(prompt, generation_config=generation_config)
+        generation_config = genai.types.GenerationConfig(
+            temperature=0.7,
+            response_mime_type="application/json" # ЗАПРАШИВАЕМ JSON
+        ) # type: ignore
 
-        generated_text = None
-        try:
-            if response.text:
-                generated_text = response.text
-                print("INFO: Raw response received from Gemini (via response.text).")
-        except AttributeError:
-            print("INFO: response.text not available, trying via candidates.")
-        except Exception as e_text_access:
-            print(f"WARNING: Error accessing response.text: {e_text_access}. Trying via candidates.")
+        # Устанавливаем safety_settings, чтобы попытаться избежать блокировок по безопасности
+        # для невинных тем, если такое происходит. Настрой по необходимости.
+        safety_settings = [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+        ]
 
-        if not generated_text:
-            if response.candidates and response.candidates[0].content.parts:
-                generated_text = response.candidates[0].content.parts[0].text
-                print("INFO: Raw response received from Gemini (via candidates[0].content.parts[0].text).")
-            else:
-                error_message = "Gemini API returned a response without text content, valid candidates, or content parts."
-                if hasattr(response, 'prompt_feedback') and response.prompt_feedback: # type: ignore
-                    feedback = response.prompt_feedback # type: ignore
-                    error_message += f" Prompt feedback block reason: {feedback.block_reason}."
-                    if feedback.block_reason_message:
-                        error_message += f" Message: {feedback.block_reason_message}."
-                print(f"ERROR: {error_message}")
-                return None
-        
-        if not generated_text:
-            print("ERROR: Failed to extract any text from the Gemini response.")
+        response = model.generate_content(
+            formatted_prompt, 
+            generation_config=generation_config,
+            safety_settings=safety_settings
+        )
+
+        generated_json_text = None
+        if response.text:
+            generated_json_text = response.text
+            logger.info("Получен сырой ответ от Gemini (через response.text). Попытка прямого парсинга JSON.")
+        elif response.candidates and response.candidates[0].content.parts:
+            generated_json_text = response.candidates[0].content.parts[0].text
+            logger.info("Сырой ответ извлечен из candidates Gemini.")
+        else:
+            error_message = "Gemini API вернул ответ без текстового содержимого или валидных candidates."
+            if hasattr(response, 'prompt_feedback') and response.prompt_feedback: # type: ignore
+                feedback = response.prompt_feedback # type: ignore
+                error_message += f" Причина блокировки промпта: {feedback.block_reason}."
+                if feedback.block_reason_message:
+                     error_message += f" Сообщение: {feedback.block_reason_message}."
+            logger.error(error_message)
             return None
 
-        json_str = ""
-        match_markdown = re.search(r"```json\s*(\{[\s\S]*?\})\s*```", generated_text, re.DOTALL)
-        if match_markdown:
-            json_str = match_markdown.group(1).strip()
-            print("INFO: JSON extracted from markdown ```json ... ``` block.")
-        elif generated_text.strip().startswith("{") and generated_text.strip().endswith("}"):
-            json_str = generated_text.strip()
-            print("INFO: Gemini response recognized as a clean JSON object.")
-        else:
-            match_curly = re.search(r"(\{((?:[^{}]*|\{(?1)\})*)\})", generated_text)
-            if match_curly:
-                json_str = match_curly.group(0).strip()
-                print("WARNING: JSON extracted from text using a general regex. Validate correctness.")
-            else:
-                print(f"ERROR: Could not find a JSON-like structure in the Gemini response. Response snippet: {generated_text[:1000]}...")
-                return None
-        
-        try:
-            generated_data = json.loads(json_str)
-        except json.JSONDecodeError as e:
-            print(f"ERROR: JSON decoding failed: {e}. Extracted string for JSON: '{json_str}'")
-            print(f"Full Gemini response snippet: {generated_text[:1000]}...")
+        if not generated_json_text:
+            logger.error("Не удалось извлечь текст из ответа Gemini для парсинга JSON.")
             return None
 
-        title = generated_data.get("title")
-        body = generated_data.get("body")
+        try:
+            # Убираем возможные ```json ... ``` обертки перед парсингом
+            # Это может быть излишним, если response_mime_type="application/json" работает идеально
+            match_md_json = re.search(r"```json\s*(\{[\s\S]*?\})\s*```", generated_json_text, re.DOTALL)
+            if match_md_json:
+                json_to_parse = match_md_json.group(1).strip()
+                logger.info("JSON извлечен из Markdown блока ```json ... ```.")
+            else:
+                json_to_parse = generated_json_text.strip()
 
-        if isinstance(title, str) and title.strip() and \
-           isinstance(body, str) and body.strip():
-            print("INFO: Gemini successfully generated and parsed content (title and body).")
-            return {"title": title.strip(), "body": body.strip()}
-        else:
-            missing_fields = []
-            if not isinstance(title, str) or not title.strip(): missing_fields.append("'title' (non-empty string)")
-            if not isinstance(body, str) or not body.strip(): missing_fields.append("'body' (non-empty string)")
-            print(f"ERROR: JSON from Gemini is missing required fields, fields are empty, or have incorrect types: {', '.join(missing_fields)}. Received: {generated_data}")
+            generated_data = json.loads(json_to_parse)
+            title = generated_data.get("title")
+            body = generated_data.get("body")
+
+            if isinstance(title, str) and title.strip() and \
+               isinstance(body, str) and body.strip():
+                logger.info("Gemini успешно сгенерировал и распарсил JSON контент.")
+                return {"title": title.strip(), "body": body.strip()}
+            else:
+                missing_fields_msg = []
+                if not (isinstance(title, str) and title.strip()): missing_fields_msg.append("'title'")
+                if not (isinstance(body, str) and body.strip()): missing_fields_msg.append("'body'")
+                logger.error(f"Распарсенный JSON из Gemini не содержит обязательных полей, поля пусты или имеют неверный тип: {', '.join(missing_fields_msg)}. Полученные данные: {generated_data}")
+                return None
+        except json.JSONDecodeError as e_json:
+            logger.error(f"Ошибка декодирования JSON: {e_json}. Текст для парсинга (первые 500 симв.): '{generated_json_text[:500]}'")
+            # Если response_mime_type="application/json" не сработал и вернулся не JSON,
+            # можно здесь оставить старую логику с re.search для всего текста, если очень нужно.
+            # Но лучше добиться, чтобы API возвращал чистый JSON.
             return None
 
     except Exception as e_api:
-        print(f"CRITICAL ERROR during Gemini API request or response processing: {e_api}")
-        traceback.print_exc()
+        logger.exception(f"КРИТИЧЕСКАЯ ОШИБКА во время запроса к Gemini API или обработки ответа: {e_api}")
+        # traceback.print_exc() в logger.exception уже включен
         return None
 
 class Command(BaseCommand):
     help = 'Generates and publishes a new eco-themed blog post using the Gemini API.'
-
-    def get_gemini_api_key(self) -> str | None:
-        """
-        Retrieves the Gemini API key.
-        For temporary testing, it prioritizes the hardcoded DEFAULT_GEMINI_API_KEY.
-        It will also check the environment variable as a fallback.
-        """
-        # 1. Пытаемся получить из переменной окружения (как более безопасный вариант)
-        key_from_env = os.getenv(ENV_GEMINI_API_KEY)
-        if key_from_env:
-            self.stdout.write(self.style.SUCCESS(
-                f"Gemini API key successfully retrieved from environment variable '{ENV_GEMINI_API_KEY}'."
-            ))
-            if key_from_env == "AIzaSyYOUR_API_KEY_HERE_REPLACE_ME": # Проверка на плейсхолдер из env
-                 self.stdout.write(self.style.WARNING(
-                    "The API key from environment variable appears to be a placeholder. "
-                    "Falling back to DEFAULT_GEMINI_API_KEY from script."
-                ))
-            else:
-                return key_from_env
-
-        # 2. Если из окружения нет или это плейсхолдер, используем ключ из кода (для временной отладки)
-        script_key = DEFAULT_GEMINI_API_KEY
-        if not script_key or script_key == "AIzaSyYOUR_API_KEY_HERE_REPLACE_ME":
-            self.stdout.write(self.style.ERROR(
-                "CRITICAL ERROR: Gemini API key is not set or is a placeholder in the script. "
-                f"Please set a valid API key in DEFAULT_GEMINI_API_KEY or the '{ENV_GEMINI_API_KEY}' environment variable."
-            ))
-            return None
-        
-        self.stdout.write(self.style.WARNING(
-            f"Using DEFAULT_GEMINI_API_KEY directly from the script. "
-            "Remember to switch to environment variables for production."
-        ))
-        return script_key
-
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS(f"--- {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}: Starting eco-post generation ---"))
+        self.stdout.write(self.style.NOTICE(f"--- {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}: Запуск генерации эко-поста ---"))
 
-        gemini_key = self.get_gemini_api_key()
+        gemini_key = self.get_gemini_api_key() # Твой метод get_gemini_api_key уже использует self.stdout
         if not gemini_key:
-            self.stdout.write(self.style.ERROR("Operation aborted due to missing or invalid Gemini API key."))
+        # Сообщение об ошибке уже выводится в get_gemini_api_key
             return
 
         try:
             author = User.objects.get(username=AI_AUTHOR_USERNAME)
-            self.stdout.write(self.style.SUCCESS(f"Author '{author.username}' for posts found."))
+            self.stdout.write(self.style.SUCCESS(f"Автор '{author.username}' для постов найден."))
         except User.DoesNotExist:
             self.stdout.write(self.style.ERROR(
-                f"CRITICAL ERROR: Author user '{AI_AUTHOR_USERNAME}' not found in the database. Please create this user."
+                f"КРИТИЧЕСКАЯ ОШИБКА: Пользователь-автор '{AI_AUTHOR_USERNAME}' не найден в базе. Пожалуйста, создайте этого пользователя."
             ))
             return
 
@@ -315,3 +266,28 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(traceback.format_exc()))
         
         self.stdout.write(self.style.SUCCESS(f"--- {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}: Eco-post generation finished ---"))
+
+
+    def get_gemini_api_key(self) -> str | None:
+        gemini_api_key = os.getenv(ENV_GEMINI_API_KEY)
+        if not gemini_api_key:
+            self.stdout.write(self.style.ERROR(
+                f"КРИТИЧЕСКАЯ ОШИБКА: Ключ Gemini API не найден в переменной окружения '{ENV_GEMINI_API_KEY}'. "
+                "Пожалуйста, установите эту переменную в вашем .env файле."
+            ))
+            return None
+
+        known_placeholders = [
+            "AIzaSyYOUR_API_KEY_HERE_REPLACE_ME",  
+        ]
+        if gemini_api_key in known_placeholders:
+            self.stdout.write(self.style.ERROR(
+                f"КРИТИЧЕСКАЯ ОШИБКА: Ключ API из переменной окружения '{ENV_GEMINI_API_KEY}' "
+                "является плейсхолдером или ранее жестко закодированным ключом. Пожалуйста, установите НОВЫЙ, валидный ключ API."
+            ))
+            return None
+
+        self.stdout.write(self.style.SUCCESS(
+            f"Ключ Gemini API успешно получен из переменной окружения '{ENV_GEMINI_API_KEY}'."
+        ))
+        return gemini_api_key

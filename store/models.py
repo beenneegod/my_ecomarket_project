@@ -4,18 +4,19 @@ from django.db import models
 from django.conf import settings # Для ссылки на модель пользователя
 from django.urls import reverse
 from django.utils.text import slugify
+from django.utils.module_loading import import_string
 
 class Category(models.Model):
     """Модель категории товаров"""
-    name = models.CharField(max_length=200, db_index=True, verbose_name="Название")
+    name = models.CharField(max_length=200, db_index=True, verbose_name="Nazwa")
     # Slug - это часть URL, обычно формируется из названия (например, 'kukhonnaya-tekhnika')
     # unique=True гарантирует, что слаги не будут повторяться
-    slug = models.SlugField(max_length=200, unique=True, verbose_name="URL slug")
+    slug = models.SlugField(max_length=200, unique=True, verbose_name="Alias URL")
 
     class Meta:
         ordering = ('name',)
-        verbose_name = 'Категория'
-        verbose_name_plural = 'Категории'
+        verbose_name = 'Kategoria'
+        verbose_name_plural = 'Kategorie'
 
     def __str__(self):
         return self.name
@@ -24,6 +25,21 @@ class Category(models.Model):
         """Возвращает URL для отображения товаров этой категории."""
         # 'store:product_list_by_category' - это имя URL, которое мы создадим позже
         return reverse('store:product_list_by_category', args=[self.slug])
+    
+def get_product_image_storage_instance():
+    """
+    Возвращает экземпляр файлового хранилища в зависимости от settings.DEBUG.
+    Вызывается один раз при определении класса Product.
+    """
+    if not settings.DEBUG:
+        storage_path = settings.DEFAULT_FILE_STORAGE # Должен быть 'storages.backends.s3boto3.S3Boto3Storage'
+        print(f"[get_product_image_storage_instance] Using S3 Storage: {storage_path}")
+    else:
+        storage_path = 'django.core.files.storage.FileSystemStorage' # Явно для DEBUG=True
+        print(f"[get_product_image_storage_instance] Using FileSystem Storage: {storage_path}")
+    
+    StorageClass = import_string(storage_path)
+    return StorageClass()
 
 class Product(models.Model):
     category = models.ForeignKey(Category,
@@ -35,21 +51,25 @@ class Product(models.Model):
     name = models.CharField(max_length=255, verbose_name="Nazwa")
     slug = models.SlugField(max_length=255,
                             unique=True,       # Слаги должны быть уникальными
-                            db_index=True,     # Индекс для быстрого поиска по слагу
-                            null=True,         # Временно разрешаем NULL (для существующих товаров)
-                            blank=True,        # Временно разрешаем быть пустым в формах
-                            verbose_name="URL slug")
-    description = models.TextField(blank=True, verbose_name="Описание") # Описание может быть необязательным
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена") # Используем DecimalField для точности
-    stock = models.PositiveIntegerField(default=0, verbose_name="Остаток на складе") # Количество не может быть отрицательным
-    image = models.ImageField(upload_to='products/%Y/%m/%d/', blank=True, null=True, verbose_name="Изображение") # Картинка товара (необязательно)
+                            db_index=True,
+                            verbose_name="Alias URL")
+    description = models.TextField(blank=True, verbose_name="Opis") # Описание может быть необязательным
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Cena") # Используем DecimalField для точности
+    stock = models.PositiveIntegerField(default=0, verbose_name="Ilość na stanie") # Количество не может быть отрицательным
+    image = models.ImageField(
+        upload_to='products/%Y/%m/%d/',
+        blank=True,
+        null=True,
+        verbose_name="Obrazek",
+        storage=get_product_image_storage_instance()
+    )
     # upload_to создает подпапки по году/месяцу/дню для порядка
-    available = models.BooleanField(default=True, verbose_name="Доступен") # Флаг доступности товара
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания") # Дата добавления (автоматически при создании)
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления") # Дата последнего обновления (автоматически при сохранении)
+    available = models.BooleanField(default=True, verbose_name="Dostępny") # Флаг доступности товара
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data utworzenia") # Дата добавления (автоматически при создании)
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Data aktualizacji") # Дата последнего обновления (автоматически при сохранении)
     class Meta:
-        verbose_name = "Товар"
-        verbose_name_plural = "Товары"
+        verbose_name = "Produkt"
+        verbose_name_plural = "Produkty"
         ordering = ['name'] # Сортировка по умолчанию по названию
 
     def __str__(self):
@@ -60,25 +80,41 @@ class Product(models.Model):
         return reverse('store:product_detail', args=[self.slug])
     
     def save(self, *args, **kwargs):
-        if not self.slug and self.name: # Генерируем слаг, только если он не установлен и есть имя
-            self.slug = slugify(self.name)
-            # Начальная проверка на уникальность и добавление суффикса, если необходимо
-            # Это базовая реализация, для высокой нагрузки может потребоваться более сложная логика
-            original_slug = self.slug
-            counter = 1
-            # Проверяем, существует ли уже такой слаг (исключая текущий объект, если он уже сохранен)
-            queryset = Product.objects.filter(slug=self.slug)
-            if self.pk: # Если объект уже существует в БД
-                queryset = queryset.exclude(pk=self.pk)
+        if not self.slug or self.slug.strip() == "": # Генерируем, если слаг отсутствует или пустой (пробелы)
+            if self.name:
+                self.slug = slugify(self.name)
+                # Логика проверки уникальности и добавления суффикса
+                original_slug = self.slug
+                counter = 1
+                # Определяем максимальную длину слага с учетом возможного суффикса (например, "-1", "-2")
+                # Это базовая реализация, для высокой нагрузки может потребоваться более сложная логика
+                base_slug_max_length = self._meta.get_field('slug').max_length - (len(str(Product.objects.count())) + 2) # Примерный расчет
 
-            while queryset.exists():
-                self.slug = f"{original_slug}-{counter}"
-                counter += 1
-                # Обновляем queryset для следующей проверки
+                if len(self.slug) > base_slug_max_length:
+                    self.slug = self.slug[:base_slug_max_length]
+                    original_slug = self.slug # Обновляем original_slug, если он был урезан
+
                 queryset = Product.objects.filter(slug=self.slug)
-                if self.pk:
+                if self.pk: # Если объект уже существует в БД
                     queryset = queryset.exclude(pk=self.pk)
 
+                while queryset.exists():
+                    self.slug = f"{original_slug}-{counter}"
+                    counter += 1
+                    if len(self.slug) > self._meta.get_field('slug').max_length:
+                    # Если даже с коротким суффиксом превышаем, это проблема.
+                    # Можно либо урезать еще, либо вызвать ошибку, либо использовать UUID в суффиксе.
+                    # Для простоты пока оставим как есть, но это место для улучшения.
+                        self.slug = self.slug[:self._meta.get_field('slug').max_length] # Обрезаем жестко
+
+                    queryset = Product.objects.filter(slug=self.slug)
+                    if self.pk:
+                        queryset = queryset.exclude(pk=self.pk)
+            else:
+            # Если нет имени, слаг не может быть сгенерирован.
+            # Если слаг обязателен (null=False), здесь должна быть ошибка или значение по умолчанию.
+            # Но так как мы делаем slug не null=False, то до этого доходить не должно, если имя есть.
+                pass 
         super().save(*args, **kwargs)
 
 class Order(models.Model):
@@ -86,29 +122,29 @@ class Order(models.Model):
     # Связь с пользователем. Используем settings.AUTH_USER_MODEL для гибкости.
     # null=True, blank=True позволят создавать заказы для неавторизованных пользователей (если понадобится)
     # on_delete=models.SET_NULL - если пользователь удален, заказ остается, но без пользователя
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders', verbose_name="Пользователь")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders', verbose_name="Użytkownik")
     # Дополнительные поля для адреса доставки и т.д. можно добавить сюда
-    first_name = models.CharField(max_length=100, verbose_name="Имя")
-    last_name = models.CharField(max_length=100, verbose_name="Фамилия")
+    first_name = models.CharField(max_length=100, verbose_name="Imię")
+    last_name = models.CharField(max_length=100, verbose_name="Nazwisko")
     email = models.EmailField(verbose_name="Email")
-    address_line_1 = models.CharField(max_length=250, verbose_name="Адрес (улица, дом)")
-    address_line_2 = models.CharField(max_length=250, blank=True, verbose_name="Адрес (кв., офис - необязательно)")
-    postal_code = models.CharField(max_length=20, verbose_name="Почтовый индекс")
-    city = models.CharField(max_length=100, verbose_name="Город")
+    address_line_1 = models.CharField(max_length=250, verbose_name="Adres (linia 1)")
+    address_line_2 = models.CharField(max_length=250, blank=True, verbose_name="Adres (linia 2, opcjonalnie)")
+    postal_code = models.CharField(max_length=20, verbose_name="Kod pocztowy")
+    city = models.CharField(max_length=100, verbose_name="Miasto")
     # Поле страны пока сделаем простым текстом, можно усложнить позже
-    country = models.CharField(max_length=100, default="Польша", verbose_name="Страна")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
-    paid = models.BooleanField(default=False, verbose_name="Оплачен") # Статус оплаты
-    stripe_id = models.CharField(max_length=250, blank=True, verbose_name="ID транзакции Stripe") # Для хранения ID сессии/платежа Stripe
+    country = models.CharField(max_length=100, default="Polska", verbose_name="Kraj")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data złożenia")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Data aktualizacji")
+    paid = models.BooleanField(default=False, verbose_name="Opłacone") # Статус оплаты
+    stripe_id = models.CharField(max_length=250, blank=True, verbose_name="ID transakcji Stripe") # Для хранения ID сессии/платежа Stripe
 
     class Meta:
-        verbose_name = "Заказ"
-        verbose_name_plural = "Заказы"
+        verbose_name = "Zamówienie"
+        verbose_name_plural = "Zamówienia"
         ordering = ['-created_at'] # Сортировка по умолчанию - сначала новые
 
     def __str__(self):
-        return f"Заказ №{self.id}"
+        return f"Zamówienie №{self.id}"
 
     def get_total_cost(self):
         """Возвращает общую стоимость заказа"""
@@ -117,20 +153,20 @@ class Order(models.Model):
 class OrderItem(models.Model):
     """Модель элемента заказа (конкретный товар в заказе)"""
     # Связь с заказом. related_name='items' позволяет обращаться к элементам заказа через order.items.all()
-    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE, verbose_name="Заказ")
+    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE, verbose_name="Zamówienie")
     # Связь с товаром. related_name='order_items' - для обратного доступа (product.order_items.all())
-    product = models.ForeignKey(Product, related_name='order_items', on_delete=models.PROTECT, verbose_name="Товар") # PROTECT - не даст удалить товар, если он есть в заказах
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена") # Цена товара НА МОМЕНТ покупки
-    quantity = models.PositiveIntegerField(default=1, verbose_name="Количество")
+    product = models.ForeignKey(Product, related_name='order_items', on_delete=models.PROTECT, verbose_name="Produkt") # PROTECT - не даст удалить товар, если он есть в заказах
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Cena") # Цена товара НА МОМЕНТ покупки
+    quantity = models.PositiveIntegerField(default=1, verbose_name="Ilość")
 
     class Meta:
-        verbose_name = "Элемент заказа"
-        verbose_name_plural = "Элементы заказа"
+        verbose_name = "Pozycja zamówienia"
+        verbose_name_plural = "Pozycje zamówienia"
         # Уникальность пары заказ-товар, чтобы один товар не добавлялся дважды в один заказ как отдельный OrderItem
-        # unique_together = ('order', 'product') # Раскомментируйте, если нужно строго это правило
+        unique_together = ('order', 'product')
 
     def __str__(self):
-        return f"{self.quantity} x {self.product.name} в Заказе №{self.order.id}"
+        return f"{self.quantity} x {self.product.name} w zamówieniu №{self.order.id}"
 
     def get_cost(self):
         """Возвращает стоимость данного элемента заказа (цена * количество)"""

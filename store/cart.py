@@ -3,22 +3,36 @@
 from decimal import Decimal
 from django.conf import settings
 from .models import Product
+import logging
 
+logger = logging.getLogger(__name__)
 class Cart:
-    """
-    Класс для управления корзиной покупок в сессии.
-    """
     def __init__(self, request):
-        """
-        Инициализация корзины.
-        Получает корзину из текущей сессии или создает новую.
-        """
         self.session = request.session
         cart = self.session.get(settings.CART_SESSION_ID)
         if not cart:
-            # Сохраняем пустую корзину в сессии
             cart = self.session[settings.CART_SESSION_ID] = {}
         self.cart = cart
+
+    def add(self, product, quantity=1, update_quantity=False):
+        # ... (остальной код метода add без изменений) ...
+        product_id = str(product.id) 
+
+        if product_id not in self.cart:
+            self.cart[product_id] = {'quantity': 0, 'price': str(product.price)}
+
+        if update_quantity:
+            self.cart[product_id]['quantity'] = quantity
+        else:
+            self.cart[product_id]['quantity'] += quantity
+
+        if self.cart[product_id]['quantity'] > product.stock:
+             self.cart[product_id]['quantity'] = product.stock
+
+        if self.cart[product_id]['quantity'] <= 0:
+             self.remove(product)
+        else:
+             self.save()
 
     def add(self, product, quantity=1, update_quantity=False):
         """
@@ -58,23 +72,46 @@ class Cart:
 
     def __iter__(self):
         product_ids = self.cart.keys()
+        # Используем logger.debug() или logger.info() вместо print()
+        logger.info(f"CART_DEBUG: Product IDs in session cart: {list(product_ids)}")
+
         products = Product.objects.filter(id__in=product_ids)
+        logger.info(f"CART_DEBUG: Products fetched from DB: {[(p.id, p.name, p.slug) for p in products]}")
+
         cart = self.cart.copy()
 
         products_in_cart = []
-        for product in products:
-            item_data = cart[str(product.id)]
-            item_data['product_obj'] = product # Используем product_obj в шаблоне
+        for product_instance in products: # Переименовал для ясности
+            product_id_str = str(product_instance.id)
+            if not product_instance.slug: # ПРОВЕРКА ПРЯМО ЗДЕСЬ
+                logger.error(f"CART_CRITICAL_DEBUG: Product ID {product_instance.id} ('{product_instance.name}') has an empty or NULL slug ('{product_instance.slug}') right after fetching from DB!")
+            
+            item_data = cart.get(product_id_str) # Используем .get() для безопасности, хотя ID должен быть
+            if item_data is None:
+                logger.warning(f"CART_DEBUG: Product ID {product_id_str} found in DB but not in cart session copy. Skipping.")
+                continue
+
+            item_data['product_obj'] = product_instance 
             item_data['total_price'] = Decimal(item_data['price']) * item_data['quantity']
             products_in_cart.append(item_data)
 
-         # Удалить из сессии корзины товары, которых уже нет в БД
         current_product_ids_in_db = [str(p.id) for p in products]
-        for product_id_in_session in list(cart.keys()): # list() для безопасного удаления при итерации
+        ids_removed_from_session = []
+        for product_id_in_session in list(cart.keys()): 
             if product_id_in_session not in current_product_ids_in_db:
+                ids_removed_from_session.append(product_id_in_session)
                 del self.cart[product_id_in_session]
-        if len(products_in_cart) != len(cart): # Если что-то удалили
-            self.save() # Сохранить изменения в сессии
+        
+        if ids_removed_from_session:
+            logger.info(f"CART_DEBUG: Product IDs removed from session because not in DB: {ids_removed_from_session}")
+            self.save() 
+
+        logger.info(f"CART_DEBUG: Final products_in_cart to be iterated by template: {[{'id': item['product_obj'].id, 'name': item['product_obj'].name, 'slug': item['product_obj'].slug, 'qty': item['quantity']} for item in products_in_cart]}")
+        
+        # Дополнительная проверка непосредственно перед возвратом
+        for item_for_template in products_in_cart:
+            if not item_for_template['product_obj'].slug:
+                logger.error(f"CART_CRITICAL_DEBUG_FINAL_CHECK: Product ID {item_for_template['product_obj'].id} ('{item_for_template['product_obj'].name}') has slug ('{item_for_template['product_obj'].slug}') before returning to template!")
 
         return iter(products_in_cart)
 

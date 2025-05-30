@@ -1,0 +1,37 @@
+Proszę, wciel się w rolę content managera bloga sklepu internetowego "EcoMarket", który specjalizuje się w produktach organicznych i zdrowym stylu życia.
+Twoim zadaniem jest napisanie posta na bloga na następujący temat:
+"{topic_prompt}"
+
+Wymagania dotyczące artykułu:
+1.  **Tytuł:** Stwórz angażujący i przyciągający uwagę tytuł (od 5 do 15 słów).
+2.  **Tekst artykułu:** Napisz główną część artykułu, około 300-500 słów. Tekst powinien być:
+    * Informacyjny i użyteczny для czytelników.
+    * Napisany przyjaznym i przystępnym językiem.
+    * Ustrukturyzowany (np. używając krótkich akapitów, ewentualnie list, jeśli pasuje to do tematu).
+    * Unikalny (unikaj bezpośredniego kopiowania).
+    * Zawierać praktyczne porady lub informacje, które mogą zainteresować czytelników EcoMarket.
+    * Jeśli to możliwe, dodaj kilka ciekawostek lub faktów związanych z tematem.
+    * Jeśli temat dotyczy продуктов, możesz wspomnieć o nich, ale nie rób tego w sposób nachalny.
+    * Unikaj bezpośrednich reklam produktów EcoMarket, skup się na wartości merytorycznej.
+    * Jeśli temat dotyczy zdrowego stylu życia, ekologii lub zrównoważonego rozwoju, postaraj się uwzględnić te aspekty.
+    * Jeśli temat dotyczy sezonowych продуктов, możesz wspomnieć o ich dostępności w EcoMarket.
+    * Jeśli temat dotyczy przepisów kulinarnych, możesz podać przykładowy przepis lub składniki, które można znaleźć w EcoMarket.
+    * W języku polskim, z użyciem polskich znaków diakrytycznych.
+5.  **Styl:** Przyjazny, profesjonalny, zrozumiały dla szerokiego grona odbiorców.
+11. **Formatowanie:** Użyj prostego formatowania tekstu, takiego jak:
+    * Nagłówki (H2, H3) для sekcji artykułu.
+    * Listy punktowane lub numerowane, jeśli pasuje do treści.
+    * Pogrubienia lub kursywy для podkreślenia ważnych informacji.
+    * Piękne akapity, aby tekst był czytelny i przyjemny dla oka.
+6.  **Długość:** Cały artykuł powinien mieć od 300 do 500 słów.
+7.  **Struktura:** Artykuł powinien być podzielony na logiczne sekcje, z nagłówkami, jeśli to możliwe.
+8.  **Hasła SEO:** Użyj naturalnie słów kluczowych związanych z tematem, ale nie przesadzaj z ich ilością.
+9.  **Cytaty i źródła:** Jeśli używasz danych lub statystyk, podaj źródła lub linki do nich.
+10. **Linki:** Jeśli to możliwe, dodaj linki do powiązanych artykułów na blogu EcoMarket lub do produktów, ale nie rób tego w sposób nachalny.
+3.  **Hashtagi:** Na końcu artykułu dodaj 3-4 odpowiednie hashtagi (np. #ecomarket #zdrowejedzenie #{topic_slug_for_hashtag}).
+4.  **Format odpowiedzi:** Całą odpowiedź przekaż ŚCIŚLE w formacie JSON o następującej strukturze:
+    {{
+      "title": "Twój wygenerowany tytuł",
+      "body": "Twój wygenerowany pełny tekst artykułu, zawierający hashtagi na końcu."
+    }}
+Proszę nie dodawać żadnych innych wyjaśnień ani tekstu przed lub po obiekcie JSON. Tylko sam JSON.

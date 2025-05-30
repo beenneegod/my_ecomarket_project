@@ -20,8 +20,8 @@ class CommentAdmin(admin.ModelAdmin):
 
     def approve_comments(self, request, queryset):
         queryset.update(active=True)
-    approve_comments.short_description = "Approve selected comments"
+    approve_comments.short_description = "Zatwierdź wybrane komentarze"
 
     def disapprove_comments(self, request, queryset):
         queryset.update(active=False)
-    disapprove_comments.short_description = "Disapprove selected comments"
+    disapprove_comments.short_description = "Odrzuć wybrane komentarze"

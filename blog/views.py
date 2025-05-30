@@ -15,6 +15,7 @@ from .models import Post # Уже импортирован
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.utils import timezone
+from django.conf import settings
 
 User = get_user_model()
 
@@ -25,26 +26,17 @@ class CreatePostAPIView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = PostCreateSerializer(data=request.data)
         if serializer.is_valid():
-            # Данные валидны, теперь нужно установить автора и сгенерировать слаг.
-            # Предположим, у вас есть специальный пользователь для постов, создаваемых API.
-            # Либо вы будете идентифицировать "автора" на основе API-ключа/токена.
             try:
-                # ЗАГЛУШКА: Используем первого суперпользователя как автора.
-                # В реальной системе здесь должна быть логика определения автора,
-                # например, по API-ключу или это будет фиксированный "системный" пользователь.
-                api_user = User.objects.filter(is_superuser=True).first()
-                if not api_user:
-                    # Если нет суперпользователя, можно создать специального пользователя "API Bot"
-                    # или вернуть ошибку.
-                    return Response(
-                        {"error": "API user not configured on the server."},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
+                # Получаем автора из настроек
+                author_username = settings.API_POST_AUTHOR_USERNAME
+                author = User.objects.get(username=author_username)
+            except User.DoesNotExist:
+                # Логируем ошибку или возвращаем 500, если системный автор не найден
+                # logger.error(f"API Post Author '{author_username}' not found!")
+                return Response({"error": "API post author not configured correctly on the server."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             except Exception as e:
-                return Response(
-                    {"error": f"Could not determine API user: {str(e)}"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+                # logger.error(f"Error getting API Post Author: {e}")
+                return Response({"error": f"Could not determine API post author: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             title = serializer.validated_data['title']
             new_slug = slugify(title)
@@ -66,7 +58,7 @@ class CreatePostAPIView(APIView):
             # Вместо этого, создаем объект Post вручную.
             try:
                 post = Post.objects.create(
-                    author=api_user,
+                    author=author,
                     title=title,
                     slug=new_slug,
                     body=serializer.validated_data['body'],

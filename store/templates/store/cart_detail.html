@@ -21,7 +21,7 @@
                 </thead>
                 <tbody>
                     {% for item in cart %}
-                        {% with product=item.product %}
+                        {% with product=item.product_obj %}
                         <tr class="cart-item" data-product-id="{{ product.id }}">
                             <td>
                                 <a href="{% url 'store:product_detail' product.slug %}">

@@ -31,7 +31,8 @@ class ProductAdmin(ImportExportModelAdmin):
         if obj.image:
             return mark_safe(f'<img src="{obj.image.url}" style="max-height: 50px; max-width: 50px;" />')
         return "-"
-    thumbnail_preview.short_description = 'Miniatura'
+    @admin.display(description='Miniatura')
+
 
     @admin.display(description='Aktualny obrazek') # Для страницы редактирования
     def thumbnail_display(self, obj):
@@ -148,7 +149,7 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
                        'current_period_start', 'current_period_end', 'cancel_at_period_end',
                        'get_stripe_customer_id_from_profile') 
 
-    @admin.display(description='Stripe Customer ID (z Profilu)') # Описание для колонки
+    @admin.display(description='ID klienta Stripe (z Profilu)') # Описание для колонки
     def get_stripe_customer_id_from_profile(self, obj):
         if obj.user and hasattr(obj.user, 'profile') and obj.user.profile.stripe_customer_id:
             return obj.user.profile.stripe_customer_id

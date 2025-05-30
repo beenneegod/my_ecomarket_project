@@ -3,7 +3,9 @@
 import os
 from pathlib import Path
 import dotenv # Импортируем dotenv
+import logging
 
+logger = logging.getLogger(__name__)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -168,42 +170,62 @@ if not DEBUG: # Настройки для ПРОДАКШЕНА (использу
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME') 
-    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL') # Для S3-совместимых хранилищ, если не AWS S3
-    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN') # Если используешь CDN или свой домен для бакета
-    
-    AWS_S3_OBJECT_PARAMETERS = {
-        'CacheControl': 'max-age=86400', # Пример: кеширование объектов на 1 день
-    }
-    AWS_LOCATION = 'media' # Подпапка в бакете для медиафайлов (опционально, но рекомендуется)
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME')
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL') # Оставь пустым, если используешь Amazon S3
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN')
 
-    AWS_DEFAULT_ACL = 'private'
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400', # Кеширование на 1 день
+    }
+    AWS_LOCATION = 'media' # Файлы будут в s3://<bucket_name>/media/
+    AWS_DEFAULT_ACL = 'public-read' # Сделать файлы публично читаемыми
+
     # Формирование MEDIA_URL
     if AWS_S3_CUSTOM_DOMAIN:
-        # Убедись, что AWS_LOCATION заканчивается на слеш, если он не пустой
-        location_path = f"{AWS_LOCATION.strip('/')}/" if AWS_LOCATION else ""
-        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{location_path}'
-    else:
-        # Базовый URL для S3-совместимого хранилища
-        base_s3_url = AWS_S3_ENDPOINT_URL if AWS_S3_ENDPOINT_URL else f'https://s3.{AWS_S3_REGION_NAME}.amazonaws.com'
-        # Убедись, что AWS_LOCATION НЕ начинается и НЕ заканчивается на слеш для этого формата URL
-        location_path = f"{AWS_LOCATION.strip('/')}/" if AWS_LOCATION else ""
-        # URL для стандартного AWS S3 или S3-совместимого без кастомного домена
-        MEDIA_URL = f'{base_s3_url}/{AWS_STORAGE_BUCKET_NAME}/{location_path}'
-        # Для некоторых S3-совместимых хранилищ (например, Yandex) может быть так:
-        # MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/{location_path}'
-        # Всегда проверяй документацию твоего S3-провайдера по формату URL!
+        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
+    elif AWS_S3_ENDPOINT_URL:
+        # Для S3-совместимых хранилищ. Эта логика может потребовать адаптации
+        # в зависимости от того, как твой провайдер формирует URL (path-style vs virtual-hosted style)
+        # Часто django-storages сам формирует правильный URL для файла.
+        # MEDIA_URL может быть просто корневым путем на этом эндпоинте для бакета.
+        # Безопасный вариант - позволить django-storages генерировать полные URL для каждого файла,
+        # а MEDIA_URL использовать для {{ MEDIA_URL }} в шаблонах, если нужно.
+        # Пример для virtual-hosted style (если бакет доступен как bucket.endpoint.com):
+        # endpoint_hostname = AWS_S3_ENDPOINT_URL.split('//')[-1]
+        # MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{endpoint_hostname}/{AWS_LOCATION}/'
+        # Более простой вариант, если django-storages сам строит полный URL:
+        MEDIA_URL = f'/{AWS_LOCATION}/' # Django будет использовать это как относительный путь для {{ MEDIA_URL }}
+                                     # а file.url будет полным S3 URL.
+                                     # Однако, если ты всегда используешь file.url, то точное значение MEDIA_URL в settings
+                                     # для S3 (без кастомного домена) менее критично, если оно не пустое.
+                                     # Твой существующий вариант:
+                                     # base_s3_url = AWS_S3_ENDPOINT_URL
+                                     # location_path = f"{AWS_LOCATION.strip('/')}/" if AWS_LOCATION else ""
+                                     # MEDIA_URL = f'{base_s3_url}/{AWS_STORAGE_BUCKET_NAME}/{location_path}'
+                                     # Этот вариант предполагает path-style доступ.
+                                     # Оставим его, если он у тебя работал для S3-совместимого хранилища.
+        base_s3_url = AWS_S3_ENDPOINT_URL.rstrip('/')
+        location_inner = AWS_LOCATION.strip('/')
+        bucket_name_part = AWS_STORAGE_BUCKET_NAME.strip('/')
+        MEDIA_URL = f'{base_s3_url}/{bucket_name_part}/{location_inner}/'
 
-    # Проверка наличия основных переменных для S3 в продакшене
-    # (Можно использовать logging.warning или raise ValueError для более строгой проверки)
-    if not all([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME, AWS_S3_REGION_NAME]):
-        print("WARNING: Production S3 settings (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME, AWS_S3_REGION_NAME) are not fully configured. Check .env variables.")
-        # Если хочешь, чтобы приложение падало при отсутствии настроек:
-        # raise ValueError("Production S3 settings must be fully configured.")
+    else: # Стандартный Amazon S3
+        MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_LOCATION}/'
+
+    # Убедимся, что MEDIA_URL всегда заканчивается на /
+    if not MEDIA_URL.endswith('/'):
+        MEDIA_URL += '/'
+
+    # Проверка наличия ключевых переменных (можно сделать строже)
+    if not all([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME]):
+        logger.warning("Ключевые настройки S3 для продакшена (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME) не полностью сконфигурированы. Проверьте переменные .env.")
+    if not AWS_S3_REGION_NAME and not AWS_S3_ENDPOINT_URL and not AWS_S3_CUSTOM_DOMAIN: # Регион важен для AWS S3
+        logger.warning("AWS_S3_REGION_NAME не установлена для стандартного AWS S3.")
 
 else: # Настройки для РАЗРАБОТКИ (локальное хранение)
     MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 
 # Default primary key field type
@@ -226,6 +248,7 @@ LOGOUT_REDIRECT_URL = '/' # URL для перенаправления ПОСЛЕ
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST')
 # Порт должен быть числом, конвертируем его
+API_POST_AUTHOR_USERNAME = os.getenv('API_POST_AUTHOR_USERNAME', 'default_api_user')
 try:
     EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587)) # 587 - частый порт по умолчанию для TLS
 except (ValueError, TypeError):
