@@ -299,12 +299,12 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'INFO', # Для локальной разработки можно поставить 'DEBUG'
+            'level': 'DEBUG', # Для локальной разработки можно поставить 'DEBUG'
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'simple' if DEBUG else 'verbose',
         },
         'file_info': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler', # Ротация файлов по размеру
             'filename': BASE_DIR / 'logs/info.log',        # Убедись, что папка logs существует
             'maxBytes': 1024 * 1024 * 10,  # 10 MB
@@ -312,72 +312,63 @@ LOGGING = {
             'formatter': 'verbose',
             'encoding': 'utf-8',           # Явно указываем кодировку
         },
-        'file_error': {
-            'level': 'ERROR',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs/error.log',      # Убедись, что папка logs существует
-            'maxBytes': 1024 * 1024 * 5,   # 5 MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-            'encoding': 'utf-8',
-        },
     },
     'root': { # Корневой логгер
-        'handlers': ['console', 'file_info', 'file_error'], # Куда отправлять логи по умолчанию
-        'level': 'INFO', # Общий уровень для корневого логгера
+        'handlers': ['console'], # Куда отправлять логи по умолчанию
+        'level': 'DEBUG', # Общий уровень для корневого логгера
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file_info', 'file_error'],
-            'level': 'INFO', # Логи от Django (запросы, ошибки и т.д.)
+            'handlers': ['console'],
+            'level': 'DEBUG', # Логи от Django (запросы, ошибки и т.д.)
             'propagate': False, # Не передавать выше, чтобы не дублировать в root
         },
         'django.request': { # Отдельно для ошибок запросов, чтобы не пропустить
-            'handlers': ['console', 'file_error'], # Ошибки запросов пишем и в консоль, и в error.log
+            'handlers': ['console'], # Ошибки запросов пишем и в консоль, и в error.log
             'level': 'ERROR',
             'propagate': False,
         },
         'django.security': { # Логи безопасности
-            'handlers': ['console', 'file_error'],
+            'handlers': ['console'],
             'level': 'WARNING', # Или ERROR, если не хочешь видеть все предупреждения
             'propagate': False,
         },
         # Логгеры для AWS SDK (boto3)
         'boto3': {
-            'handlers': ['console', 'file_info'], # Или только file_info/file_error
+            'handlers': ['console'], # Или только file_info/file_error
             'level': 'WARNING', # Покажет только предупреждения и ошибки от boto3
             'propagate': True, # Можно оставить True, чтобы они также попадали в root, если нужно
         },
         'botocore': {
-            'handlers': ['console', 'file_info'],
+            'handlers': ['console'],
             'level': 'WARNING', # Аналогично для botocore
             'propagate': True,
         },
         's3transfer': {
-            'handlers': ['console', 'file_info'],
+            'handlers': ['console'],
             'level': 'WARNING',
             'propagate': True,
         },
         # Логгеры для твоих приложений (замени 'store', 'payments', 'blog' на реальные имена)
         'store': {
-            'handlers': ['console', 'file_info', 'file_error'],
-            'level': 'INFO', # Или DEBUG во время активной разработки этого приложения
+            'handlers': ['console'],
+            'level': 'DEBUG', # Или DEBUG во время активной разработки этого приложения
             'propagate': False,
         },
         'payments': {
-            'handlers': ['console', 'file_info', 'file_error'],
-            'level': 'INFO',
+            'handlers': ['console'],
+            'level': 'DEBUG',
             'propagate': False,
         },
         'blog': {
-            'handlers': ['console', 'file_info', 'file_error'],
-            'level': 'INFO',
+            'handlers': ['console'],
+            'level': 'DEBUG',
             'propagate': False,
         },
         # Логгер для django-axes (если хочешь его логи отдельно или с другим уровнем)
         'axes': {
-            'handlers': ['console', 'file_info'], # О попытках входа
-            'level': 'INFO',
+            'handlers': ['console'], # О попытках входа
+            'level': 'DEBUG',
             'propagate': False,
         }
         # Добавь другие логгеры для сторонних библиотек, если нужно

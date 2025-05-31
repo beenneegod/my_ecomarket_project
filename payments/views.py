@@ -68,11 +68,11 @@ def checkout_and_payment(request):
             }
 
             # Заполняем line_items (как и раньше, но без expand)
-            for item in cart: # item - это словарь из Cart.__iter__()
-                product_data = item['product_obj'] # <--- ИСПРАВЛЕНО ЗДЕСЬ
+            for item in cart:
+                product_data = item['product_obj']
                 session_data['line_items'].append({
                     'price_data': {
-                        'unit_amount': int(Decimal(item['price']) * Decimal('100')), # Убедись, что item['price'] это строка, которую можно конвертировать в Decimal
+                        'unit_amount': int(item['price'] * Decimal('100')),
                         'currency': 'pln',
                         'product_data': {
                             'name': product_data.name,

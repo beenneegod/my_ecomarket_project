@@ -175,9 +175,15 @@ class OrderItem(models.Model):
 
 class Profile(models.Model): # Без отступа в начале строки
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    avatar = models.ImageField(
+        upload_to='avatars/',
+        null=True,
+        blank=True,
+        storage=get_product_image_storage_instance()
+    )
     bio = models.TextField(blank=True, null=True, verbose_name="O sobie")
     stripe_customer_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Stripe Customer ID")
+
     class Meta:
         verbose_name = "Profil użytkownika"
         verbose_name_plural = "Profile użytkowników"

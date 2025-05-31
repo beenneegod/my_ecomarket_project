@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
-
+from store.models import get_product_image_storage_instance
 class Post(models.Model):
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -20,7 +20,8 @@ class Post(models.Model):
     image = models.ImageField(
         upload_to='blog_images/%Y/%m/%d/',
         blank=True,
-        null=True
+        null=True,
+        storage=get_product_image_storage_instance()
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -56,10 +57,11 @@ class Comment(models.Model):
     )
     body = models.TextField(max_length=500)
     image = models.ImageField(
-        upload_to='blog_comments/%Y/%m/%d/', # Куда сохранять изображения
+        upload_to='blog_comments/%Y/%m/%d/',
         blank=True, # Поле необязательное
         null=True,  # Разрешаем NULL в БД
-        verbose_name="Obrazek"
+        verbose_name="Obrazek",
+        storage=get_product_image_storage_instance()
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
