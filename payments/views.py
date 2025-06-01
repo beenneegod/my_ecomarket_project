@@ -4,7 +4,7 @@ from django.db import transaction
 import stripe # Импортируем библиотеку Stripe
 from decimal import Decimal # Для работы с ценами
 from django.conf import settings # Для доступа к ключам API и другим настройкам
-from django.shortcuts import render, redirect, reverse, get_object_or_404
+from django.shortcuts import render, redirect, reverse # get_object_or_404 removed F401
 from store.models import Product, Order, OrderItem, SubscriptionBoxType, Profile, UserSubscription # Импортируем модель Order (пока не используем, но понадобится)
 from store.cart import Cart # Импортируем нашу корзину
 from django.contrib import messages
@@ -14,7 +14,7 @@ from django.contrib.auth import get_user_model
 from store.forms import OrderCreateForm
 from .tasks import send_order_confirmation_email_task, send_subscription_confirmation_email_task, \
                    send_subscription_canceled_email_task, send_payment_failed_email_task
-from django.utils import timezone
+# from django.utils import timezone # F401 unused import
 from datetime import datetime, timezone as dt_timezone
 import traceback
 

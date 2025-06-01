@@ -134,7 +134,7 @@ class ProfileUpdateForm(forms.ModelForm):
             if avatar.size > self.MAX_AVATAR_SIZE:
                 raise forms.ValidationError(f"Rozmiar pliku awatara nie może przekraczać {self.MAX_AVATAR_SIZE // 1024 // 1024} MB.")
             if avatar.content_type not in self.ALLOWED_AVATAR_TYPES:
-                raise forms.ValidationError(f"Niedozwolony typ pliku. Proszę загрузить JPEG, PNG lub GIF.")
+                raise forms.ValidationError("Niedozwolony typ pliku. Proszę загрузить JPEG, PNG lub GIF.")
         return avatar
 
 class SubscriptionChoiceForm(forms.Form):

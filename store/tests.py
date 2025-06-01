@@ -19,14 +19,14 @@ class CategoryModelTests(TestCase):
         self.assertEqual(self.category.name, "Тестовая Категория")
         self.assertEqual(self.category.slug, "testovaya-kategoriya")
         self.assertEqual(str(self.category), "Тестовая Категория")
-        print(f"Тест test_category_creation для Category пройден.")
+        print("Тест test_category_creation для Category пройден.")
 
     def test_category_get_absolute_url(self):
         """Тест метода get_absolute_url для Category."""
         # Ожидаемый URL: /category/testovaya-kategoriya/
         expected_url = reverse('store:product_list_by_category', args=[self.category.slug])
         self.assertEqual(self.category.get_absolute_url(), expected_url)
-        print(f"Тест test_category_get_absolute_url для Category пройден.")
+        print("Тест test_category_get_absolute_url для Category пройден.")
 
 
 class ProductModelTests(TestCase):
@@ -53,7 +53,7 @@ class ProductModelTests(TestCase):
         self.assertEqual(self.product.stock, 10)
         self.assertTrue(self.product.available)
         self.assertEqual(str(self.product), "Тестовый Товар")
-        print(f"Тест test_product_creation для Product пройден.")
+        print("Тест test_product_creation для Product пройден.")
 
 class ProductListViewTests(TestCase):
 

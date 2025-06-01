@@ -111,23 +111,32 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
-DATABASES = {
-    'default': {
-        'ENGINE': DB_ENGINE,
-        'NAME': os.getenv('DATABASE_NAME'),
-        'USER': os.getenv('DATABASE_USER'),
-        'PASSWORD': os.getenv('DATABASE_PASSWORD'),
-        'HOST': os.getenv('DATABASE_HOST'),
-        'PORT': os.getenv('DATABASE_PORT', 5432),
+
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3_test', # Use a separate DB for tests if DEBUG is True
+        }
     }
-}
-# Проверка наличия всех переменных БД
-if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
-    # Убедимся, что порт не передается как пустая строка, если MySQL этого не любит
-    if not DATABASES['default']['PORT']:
-        del DATABASES['default']['PORT'] # Удаляем ключ PORT, если он пустой для MySQL
-    # Дополнительные опции для MySQL можно добавить здесь, если они специфичны
-    DATABASES['default'].setdefault('OPTIONS', {}).update({'charset': 'utf8mb4'})
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': DB_ENGINE,
+            'NAME': os.getenv('DATABASE_NAME'),
+            'USER': os.getenv('DATABASE_USER'),
+            'PASSWORD': os.getenv('DATABASE_PASSWORD'),
+            'HOST': os.getenv('DATABASE_HOST'),
+            'PORT': os.getenv('DATABASE_PORT', 5432),
+        }
+    }
+    # Проверка наличия всех переменных БД
+    if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
+        # Убедимся, что порт не передается как пустая строка, если MySQL этого не любит
+        if not DATABASES['default']['PORT']:
+            del DATABASES['default']['PORT'] # Удаляем ключ PORT, если он пустой для MySQL
+        # Дополнительные опции для MySQL можно добавить здесь, если они специфичны
+        DATABASES['default'].setdefault('OPTIONS', {}).update({'charset': 'utf8mb4'})
 
 
 # Password validation

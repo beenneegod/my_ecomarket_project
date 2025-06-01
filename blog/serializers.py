@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from .models import Post
 from django.contrib.auth import get_user_model
-from django.utils.text import slugify # Для генерации слага
+# from django.utils.text import slugify # Для генерации слага # F401 unused import
 
 User = get_user_model()
 

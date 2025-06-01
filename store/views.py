@@ -16,7 +16,7 @@ from blog.models import Post
 from django.contrib import messages
 import stripe
 from django.urls import reverse, reverse_lazy
-from django.conf import settings
+# from django.conf import settings # F401 unused import
 
 
 
@@ -24,7 +24,7 @@ from django.conf import settings
 @ensure_csrf_cookie
 def product_list(request, category_slug=None):
     categories = Category.objects.all()
-    products_list = Product.objects.filter(available=True)
+    products_list = Product.objects.filter(available=True).select_related('category')
     current_category = None
     query = None # Инициализируем переменную для запроса
 
@@ -212,10 +212,10 @@ def cart_detail(request):
 @ensure_csrf_cookie
 def homepage(request):
     # Получаем несколько популярных/новых товаров для отображения (пример)
-    featured_products = Product.objects.filter(available=True).order_by('-created_at')[:4] # Последние 4 товара
+    featured_products = Product.objects.filter(available=True).select_related('category').order_by('-created_at')[:4] # Последние 4 товара
 
     # Получаем несколько последних постов из блога (пример)
-    latest_posts = Post.objects.filter(status='published').order_by('-published_at')[:3] # Последние 3 опубликованных поста
+    latest_posts = Post.objects.filter(status='published').select_related('author').order_by('-published_at')[:3] # Последние 3 опубликованных поста
 
     # Можно также получить категории для отображения
     categories = Category.objects.all()[:4] # Первые 4 категории

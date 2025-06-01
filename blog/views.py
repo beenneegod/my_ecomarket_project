@@ -3,7 +3,7 @@ from django.views.generic import ListView, View # DetailView is not directly use
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy # Not strictly needed here, but good for general use.
 from django.contrib import messages
-from .models import Post, Comment
+from .models import Post # Comment removed, F401
 from .forms import CommentForm # Assuming CommentForm will be created later
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated # Или кастомный permission для API-ключа
 from rest_framework.authentication import TokenAuthentication
 from .serializers import PostCreateSerializer
-from .models import Post # Уже импортирован
+# from .models import Post # Уже импортирован # F811 - removed duplicate import
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.utils import timezone
@@ -85,13 +85,13 @@ class PostListView(ListView):
     template_name = 'blog/post_list.html'
     context_object_name = 'posts'
     paginate_by = 5
-    queryset = Post.objects.filter(status='published').order_by('-published_at')
+    queryset = Post.objects.filter(status='published').select_related('author').order_by('-published_at')
 
 class PostDetailView(View): # Inherit from View for custom GET and POST
 
     def get(self, request, slug, *args, **kwargs):
         post = get_object_or_404(Post, slug=slug, status='published')
-        comments = post.comments.filter(active=True).order_by('-created_at')
+        comments = post.comments.filter(active=True).select_related('author').order_by('-created_at')
         comment_form = CommentForm()
         context = {
             'post': post,
@@ -222,7 +222,7 @@ class PostDetailView(View):
         else:
             # Если форма невалидна, передаем ее обратно с ошибками
             # Также нужно снова получить список комментариев для корректного отображения страницы
-            comments = post.comments.filter(active=True).order_by('-created_at')
+            comments = post.comments.filter(active=True).select_related('author').order_by('-created_at')
             messages.error(request, "Popraw błędy w formularzu komentarza.")
             context = {
                 'post': post,

@@ -83,7 +83,7 @@ class ProductResource(resources.ModelResource):
         if 'price' in row and row['price']:
             try:
                 row['price'] = str(row['price']).replace(',', '.') # Заменяем запятую на точку для Decimal
-            except:
+            except Exception:
                 pass # Оставляем как есть, если конвертация не удалась, import-export выдаст ошибку позже
         
         if 'stock' in row and row['stock'] == '': # Если сток пустой, делаем его 0
