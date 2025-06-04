@@ -26,22 +26,30 @@
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %}active{% endif %}" href="{% url 'store:product_list' %}">Produkty</a>
+                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %}active{% endif %}" href="{% url 'store:product_list' %}"><i class="bi bi-basket3-fill me-1"></i> Produkty</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.view_name == 'store:subscription_box_list' %}active{% endif %}" href="{% url 'store:subscription_box_list' %}">Eko Boxy</a>
+                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.view_name == 'store:subscription_box_list' %}active{% endif %}" style="white-space: nowrap;" href="{% url 'store:subscription_box_list' %}"><i class="bi bi-box-seam-fill me-1"></i> Eko-Boxy</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.app_name == 'blog' %}active{% endif %}" href="{% url 'blog:post_list' %}">Blog</a>
+                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.app_name == 'carbon_calculator' %}active{% endif %}" style="white-space: nowrap;" href="{% url 'carbon_calculator:calculate_page' %}"><i class="bi bi-calculator-fill me-1"></i> Eko-Kalkulator</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.app_name == 'carbon_calculator' %}active{% endif %}" href="{% url 'carbon_calculator:calculate_page' %}">
-                                <i class="bi bi-calculator-fill me-1"></i> Eko-Kalkulator
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if request.resolver_match.app_name == 'challenges' %}active{% endif %}" href="#" id="navbarChallengesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-trophy me-1"></i> Eko-Wyzwania
                             </a>
+                            <ul class="dropdown-menu" aria-labelledby="navbarChallengesDropdown">
+                                <li><a class="dropdown-item" href="{% url 'challenges:challenge_list' %}"><i class="bi bi-list-task me-1"></i> Lista wyzwań</a></li>
+                                <li><a class="dropdown-item" href="{% url 'challenges:my_progress' %}"><i class="bi bi-person-badge me-1"></i> Mój postęp</a></li>
+                                <li><a class="dropdown-item" href="{% url 'challenges:leaderboard' %}"><i class="bi bi-bar-chart-line-fill me-1"></i> Tablica liderów</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.app_name == 'blog' %}active{% endif %}" style="white-space: nowrap;" href="{% url 'blog:post_list' %}"><i class="bi bi-journal-text me-1"></i> Blog</a>
                         </li>
                     </ul>
-                    <form method="get" action="{% url 'store:product_list' %}" class="d-flex me-3">
-                        <input class="form-control me-2" type="search" name="query" placeholder="Wyszukaj..." aria-label="Szukaj" value="{{ request.GET.query }}">
+                    <form method="get" action="{% url 'store:product_list' %}" class="d-flex align-items-center flex-grow-1 me-3" style="max-width: 400px; min-width: 200px;">
+                        <input class="form-control me-2 flex-grow-1" type="search" name="query" placeholder="Wyszukaj..." aria-label="Szukaj" value="{{ request.GET.query }}" style="min-width: 0;">
                         <button class="btn btn-outline-success" type="submit">Szukaj</button>
                     </form>
 

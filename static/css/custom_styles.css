@@ -264,7 +264,7 @@ footer p {
 .card {
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-lg);
-    background-color: var(--color-surface-alt); /* <--- ИЗМЕНЕНО НА БЕЖЕВЫЙ */
+    background-color: var(--color-surface-alt);
     box-shadow: var(--shadow-sm);
     transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
     height: 100%;
@@ -770,3 +770,28 @@ header .navbar form.d-flex button.btn-outline-success {
     padding: 0.375rem 0.6rem; /* Уменьшаем паддинги кнопки */
     font-size: 0.9rem; /* Уменьшаем шрифт кнопки */
 }
+
+/* --- Зеленая пагинация --- */
+.pagination .page-link {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background-color: #fff;
+    transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+}
+.pagination .page-link:hover,
+.pagination .page-link:focus {
+    color: #fff;
+    background-color: var(--color-primary);
+    border-color: var(--color-primary-dark);
+}
+.pagination .page-item.active .page-link {
+    color: #fff;
+    background-color: var(--color-primary);
+    border-color: var(--color-primary-dark);
+}
+.pagination .page-item.disabled .page-link {
+    color: var(--color-border);
+    background-color: #fff;
+    border-color: var(--color-border);
+}
+/* --- конец --- */

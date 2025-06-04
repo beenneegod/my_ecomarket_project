@@ -81,13 +81,81 @@ class ReductionTipAdmin(admin.ModelAdmin):
     filter_horizontal = ('suggested_products', 'applies_to_categories')
     fieldsets = (
         (None, {
-            'fields': ('title', 'description_template', 'is_active', 'priority', 'icon_class')
+            'fields': ('title', 'description_template', 'is_active', 'priority', 'icon_class'),
+            'description': (
+                '<b>Przykłady description_template dla ReductionTip:</b><br>'
+                '<pre>'
+                'Przykład 1 (mięso, ID=7):\n'
+                'Wy wskazaliście, że spożywacie czerwone mięso {{user_input_raw_7}} {{user_input_unit_label_7}}.\n'
+                'To daje około {{user_input_annual_co2_7}} kg CO2-ekw. rocznie.\n'
+                'Spróbuj zastąpić część dań mięsnych roślinnymi alternatywami.\n'
+                'To może zmniejszyć Twój ślad o {{potential_annual_savings_kg}} kg CO2 rocznie.\n'
+                'Kategoria "Żywność" ({{annual_emission_category_name_food}}) stanowi {{category_percentage_food}}% Twojego całkowitego śladu: {{total_annual_emissions_kg}} kg.\n\n'
+                'Przykład 2 (energia domowa, kategoria dom-energia):\n'
+                'Twoje emisje z domowego zużycia energii (kategoria {{annual_emission_category_name_dom-energia}}) wynoszą {{annual_emission_category_dom-energia}} kg CO2-ekw. rocznie.\n'
+                'Zastosowanie energooszczędnych żarówek może zaoszczędzić do {{potential_annual_savings_kg}} kg CO2 rocznie.'
+                '</pre>'
+            )
         }),
         ('Warunki i zastosowanie', {
-            'fields': ('applies_to_categories', 'trigger_conditions_json')
+            'fields': ('applies_to_categories', 'trigger_conditions_json'),
+            'description': (
+                '<b>Przykłady JSON dla trigger_conditions_json:</b><br>'
+                '<pre>'
+                'Przykład 1 (Pokaż wskazówkę, jeśli emisje z żywności > 300 kg/rok):\n'
+                '[\n'
+                '    {\n'
+                '        "type": "category_emission_gt",\n'
+                '        "category_slug": "pitanie",\n'
+                '        "threshold_kg_annual": 300.0\n'
+                '    }\n'
+                ']\n\n'
+                'Przykład 2 (Pokaż wskazówkę, jeśli użytkownik wybrał dla czynnika o ID=10 opcję "codziennie"):\n'
+                '[\n'
+                '    {\n'
+                '        "type": "input_value_equals",\n'
+                '        "factor_id": 10,\n'
+                '        "expected_value": "daily"\n'
+                '    }\n'
+                ']\n\n'
+                'Przykład 3 (Pokaż, jeśli emisje z transportu > 20% całkowitego śladu):\n'
+                '[\n'
+                '    {\n'
+                '        "type": "category_emission_percentage_gt",\n'
+                '        "category_slug": "transport",\n'
+                '        "percentage": 20\n'
+                '    }\n'
+                ']'
+                '</pre>'
+            )
         }),
         ('Obliczanie oszczędności i produkty', {
-            'fields': ('estimated_co2_reduction_kg_annual_logic', 'suggested_products')
+            'fields': ('estimated_co2_reduction_kg_annual_logic', 'suggested_products'),
+            'description': (
+                '<b>Przykłady JSON dla estimated_co2_reduction_kg_annual_logic:</b><br>'
+                '<pre>'
+                'Przykład 1: Stała oszczędność\n'
+                'Wskazówka: "Zawsze wyłączaj światło wychodząc z pokoju."\n'
+                '{"type": "fixed", "value_kg_annual": 20.0}\n\n'
+                'Przykład 2: Procent od emisji kategorii "dom-energia"\n'
+                'Wskazówka: "Obniż temperaturę ogrzewania o 1 stopień."\n'
+                '{"type": "percentage_of_category", "category_slug": "dom-energia", "percentage": 5}\n\n'
+                'Przykład 3: Redukcja o 10% emisji z czynnika o ID=12\n'
+                'Wskazówka: "Wymień żarówki na LED."\n'
+                '{"type": "reduction_from_input", "input_factor_id": 12, "reduction_percentage": 10}\n\n'
+                'Przykład 4: Zamiana 50% podróży autem (ID=5, CO2/km=0.18) na rower (CO2/km=0)\n'
+                'Wskazówka: "Częściej używaj roweru zamiast samochodu na krótkich trasach."\n'
+                '{\n'
+                '    "type": "activity_substitution",\n'
+                '    "original_input_factor_id": 5,\n'
+                '    "alternative_co2_per_unit": 0.0,\n'
+                '    "affected_input_percentage": 50\n'
+                '}\n\n'
+                'Przykład 5: Ustaw wartość czynnika na 0 (np. całkowita rezygnacja z produktu, ID=15)\n'
+                'Wskazówka: "Całkowicie zrezygnuj z produktu X."\n'
+                '{"type": "direct_from_input_change", "input_factor_id": 15, "new_value_for_input": 0}'
+                '</pre>'
+            )
         }),
         ('Informacje zewnętrzne', {
             'fields': ('external_link_url', 'external_link_text')

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"Tablica liderów" }} - EcoMarket{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <header class="text-center mb-5">
+        <h1 class="display-5 fw-bold">{{ page_title|default:"Tablica liderów eko-aktywistów" }}</h1>
+        <p class="lead text-muted col-lg-8 mx-auto">
+            Zobacz, kto wnosi największy wkład w naszą eko-społeczność!
+        </p>
+    </header>
+
+    {% if leaderboard_entries %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle shadow-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" style="width: 10%;" class="text-center"># Pozycja</th>
+                        <th scope="col" style="width: 15%;" class="text-center">Awatar</th>
+                        <th scope="col" style="width: 45%;">Uczestnik</th>
+                        <th scope="col" style="width: 30%;" class="text-end">Eko-Punkty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in leaderboard_entries %}
+                    <tr>
+                        <td class="text-center fw-bold">
+                            {% if entry.rank == 1 %}<i class="bi bi-trophy-fill text-warning me-1"></i>
+                            {% elif entry.rank == 2 %}<i class="bi bi-trophy-fill text-secondary me-1" style="color: #C0C0C0 !important;"></i>
+                            {% elif entry.rank == 3 %}<i class="bi bi-trophy-fill text-danger me-1" style="color: #CD7F32 !important;"></i>
+                            {% endif %}
+                            {{ entry.rank }}
+                        </td>
+                        <td class="text-center">
+                            <img src="{{ entry.avatar_url }}" alt="{{ entry.user.username }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover;">
+                        </td>
+                        <td>
+                            <span class="fw-medium">
+                                {{ entry.user.get_full_name|default:entry.user.username }}
+                            </span>
+                        </td>
+                        <td class="text-end fs-5 fw-bold text-primary">
+                            {{ entry.eco_points }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            Tablica liderów jest pusta. Zacznij brać udział w wyzwaniach, aby się tu pojawić!
+        </div>
+    {% endif %}
+
+    <div class="text-center mt-4">
+        <a href="{% url 'challenges:challenge_list' %}" class="btn btn-primary"><i class="bi bi-trophy"></i> Do listy wyzwań</a>
+    </div>
+</div>
+{% endblock %}

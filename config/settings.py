@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'payments.apps.PaymentsConfig',
     'blog.apps.BlogConfig', # Add the blog app
     'carbon_calculator.apps.CarbonCalculatorConfig',
+    'challenges.apps.ChallengesConfig',
 ]
 
 MIDDLEWARE = [

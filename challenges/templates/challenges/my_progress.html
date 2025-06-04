@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"Mój postęp" }} - EcoMarket{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <header class="text-center mb-5">
+        <h1 class="display-5 fw-bold">{{ page_title|default:"Mój eko-postęp" }}</h1>
+    </header>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card text-center shadow-sm h-100">
+                <div class="card-body">
+                    <i class="bi bi-trophy-fill display-3 text-warning mb-3"></i>
+                    <h4 class="card-title">Moje Eko-Punkty</h4>
+                    <p class="display-4 fw-bold">{{ profile.eco_points|default:0 }}</p>
+                    {% if profile.last_points_update %}
+                    <p class="card-text text-muted"><small>Ostatnia aktualizacja: {{ profile.last_points_update|date:"d.m.Y H:i" }}</small></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                   <h4 class="mb-0"><i class="bi bi-patch-check-fill me-2"></i>Moje Odznaki</h4>
+                </div>
+                <div class="card-body">
+                    {% if earned_badges %}
+                        <div class="row g-3">
+                            {% for user_badge in earned_badges %}
+                            <div class="col-auto text-center" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ user_badge.badge.name }} - {{ user_badge.badge.description|default:'' }} (получен {{ user_badge.awarded_at|date:"d.m.Y" }})">
+                                {% if user_badge.badge.icon_class %}
+                                    <i class="{{ user_badge.badge.icon_class }} fs-1"></i>
+                                {% else %}
+                                    <i class="bi bi-award fs-1 text-secondary"></i>
+                                {% endif %}
+                                <p class="small mb-0">{{ user_badge.badge.name|truncatechars:15 }}</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center my-3">Nie masz jeszcze żadnych odznak. Weź udział w wyzwaniach, aby je zdobyć!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-5 hr-eco">
+
+    <h3 class="mb-3">Aktywne wyzwania</h3>
+    {% if active_participations %}
+        <div class="list-group mb-4">
+            {% for participation in active_participations %}
+            <a href="{{ participation.challenge.get_absolute_url }}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ participation.challenge.title }}</h5>
+                    <small class="text-muted">Do {{ participation.challenge.end_date|date:"d.m.Y" }}</small>
+                </div>
+                <p class="mb-1">{{ participation.challenge.short_description|truncatewords:25 }}</p
+                <small>Status: <span class="badge bg-info">{{ participation.get_status_display }}</span>. Punkty: {{ participation.challenge.points_for_completion }}.</small>
+            </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">Nie masz aktywnych wyzwań. <a href="{% url 'challenges:challenge_list' %}">Dołącz do nowych!</a></p>
+    {% endif %}
+
+    <h3 class="mb-3 mt-5">Ukończone wyzwania</h3>
+    {% if completed_participations %}
+         <div class="list-group">
+            {% for participation in completed_participations %}
+            <div class="list-group-item list-group-item-light">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ participation.challenge.title }}</h5>
+                    <small class="text-success">Wykonane: {{ participation.completed_at|date:"d.m.Y" }}</small>
+                </div>
+                 <p class="mb-1">{{ participation.challenge.short_description|truncatewords:25 }}</p>
+                <small>Otrzymano: {{ participation.challenge.points_for_completion }} punktów.
+                    {% if participation.challenge.badge_name_reward %}
+                        Odznaka: {{ participation.challenge.badge_name_reward }}
+                    {% endif %}
+                </small>
+                 {% if participation.user_notes %}
+                    <p class="mt-2 mb-0 fst-italic small bg-light p-2 rounded">Twój raport: {{ participation.user_notes|truncatewords:30 }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">Nie ukończyłeś jeszcze żadnego wyzwania.</p>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Активация Bootstrap Tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+{% endblock %}

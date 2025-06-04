@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:challenge.title }} - Eko-Wyzwania - EcoMarket{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5" data-aos="fade-in">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card shadow-lg challenge-detail-card">
+                {% if challenge.image %}
+                    <img src="{{ challenge.image.url }}" class="card-img-top" alt="{{ challenge.title }}" style="max-height: 400px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body p-4 p-md-5">
+                    <h1 class="card-title display-5 fw-bold mb-3">{{ challenge.title }}</h1>
+                    <div class="text-muted mb-3">
+                        <span class="me-3"><i class="bi bi-calendar-event"></i> <strong>Okres:</strong> {{ challenge.start_date|date:"d.m.Y" }} - {{ challenge.end_date|date:"d.m.Y" }}</span>
+                        <span class="me-3"><i class="bi bi-award"></i> <strong>Nagroda:</strong> {{ challenge.points_for_completion }} punktów</span>
+                        {% if challenge.badge_name_reward %}
+                            <span><i class="bi {{ challenge.badge_icon_class_reward|default:'bi-patch-check' }}"></i> <strong>Odznaka:</strong> {{ challenge.badge_name_reward }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="challenge-status-badge mb-3">
+                        {% if challenge.is_active_now %}
+                            <span class="badge bg-success fs-6">Aktywny</span>
+                        {% elif challenge.status == 'upcoming' %}
+                            <span class="badge bg-info fs-6">Wkrótce się zacznie ({{ challenge.start_date|date:"d.m.Y" }})</span>
+                        {% elif challenge.status == 'completed_period' %}
+                            <span class="badge bg-secondary fs-6">Zakończony</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark fs-6">{{ challenge.get_status_display }}</span>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4">
+                    <h4 class="mb-3">Opis i zasady:</h4>
+                    <div class="challenge-description">
+                        {{ challenge.description|linebreaksbr }}
+                    </div>
+                    <hr class="my-4">
+
+                    {% if user.is_authenticated %}
+                        {% if participation %}
+                            {% if participation.status == 'completed_approved' %}
+                                <div class="alert alert-success text-center" role="alert">
+                                    <i class="bi bi-check-circle-fill fs-3 me-2"></i>
+                                    <h4 class="alert-heading">Ukończyłeś to wyzwanie!</h4>
+                                    <p>Świetna robota! Otrzymałeś {{ challenge.points_for_completion }} punktów {% if challenge.badge_name_reward %} i odznakę "{{challenge.badge_name_reward}}"{% endif %}.</p>
+                                    <p>Data ukończenia: {{ participation.completed_at|date:"d.m.Y H:i" }}</p>
+                                </div>
+                            {% elif participation.status == 'completed_pending_review' %}
+                                <div class="alert alert-info text-center" role="alert">
+                                    <i class="bi bi-hourglass-split fs-3 me-2"></i>
+                                    Twoje wykonanie wyzwania oczekuje na weryfikację.
+                                </div>
+                            {% elif can_mark_as_done %}
+                                <h4 class="mb-3">Oznacz wykonanie:</h4>
+                                <form method="post">
+                                    {% csrf_token %}
+                                    {% if completion_form %}
+                                        {% for field in completion_form %}
+                                            <div class="mb-3">
+                                                {% if field.label %}{{ field.label_tag }}{% endif %}
+                                                {{ field }}
+                                                {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
+                                                {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>{% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                    <button type="submit" name="mark_completed_action" class="btn btn-success btn-lg w-100">
+                                        <i class="bi bi-check2-square"></i> Wykonałem(am) to wyzwanie!
+                                    </button>
+                                </form>
+                            {% elif participation.status == 'joined' or participation.status == 'in_progress' %}
+                                 <div class="alert alert-info text-center" role="alert">
+                                    <i class="bi bi-clock-history fs-3 me-2"></i>
+                                    Bierzesz udział w tym wyzwaniu. Powodzenia!
+                                    {% if not challenge.is_active_now %}Wyzwanie nie jest teraz aktywne.{% endif %}
+                                </div>
+                            {% else %}
+                                 <p class="text-center text-muted">Brałeś udział w tym wyzwaniu. Status: {{ participation.get_status_display }}.</p>
+                            {% endif %}
+                        {% else %} {# Пользователь не участвует #}
+                            {% if challenge.can_join_now %}
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'challenges:join_challenge' challenge.id %}" class="btn btn-primary btn-lg">
+                                        <i class="bi bi-joystick"></i> Dołącz do wyzwania
+                                    </a>
+                                </div>
+                            {% elif challenge.status == 'upcoming' %}
+                                 <p class="text-center text-info">To wyzwanie wkrótce się zacznie. Będziesz mógł dołączyć {{ challenge.start_date|date:"d.m.Y" }}.</p>
+                            {% else %}
+                                <p class="text-center text-muted">Dołączenie do tego wyzwania jest teraz niedostępne.</p>
+                            {% endif %}
+                        {% endif %}
+                    {% else %} {# Пользователь не аутентифицирован #}
+                         <p class="text-center lead">
+                            <a href="{% url 'login' %}?next={{ request.path }}">Zaloguj się</a> lub <a href="{% url 'register' %}?next={{ request.path }}">zarejestruj się</a>, aby brać udział w wyzwaniach!
+                        </p>
+                    {% endif %}
+
+                    <div class="mt-5 text-center">
+                        <a href="{% url 'challenges:challenge_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Do wszystkich wyzwań
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

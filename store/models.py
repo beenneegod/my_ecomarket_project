@@ -183,7 +183,9 @@ class Profile(models.Model): # Без отступа в начале строк�
     )
     bio = models.TextField(blank=True, null=True, verbose_name="O sobie")
     stripe_customer_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="Stripe Customer ID")
-
+    eco_points = models.PositiveIntegerField(default=0, verbose_name="Эко-очки")
+    last_points_update = models.DateTimeField(null=True, blank=True, verbose_name="Последнее обновление очков")
+    
     class Meta:
         verbose_name = "Profil użytkownika"
         verbose_name_plural = "Profile użytkowników"
