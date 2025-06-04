@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'store.apps.StoreConfig', # Регистрируем приложение store
     'payments.apps.PaymentsConfig',
     'blog.apps.BlogConfig', # Add the blog app
+    'carbon_calculator.apps.CarbonCalculatorConfig',
 ]
 
 MIDDLEWARE = [
@@ -282,3 +283,6 @@ AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]
 AXES_VERBOSE = True 
 AXES_ENABLE_ADMIN = True
+
+
+AVERAGE_ANNUAL_CO2_FOOTPRINT_PL_KG = 5600

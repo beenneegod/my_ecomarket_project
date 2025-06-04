@@ -42,6 +42,7 @@ urlpatterns = [
         template_name='registration/password_reset_complete.html'
     ), name='password_reset_complete'),
     path('accounts/', include('django.contrib.auth.urls')),
+    path('eco-calculator/', include('carbon_calculator.urls', namespace='carbon_calculator')),
 ]
 
 # В режиме разработки (DEBUG=True) добавляем обработку медиа-файлов

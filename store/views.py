@@ -62,17 +62,18 @@ def product_list(request, category_slug=None):
     return render(request, 'store/product_list.html', context)
 
 @ensure_csrf_cookie
-def product_detail(request, product_slug): # Принимаем product_slug вместо product_id
-    """
-    Представление для отображения страницы одного товара.
-    Использует слаг для поиска товара.
-    """
-    # Ищем товар по слагу и доступности
-    product = get_object_or_404(Product,
-                                slug=product_slug, # Ищем по slug
-                                available=True)
+def product_detail(request, product_slug):
+    product = get_object_or_404(Product, slug=product_slug, available=True)
+    related_products = []
+    if product.category: # Check if the product has a category
+        related_products = Product.objects.filter(
+            category=product.category,
+            available=True
+        ).exclude(id=product.id)[:4] # Get up to 4 related products
+
     context = {
         'product': product,
+        'related_products': related_products, # Add to context
     }
     return render(request, 'store/product_detail.html', context)
 

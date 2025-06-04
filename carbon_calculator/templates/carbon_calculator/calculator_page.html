@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% load static %}
+{% load calculator_tags %}
+
+{% block title %}{{ page_title|default:"Eko-kalkulator" }} - EcoMarket{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .calculator-form-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: var(--color-surface-alt); /* Бежевый фон для секций формы */
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-lg);
+        }
+        .calculator-form-section h4 {
+            color: var(--color-primary);
+            margin-top: 0;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--color-primary-light);
+            font-size: 1.3rem;
+        }
+        .form-field-container {
+            margin-bottom: 1.25rem;
+        }
+        .form-field-container label {
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+            display: block;
+        }
+        .form-field-container .form-text { /* Подсказка под полем */
+            font-size: 0.85rem;
+        }
+        .results-section {
+            margin-top: 2.5rem;
+        }
+        .results-card {
+            background-color: var(--color-surface);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+        }
+        .results-card .display-3 { font-size: 3.5rem; }
+        .results-card .display-4 { font-size: 2.5rem; }
+
+        .category-breakdown-list .list-group-item {
+            background-color: transparent;
+            border-left: none;
+            border-right: none;
+        }
+        .category-breakdown-list .list-group-item:first-child { border-top: none; }
+        .category-breakdown-list .list-group-item:last-child { border-bottom: none; }
+
+        .tip-card {
+            background-color: var(--color-surface-alt);
+            border-left: 5px solid var(--color-primary);
+            margin-bottom: 1rem;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .tip-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+        .tip-card .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--color-text-dark);
+        }
+        .tip-card .product-suggestion img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: var(--border-radius-sm);
+            margin-right: 0.5rem;
+        }
+        .tip-card .product-suggestion a {
+            font-size: 0.9rem;
+            color: var(--color-text-medium);
+        }
+        .tip-card .product-suggestion a:hover {
+            color: var(--color-primary);
+        }
+        .savings-highlight {
+            color: var(--color-primary-dark);
+            font-weight: bold;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5" data-aos="fade-in">
+    <header class="text-center mb-5">
+        <h1 class="display-5 fw-bold">{{ page_title|default:"Eко-калькулятор" }}</h1>
+        <p class="lead text-muted col-lg-9 mx-auto">
+            Oszacuj swój roczny ślad węglowy, odpowiadając na kilka pytań dotyczących Twojego stylu życia. Otrzymaj spersonalizowane wskazówki i dowiedz się, jak produkty EcoMarket mogą pomóc Ci żyć bardziej ekologicznie.
+        </p>
+    </header>
+
+    {% if calculation_error %}
+        <div class="alert alert-danger text-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ calculation_error }}
+        </div>
+    {% endif %}
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+            <form method="post" novalidate id="footprintCalculatorForm">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% for category, field_definitions_list in form.grouped_factors.items %}
+                    <section class="calculator-form-section shadow-sm">
+                        <h4>
+                            {% if category.icon_class %}<i class="bi {{ category.icon_class }} me-2"></i>{% endif %}
+                            {{ category.name }}
+                        </h4>
+                        {% for field_def in field_definitions_list %}
+                            {% get_bound_field form field_def.main_field_name as main_form_field %}
+                            {% get_bound_field form field_def.period_field_name as period_form_field %}
+                            
+                            <div class="form-field-container">
+                                {{ main_form_field.label_tag }}
+                                {% if main_form_field.field.widget_type == 'select' %}
+                                    {{ main_form_field }}
+                                {% else %}
+                                    <div class="input-group input-group-sm">
+                                        {{ main_form_field }}
+                                        {% if field_def.factor.unit_name and field_def.factor.form_field_type == 'number' and not field_def.factor.periodicity_options_for_form %}
+                                            <span class="input-group-text">{{ field_def.factor.unit_name }}</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                {% if period_form_field %}
+                                    <div class="mt-2">
+                                        {# <label for="{{ period_form_field.id_for_label }}" class="form-label visually-hidden">{{ period_form_field.label }}</label> #}
+                                        {{ period_form_field }}
+                                        {% if period_form_field.help_text %}
+                                            <small class="form-text text-muted d-block mt-1">{{ period_form_field.help_text|safe }}</small>
+                                        {% endif %}
+                                        {% if period_form_field.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in period_form_field.errors %} {{ error }} {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                
+                                {% if main_form_field.help_text %}
+                                    <small class="form-text text-muted d-block mt-1">{{ main_form_field.help_text|safe }}</small>
+                                {% endif %}
+                                {% if main_form_field.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in main_form_field.errors %} {{ error }} {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </section>
+                {% endfor %}
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-calculator me-2"></i>Oblicz mój ślad</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if results_data %}
+    <section class="results-section mt-5 pt-4 border-top" data-aos="fade-up" id="calculator-results">
+        <div class="results-card shadow-lg">
+            <div class="text-center">
+                <i class="bi bi-leaf display-1 text-success mb-3"></i>
+                <h2 class="display-5 fw-bold mb-3">Twój roczny ślad węglowy:</h2>
+                <p class="display-3 fw-bolder text-primary mb-2">{{ results_data.total_co2_annual }} kg CO₂-ekw.</p>
+                <p class="text-muted mb-4">To wstępna ocena oparta na Twoich odpowiedziach.</p>
+            </div>
+
+            {% if results_data.breakdown_annual_display %}
+                <div class="my-5">
+                    <h3 class="text-center mb-4">Podział na kategorie:</h3>
+                    <div class="row justify-content-center">
+                        <div class="col-md-10 col-lg-8">
+                            <canvas id="footprintChart" style="max-height: 350px; width: 100%;"></canvas>
+                        </div>
+                    </div>
+                    <div class="row justify-content-center mt-4">
+                        <div class="col-md-10 col-lg-8">
+                            <ul class="list-group list-group-flush category-breakdown-list">
+                                {% for category_name, value_kg in results_data.breakdown_annual_display.items %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span class="fw-medium">{{ category_name }}</span>
+                                        <span class="badge bg-primary rounded-pill fs-6">{{ value_kg }} kg</span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            {% if results_data.average_footprint_pl %}
+                {% if results_data.difference_from_average is not None %}
+                    <p class="mt-3 mb-1">
+                        Dla porównania, przeciętny roczny ślad węglowy mieszkańca Polski to około <strong>{{ results_data.average_footprint_pl }} kg CO₂-ekw.</strong>
+                    </p>
+                    {% if difference > 0 %}
+                        <p class="text-warning fw-medium">Twój ślad jest o {{ results_data.abs_difference_from_average|floatformat:0 }} kg (około {{ results_data.percentage_vs_average|floatformat:0 }}%) wyższy od średniej.</p>
+                    {% elif difference < 0 %}
+                        <p class="text-success fw-medium">Twój ślad jest o {{ results_data.abs_difference_from_average|floatformat:0 }} kg (około {{ results_data.percentage_vs_average|floatformat:0 }}%) niższy od średniej. Świetny wynik!</p>
+                    {% else %}
+                        <p class="text-info fw-medium">Twój ślad jest zbliżony do średniej wartości.</p>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+
+            {% if tips_by_category_display %}
+                <hr class="my-5 hr-eco">
+                <h3 class="text-center mb-4">Spersonalizowane wskazówki dotyczące redukcji śladu:</h3>
+                {% for category_name, tips_list in tips_by_category_display.items %}
+                    <div class="mb-4">
+                        <h4 class="h5 mb-3 fw-bold" style="color: var(--color-text-dark);">
+                            {% for cat_obj, factor_list in form.grouped_factors.items %}
+                                {% if cat_obj.name == category_name and cat_obj.icon_class %}
+                                    <i class="bi {{ cat_obj.icon_class }} me-2 text-primary"></i>
+                                {% endif %}
+                            {% endfor %}
+                            {{ category_name }}
+                        </h4>
+                        {% for tip in tips_list %}
+                        <div class="card tip-card">
+                            <div class="card-body">
+                                <div class="d-flex">
+                                    {% if tip.icon_class %}
+                                    <div class="flex-shrink-0 me-3">
+                                        <i class="bi {{ tip.icon_class }} fs-2 text-primary"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title">{{ tip.title }}</h5>
+                                        <p class="card-text small text-muted">{{ tip.formatted_description|linebreaksbr|safe }}</p>
+                                        {% if tip.calculated_potential_savings_kg %}
+                                        <p class="card-text small savings-highlight">
+                                            <i class="bi bi-arrow-down-circle-fill text-success"></i>
+                                            Potencjalna redukcja: {{ tip.calculated_potential_savings_kg }} kg CO₂ rocznie
+                                        </p>
+                                        {% endif %}
+                                        {% if tip.suggested_products.all %}
+                                            <div class="mt-2">
+                                                <p class="card-text small mb-1"><strong>EcoMarket poleca:</strong></p>
+                                                <div class="d-flex flex-wrap align-items-center">
+                                                {% for product in tip.suggested_products.all|slice:":3" %}
+                                                    <div class="product-suggestion me-3 mb-2">
+                                                        <a href="{{ product.get_absolute_url }}" class="d-flex align-items-center text-decoration-none">
+                                                            {% if product.image %}
+                                                                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                                                            {% endif %}
+                                                            <span>{{ product.name }}</span>
+                                                        </a>
+                                                    </div>
+                                                {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        {% if tip.external_link_url %}
+                                            <p class="card-text small mt-2">
+                                                <a href="{{ tip.external_link_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                                                    {{ tip.external_link_text|default:"Dowiedz się więcej" }} <i class="bi bi-box-arrow-up-right small"></i>
+                                                </a>
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                {% if results_data %}
+                <p class="text-center text-muted mt-4">Pracujemy nad dodaniem spersonalizowanych wskazówek dla Twojego profilu emisji.</p>
+                {% endif %}
+            {% endif %}
+
+             <div class="text-center mt-5">
+                 <a href="{% url 'carbon_calculator:calculate_page' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-clockwise"></i> Oblicz ponownie</a>
+                 {% if user.is_authenticated %}
+                 <a href="{% url 'carbon_calculator:footprint_history' %}" class="btn btn-info ms-2"><i class="bi bi-clock-history"></i> Moja historia obliczeń</a>
+                 {% endif %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if results_data and results_data.breakdown_annual_json %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const resultsSection = document.getElementById('calculator-results');
+        if (resultsSection) {
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        const breakdownDataString = '{{ results_data.breakdown_annual_json|escapejs }}';
+        try {
+            const breakdownData = JSON.parse(breakdownDataString);
+            const labels = Object.keys(breakdownData);
+            const dataValues = Object.values(breakdownData);
+
+            const chartColors = [
+                'rgba(75, 192, 192, 0.7)', 'rgba(255, 159, 64, 0.7)',
+                'rgba(255, 205, 86, 0.7)', 'rgba(54, 162, 235, 0.7)',
+                'rgba(153, 102, 255, 0.7)', 'rgba(255, 99, 132, 0.7)',
+                'rgba(201, 203, 207, 0.7)', 'rgba(76, 175, 80, 0.7)',
+                'rgba(244, 67, 54, 0.7)', 'rgba(0, 188, 212, 0.7)'
+            ];
+            const backgroundColors = labels.map((_, i) => chartColors[i % chartColors.length]);
+
+            const ctx = document.getElementById('footprintChart');
+            if (ctx && labels.length > 0) {
+                new Chart(ctx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Emisje CO2-ekw. (kg/rok)',
+                            data: dataValues,
+                            backgroundColor: backgroundColors,
+                            borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    padding: 15,
+                                    font: { size: 10 }
+                                }
+                            },
+                            title: {
+                                display: false,
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed.toFixed(1) + ' kg CO₂-ekw.';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else if (ctx && labels.length === 0) {
+                 ctx.style.display = 'none';
+                 const parentDiv = ctx.closest('.row.justify-content-center');
+                 if (parentDiv) {
+                    const noDataMsg = document.createElement('p');
+                    noDataMsg.textContent = 'Brak danych do wykresu lub wszystkie wartości są zerowe.';
+                    noDataMsg.className = 'text-center text-muted';
+                    parentDiv.appendChild(noDataMsg);
+                 }
+            }
+        } catch (e) {
+            console.error("Błąd podczas parsowania danych JSON lub inicjalizacji wykresu:", e, breakdownDataString);
+            const chartContainer = document.getElementById('footprintChart');
+            if(chartContainer) chartContainer.innerHTML = "<p class='text-danger text-center'>Nie udało się załadować wykresu emisji.</p>";
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

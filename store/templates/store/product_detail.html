@@ -4,13 +4,13 @@
 {% block title %}{{ product.name }} - EcoMarket{% endblock %}
 
 {% block content %}
-<div class="container mt-4" data-aos="fade-in"> {# Добавим общую анимацию появления для всей страницы товара #}
+<div class="container mt-4" data-aos="fade-in">
     <div class="row">
         <div class="col-md-6 mb-4" data-aos="fade-right" data-aos-delay="100">
             {% if product.image %}
                 <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded shadow-sm" style="max-height: 500px; object-fit: contain;">
             {% else %}
-                <img src="{% static 'img/no_image.png' %}" alt="Нет изображения" class="img-fluid rounded shadow-sm" style="max-height: 500px; object-fit: contain;">
+                <img src="{% static 'img/no_image.png' %}" alt="Brak zdjęcia" class="img-fluid rounded shadow-sm" style="max-height: 500px; object-fit: contain;">
             {% endif %}
         </div>
 
@@ -27,7 +27,7 @@
                 {% if product.stock > 0 %}
                     <div class="row g-2 align-items-center mb-3">
                         <div class="col-auto">
-                            <label for="quantity-{{ product.id }}" class="col-form-label fw-medium">Ilość:</label> {# Изменили текст, добавили fw-medium #}
+                            <label for="quantity-{{ product.id }}" class="col-form-label fw-medium">Ilość:</label>
                         </div>
                         <div class="col-auto">
                             <input type="number" id="quantity-{{ product.id }}" name="quantity" value="1" min="1" max="{{ product.stock }}" class="form-control quantity-input-detail" style="width: 80px;">
@@ -38,9 +38,8 @@
                             </button>
                         </div>
                     </div>
-                    {# Обновленный блок информации о наличии #}
                     {% if product.stock > 5 %}
-                        <div class="stock-info stock-available mt-2"> {# Убрали d-block, т.к. .stock-info уже inline-block #}
+                        <div class="stock-info stock-available mt-2">
                             <i class="bi bi-check-circle-fill"></i> Na stanie: {{ product.stock }} szt.
                         </div>
                     {% elif product.stock > 0 %}
@@ -56,18 +55,26 @@
             </div>
 
             <a href="{% url 'store:product_list' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Cofnij się do listy produktów
+                <i class="bi bi-arrow-left"></i> Wróć do listy produktów
             </a>
         </div>
     </div>
 
-    {# <hr class="my-5">
+    {% if related_products %}
+    <hr class="my-5 hr-eco">
     <div class="row">
         <div class="col">
-            <h4>Może Cię również zainteresować:</h4>
-            <! -- Здесь могут быть карточки других товаров -->
+            <h3 class="text-center mb-4">Może Cię również zainteresować:</h3>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+                {% for related_product in related_products %}
+                    <div class="col">
+                        {% include "store/partials/product_card.html" with product=related_product %}
+                    </div>
+                {% endfor %}
+            </div>
         </div>
-    </div> #}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 

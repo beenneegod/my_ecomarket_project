@@ -20,13 +20,13 @@
         <nav class="navbar navbar-expand-lg">
             <div class="container">
                 <a class="navbar-brand" href="{% url 'homepage' %}">EcoMarket</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Przełącz nawigację">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %}active{% endif %}" href="{% url 'store:product_list' %}">Towary</a>
+                            <a class="nav-link {% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %}active{% endif %}" href="{% url 'store:product_list' %}">Produkty</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.view_name == 'store:subscription_box_list' %}active{% endif %}" href="{% url 'store:subscription_box_list' %}">Eko Boxy</a>
@@ -34,12 +34,14 @@
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.app_name == 'blog' %}active{% endif %}" href="{% url 'blog:post_list' %}">Blog</a>
                         </li>
-
-                        {# Другие ссылки, если нужны #}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'carbon_calculator' %}active{% endif %}" href="{% url 'carbon_calculator:calculate_page' %}">
+                                <i class="bi bi-calculator-fill me-1"></i> Eko-Kalkulator
+                            </a>
+                        </li>
                     </ul>
-                    {# Форма поиска (переносим сюда) #}
                     <form method="get" action="{% url 'store:product_list' %}" class="d-flex me-3">
-                        <input class="form-control me-2" type="search" name="query" placeholder="Wyszukaj..." aria-label="Search" value="{{ request.GET.query }}">
+                        <input class="form-control me-2" type="search" name="query" placeholder="Wyszukaj..." aria-label="Szukaj" value="{{ request.GET.query }}">
                         <button class="btn btn-outline-success" type="submit">Szukaj</button>
                     </form>
 
@@ -52,10 +54,9 @@
                         {% if user.is_authenticated %}
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    {% if user.profile and user.profile.avatar_url %} {# Проверяем наличие профиля и avatar_url #}
+                                    {% if user.profile and user.profile.avatar_url %}
                                         <img src="{{ user.profile.avatar_url }}" alt="{{ user.username }}" class="rounded-circle me-2" style="width: 30px; height: 30px; object-fit: cover;">
                                     {% else %}
-                                    {# Можно показать дефолтную иконку, если профиля или аватара нет (хотя сигнал должен создать профиль) #}
                                         <i class="bi bi-person-circle fs-5 me-2"></i>
                                     {% endif %}
                                     Cześć, {{ user.username }}!
@@ -64,6 +65,7 @@
                                     <li><a class="dropdown-item" href="{% url 'store:profile_update' %}">Edytuj profil</a></li>
                                     <li><a class="dropdown-item" href="{% url 'password_change' %}">Zmień hasło</a></li>
                                     <li><a class="dropdown-item" href="{% url 'store:order_history' %}">Moje zamówienia</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'carbon_calculator:footprint_history' %}">Moje emisje CO2</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: none;">
@@ -78,7 +80,7 @@
                                 <a class="nav-link" href="{% url 'login' %}">Logowanie</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'register' %}">Zalóż konto</a>
+                                <a class="nav-link" href="{% url 'register' %}">Załóż konto</a>
                             </li>
                         {% endif %}
                     </ul>
@@ -87,14 +89,13 @@
         </nav>
     </header>
 
-    <main class="container"> {# Добавляем класс container для основного контента #}
+    <main class="container">
         {% if messages %}
-            <div class="django-messages"> {# Убираем container отсюда, т.к. main уже container #}
+            <div class="django-messages">
                 {% for message in messages %}
-                    {# Используем классы Alert от Bootstrap #}
-                    <div class.alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+                    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Zamknij"></button>
                     </div>
                 {% endfor %}
             </div>
@@ -118,11 +119,11 @@
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
     <script>
         AOS.init({
-            // Глобальные настройки AOS (опционально):
-            // duration: 800, // длительность анимации в мс
-            // once: true, // анимировать только один раз при прокрутке
-            // offset: 120, // смещение (в px) от оригинальной точки триггера
-            // delay: 100, // задержка анимации в мс
+            // Globalne ustawienia AOS (opcjonalnie):
+            // duration: 800, // czas trwania animacji w ms
+            // once: true, // animować tylko raz przy przewijaniu
+            // offset: 120, // przesunięcie (w px) od oryginalnego punktu wyzwalania
+            // delay: 100, // opóźnienie animacji w ms
         });
 </script>
     {% block extra_js %}{% endblock %}

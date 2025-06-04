@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"Historia obliczeń" }} - EcoMarket{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5" data-aos="fade-in">
+    <h1 class="mb-4">{{ page_title|default:"Historia moich obliczeń śladu węglowego" }}</h1>
+
+    {% if history_sessions %}
+        <div class="list-group shadow-sm">
+            {% for session_calc in history_sessions %}
+                <div class="list-group-item list-group-item-action flex-column align-items-start mb-2">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">Obliczenie z: {{ session_calc.calculated_at|date:"d.m.Y H:i" }}</h5>
+                        <small class="text-muted">Wersja: {{ session_calc.calculation_version }}</small>
+                    </div>
+                    <p class="mb-1 h4 text-primary">
+                        <strong>{{ session_calc.total_co2_emissions_kg_annual }} kg CO₂-ekw. / rok</strong>
+                    </p>
+                    {% if session_calc.category_breakdown_kg_annual %}
+                        <small class="text-muted">
+                            Podział:
+                            {% for category_slug, emissions in session_calc.category_breakdown_kg_annual.items %}
+                                {% for cat_model in form.grouped_factors.keys %}
+                                    {% if cat_model.slug == category_slug %}
+                                        {{ cat_model.name }}: {{ emissions|floatformat:1 }} kg;
+                                    {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                        </small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle-fill me-2"></i>Nie masz jeszcze zapisanych obliczeń śladu węglowego.
+        </div>
+        <p class="text-center">
+            <a href="{% url 'carbon_calculator:calculate_page' %}" class="btn btn-primary">
+                <i class="bi bi-calculator me-2"></i>Oblicz mój ślad teraz
+            </a>
+        </p>
+    {% endif %}
+</div>
+{% endblock %}

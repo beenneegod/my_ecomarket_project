@@ -8,11 +8,11 @@
         <div class="card shadow-sm">
             <div class="card-body p-4 p-md-5 text-center">
                 <h2 class="card-title text-danger mb-3">Dostęp zablokowany</h2>
-                {% if cooloff_time_str %} {# cooloff_time_str передается из Axes если есть время остывания #}
+                {% if cooloff_time_str %}
                     <p>Twoje konto lub adres IP zostały tymczasowo zablokowane z powodu zbyt wielu nieudanych prób logowania.</p>
-                    <p>Proszę spróbować ponownie za <strong>{{ cooloff_time_str }}</strong>.</p>
+                    <p>Spróbuj ponownie za <strong>{{ cooloff_time_str }}</strong>.</p>
                 {% else %}
-                    <p>Twoje konto lub adres IP zostały zablokowane z powodu слишком wielu неudanych prób logowania.</p>
+                    <p>Twoje konto lub adres IP zostały zablokowane z powodu zbyt wielu nieudanych prób logowania.</p>
                     <p>Skontaktuj się z administratorem, jeśli uważasz, że to błąd.</p>
                 {% endif %}
                 <hr class="my-4">

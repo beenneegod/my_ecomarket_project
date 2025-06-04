@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} - EcoMarket{% endblock %}
+{% block content %}
+<div class="container mt-4 mb-5">
+    <h1>{{ page_title }}</h1>
+    <p>Szczegółowy opis metodologii naszego eko-kalkulatora pojawi się tutaj wkrótce.</p>
+    <p>Do obliczeń współczynników emisji korzystamy z danych pochodzących z wiarygodnych źródeł i dążymy do zapewnienia jak najdokładniejszej oceny Twojego śladu węglowego.</p>
+    <a href="{% url 'carbon_calculator:calculate_page' %}" class="btn btn-primary mt-3">Powrót do kalkulatora</a>
+</div>
+{% endblock %}
