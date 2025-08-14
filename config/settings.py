@@ -28,6 +28,9 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True # Если используешь HTTPS, установи True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    # Доверяем заголовкам прокси (Railway/Heroku и т.п.), чтобы избежать бесконечных редиректов HTTPS
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_X_FORWARDED_HOST = True
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY and DEBUG: # В режиме DEBUG можно сгенерировать временный ключ
