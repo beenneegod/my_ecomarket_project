@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dodaj eko‑miejsce — EcoMarket{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="mb-0">Dodaj eko‑miejsce</h2>
+    <a href="{% url 'places:map' %}" class="btn btn-outline-secondary">Wróć do mapy</a>
+  </div>
+
+  <div class="alert alert-info">Nowa lokalizacja pojawi się na mapie po moderacji.</div>
+
+  <form method="post" class="row g-3">
+    {% csrf_token %}
+    <div class="col-md-6">
+  <label class="form-label">Nazwa</label>
+      {{ form.name }}
+    </div>
+    <div class="col-md-6">
+  <label class="form-label">Kategoria</label>
+      {{ form.category }}
+    </div>
+    <div class="col-md-6">
+  <label class="form-label">Miasto</label>
+      {{ form.city }}
+    </div>
+    <div class="col-md-6">
+  <label class="form-label">Adres (opcjonalnie)</label>
+      {{ form.address }}
+    </div>
+    <div class="col-md-6">
+  <label class="form-label">Szerokość geogr. (lat)</label>
+      {{ form.lat }}
+    </div>
+    <div class="col-md-6">
+  <label class="form-label">Długość geogr. (lng)</label>
+      {{ form.lng }}
+    </div>
+    <div class="col-12">
+  <label class="form-label">Opis (opcjonalnie)</label>
+      {{ form.description }}
+    </div>
+    <div class="col-12">
+  <button type="submit" class="btn btn-success">Wyślij do moderacji</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

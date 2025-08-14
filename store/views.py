@@ -4,11 +4,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse # Для AJAX ответов
 from django.views.decorators.csrf import ensure_csrf_cookie # Импортируем декоратор
-from .models import Product, Order, Category, Profile, SubscriptionBoxType, UserSubscription # Импортируем модели Product и Order
-from .cart import Cart # Импортируем наш класс Cart
+from .models import Product, Order, Category, Profile, SubscriptionBoxType, UserSubscription, Coupon, UserCoupon # Импортируем UserCoupon
+from .cart import Cart
 from decimal import Decimal
 from django.contrib.auth import login # Функция для автоматического входа пользователя
-from .forms import UserRegistrationForm, ProfileUpdateForm, SubscriptionChoiceForm # Импортируем нашу форму
+from .forms import UserRegistrationForm, ProfileUpdateForm, SubscriptionChoiceForm, CouponApplyForm, UserCouponChoiceForm # Импортируем UserCouponChoiceForm
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
@@ -17,6 +17,7 @@ from django.contrib import messages
 import stripe
 from django.urls import reverse, reverse_lazy
 from django.conf import settings
+from django.utils import timezone
 
 
 
@@ -165,6 +166,8 @@ def cart_add(request, product_id):
             'status': 'ok',
             'cart_total_items': len(cart),
             'cart_total_price': str(cart.get_total_price()), # Конвертируем Decimal в строку для JSON
+            'cart_total_price_after_discount': str(cart.get_total_price_after_discount()),
+            'cart_discount_amount': str(cart.get_discount_amount()),
             'item_removed': item_removed, # Флаг, был ли товар удален (кол-во <= 0)
             'quantity_adjusted': quantity_adjusted, # Флаг, было ли кол-во скорректировано
             'adjusted_quantity': adjusted_quantity, # Итоговое количество в корзине
@@ -197,8 +200,11 @@ def cart_remove(request, product_id):
     # Можно добавить больше данных, если нужно обновить страницу динамически
     return JsonResponse({
         'status': 'ok',
-        'cart_total_items': len(cart),
-        'cart_total_price': cart.get_total_price() # Общая стоимость для обновления
+    'cart_total_items': len(cart),
+    'cart_total_price': str(cart.get_total_price()),
+    'cart_total_price_after_discount': str(cart.get_total_price_after_discount()),
+    'cart_discount_amount': str(cart.get_discount_amount()),
+    'cart_empty': len(cart) == 0,
     })
 
 @ensure_csrf_cookie
@@ -207,8 +213,30 @@ def cart_detail(request):
     Представление для отображения страницы корзины.
     """
     cart = Cart(request)
-    # Передаем объект cart в шаблон. Шаблон сможет итерировать по нему.
-    return render(request, 'store/cart_detail.html', {'cart': cart})
+    coupon_apply_form = CouponApplyForm()
+    user_coupon_choice_form = None
+    available_user_coupons = None
+
+    if request.user.is_authenticated:
+        now = timezone.now()
+        available_user_coupons = UserCoupon.objects.filter(
+            user=request.user,
+            is_used=False,
+            coupon__active=True,
+            coupon__valid_from__lte=now,
+            coupon__valid_to__gte=now
+        ).select_related('coupon')
+        
+        if available_user_coupons.exists():
+            user_coupon_choice_form = UserCouponChoiceForm(user=request.user) # Передаем пользователя в форму
+
+    context = {
+        'cart': cart,
+        'coupon_apply_form': coupon_apply_form,
+        'user_coupon_choice_form': user_coupon_choice_form,
+        'available_user_coupons': available_user_coupons # Можно использовать для прямого отображения, если форма не нужна
+    }
+    return render(request, 'store/cart_detail.html', context)
 
 @ensure_csrf_cookie
 def homepage(request):
@@ -439,3 +467,67 @@ def cancel_subscription(request, subscription_id):
         # Если нужна страница подтверждения, здесь нужно будет рендерить шаблон.
         messages.warning(request, "Для отмены подписки используйте соответствующую кнопку.")
         return redirect('store:order_history')
+
+
+@require_POST
+def coupon_apply(request):
+    now = timezone.now()
+    cart = Cart(request)
+    source_form = request.POST.get('source_form')
+    applied_coupon = None
+
+    if source_form == 'user_choice' and request.user.is_authenticated:
+        form = UserCouponChoiceForm(request.POST, user=request.user) # Передаем user для валидации queryset
+        if form.is_valid():
+            user_coupon_instance = form.cleaned_data['user_coupon']
+            # Дополнительная проверка, что купон действительно принадлежит пользователю и активен
+            # (хотя форма должна была это сделать, но для безопасности)
+            if user_coupon_instance.user == request.user and \
+               user_coupon_instance.coupon.active and \
+               not user_coupon_instance.is_used and \
+               user_coupon_instance.coupon.valid_from <= now <= user_coupon_instance.coupon.valid_to:
+                applied_coupon = user_coupon_instance.coupon
+            else:
+                messages.error(request, "Wybrany kupon jest nieprawidłowy lub już nieważny.")
+        else:
+            # Обычно ошибки формы обрабатываются в cart_detail при GET запросе,
+            # но если пользователь как-то отправит невалидную форму напрямую:
+            messages.error(request, "Wystąpił błąd przy wyborze kuponu. Spróbuj ponownie.")
+            # Можно добавить логирование ошибок формы: e.g., logger.error(form.errors.as_json())
+
+    elif source_form == 'manual_apply':
+        form = CouponApplyForm(request.POST)
+        if form.is_valid():
+            code = form.cleaned_data['code']
+            try:
+                coupon = Coupon.objects.get(
+                    code__iexact=code,
+                    active=True,
+                    valid_from__lte=now,
+                    valid_to__gte=now
+                )
+                applied_coupon = coupon
+            except Coupon.DoesNotExist:
+                messages.error(request, 'Ten kupon jest nieprawidłowy lub wygasł.')
+        # Если форма невалидна, сообщение об ошибке не нужно, т.к. поле одно и оно required
+        # или можно добавить messages.error(request, 'Proszę wprowadzić kod kuponu.') если поле пустое
+
+    else:
+        messages.error(request, "Nieprawidłowe żądanie zastosowania kuponu.")
+
+    if applied_coupon:
+        cart.set_coupon(applied_coupon)
+        messages.success(request, f'Kupon "{applied_coupon.code}" został pomyślnie zastosowany.')
+    
+    return redirect('store:cart_detail')
+
+
+@require_POST
+def remove_coupon(request):
+    """
+    Удаляет купон из сессии (корзины).
+    """
+    cart = Cart(request)
+    cart.clear_coupon()
+    messages.info(request, "Kupon został usunięty z koszyka.")
+    return redirect('store:cart_detail')

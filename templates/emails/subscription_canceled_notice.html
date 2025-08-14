@@ -21,7 +21,10 @@
             <p>Data, do której subskrypcja była/jest aktywna (koniec opłaconego okresu): {{ user_subscription.current_period_end|date:"d.m.Y" }}</p>
         {% endif %}
         <p>Jeśli uważasz, że anulowanie nastąpiło przez pomyłkę, lub jeśli masz jakiekolwiek pytania, prosimy o kontakt z naszym działem obsługi klienta.</p>
-        <p>Dziękujemy za czas, który spędziłeś z EcoMarket. Mamy nadzieję, że wrócisz do nas w przyszłości!</p>
+    <p>Dziękujemy za czas, który spędziłeś z EcoMarket. Mamy nadzieję, że wrócisz do nas w przyszłości!</p>
+    {% if profile_url %}
+    <p>Możesz sprawdzić i zaktualizować swoje dane w <a href="{{ profile_url }}">panelu użytkownika</a>.</p>
+    {% endif %}
         <p class="footer">Z pozdrowieniami,<br>Zespół EcoMarket</p>
     </div>
 </body>

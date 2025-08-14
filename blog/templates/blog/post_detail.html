@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load markdown_filters %}
 
 {% block title %}{{ post.title }} - Blog - EcoMarket{% endblock %}
 
@@ -29,7 +30,7 @@
                 </figure>
                 {% endif %}
                 <section class="mb-5 post-body-content">
-                    {{ post.body|linebreaks }}
+                    {{ post.body|md_sanitize_headings|linebreaks }}
                 </section>
             </article>
 
@@ -124,6 +125,10 @@
                                     <div class="mb-3">
                                         <label for="{{ comment_form.image.id_for_label }}" class="form-label">{{ comment_form.image.label }}</label>
                                         {{ comment_form.image }}
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <button type="button" class="btn btn-outline-success" id="btn-choose-comment-image"><i class="bi bi-upload"></i> Wybierz plik</button>
+                                            <span id="comment-image-filename" class="text-muted small" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nie wybrano pliku</span>
+                                        </div>
                                         {% if comment_form.image.help_text %}
                                             <small class="form-text text-muted d-block mt-1">{{ comment_form.image.help_text|safe }}</small>
                                         {% endif %}
@@ -190,3 +195,25 @@
     </div>
 </div>
 {% endblock %}
+            {% block extra_js %}
+            {{ block.super }}
+            <script>
+            (() => {
+                'use strict';
+                const hiddenInput = document.querySelector('.js-comment-image-input');
+                const chooseBtn = document.getElementById('btn-choose-comment-image');
+                const fileNameField = document.getElementById('comment-image-filename');
+                if (chooseBtn && hiddenInput) {
+                    chooseBtn.addEventListener('click', () => hiddenInput.click());
+                }
+                if (hiddenInput) {
+                    hiddenInput.addEventListener('change', () => {
+                        const file = hiddenInput.files && hiddenInput.files[0];
+                        if (fileNameField) {
+                            fileNameField.textContent = file ? file.name : 'Nie wybrano pliku';
+                        }
+                    });
+                }
+            })();
+            </script>
+            {% endblock %}

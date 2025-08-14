@@ -6,42 +6,34 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, Count, F
 from django.db import transaction # Для атомарных операций
-
 from .models import Challenge, UserChallengeParticipation, Badge, UserBadge
-from store.models import Profile # Для обновления очков
+from store.models import Profile, UserCoupon # Обновленный импорт
 from .forms import ChallengeParticipationForm # Если вы создали этот файл
+from django.views.decorators.http import require_POST
 
 def challenge_list_view(request):
-    now = timezone.now()
-    active_challenges = Challenge.objects.filter(
-        status='active', 
-        start_date__lte=now, 
-        end_date__gte=now
-    ).order_by('end_date', 'start_date')
-    
-    upcoming_challenges = Challenge.objects.filter(
-        status='upcoming', 
-        start_date__gt=now
-    ).order_by('start_date')
-    
-    # Недавно завершенные челленджи (например, за последние 30 дней)
-    # completed_challenges = Challenge.objects.filter(
-    #     status='completed_period', 
-    #     end_date__lt=now, 
-    #     end_date__gte=now - timezone.timedelta(days=30)
-    # ).order_by('-end_date')
+    today = timezone.now()
 
-    user_participations_data = {} # Словарь {challenge_id: participation_status}
+    # Фильтруем челленджи, чтобы показывать только активные и не являющиеся шаблонами
+    all_challenges = Challenge.objects.filter(
+        is_active=True, 
+        is_template=False
+    )
+    # Исключаем челленджи без slug (slug пустой или None)
+    all_challenges = all_challenges.exclude(slug__isnull=True).exclude(slug="")
+
+    upcoming_challenges = all_challenges.filter(start_date__gt=today).order_by('start_date')
+    active_challenges = all_challenges.filter(start_date__lte=today, end_date__gte=today).order_by('start_date')
+
+    user_participations_ids = set()
     if request.user.is_authenticated:
         participations = UserChallengeParticipation.objects.filter(user=request.user)
-        for p in participations:
-            user_participations_data[p.challenge_id] = p.status
+        user_participations_ids = set(p.challenge_id for p in participations)
 
     context = {
-        'active_challenges': active_challenges,
         'upcoming_challenges': upcoming_challenges,
-        # 'completed_challenges': completed_challenges,
-        'user_participations_data': user_participations_data,
+        'active_challenges': active_challenges,
+        'user_participations_ids': user_participations_ids,
         'page_title': 'Eko-wyzwania',
     }
     return render(request, 'challenges/challenge_list.html', context)
@@ -80,20 +72,37 @@ def challenge_detail_view(request, slug):
                         profile.last_points_update = timezone.now()
                         profile.save()
 
+                        success_message = f"Pomyślnie ukończyłeś wyzwanie '{challenge.title}'! Otrzymano: {challenge.points_for_completion} пунктов"
+                        
                         # Выдача значка (если есть)
                         if challenge.badge_name_reward: # Используем поле из Challenge
                             badge, badge_created = Badge.objects.get_or_create(
-                                name=challenge.badge_name_reward, 
+                                name=challenge.badge_name_reward,
                                 defaults={'icon_class': challenge.badge_icon_class_reward or 'bi bi-patch-check-fill'}
                             )
                             UserBadge.objects.get_or_create(
-                                user=request.user, 
-                                badge=badge,
-                                defaults={'challenge_source': challenge}
+                                user=request.user,
+                                badge=badge
+                                # defaults={'challenge_source': challenge} # Поле отсутствует в модели UserBadge
                             )
-                            messages.success(request, f"Pomyślnie ukończyłeś wyzwanie '{challenge.title}'! Otrzymano: {challenge.points_for_completion} punktów i odznakę '{badge.name}'.")
-                        else:
-                            messages.success(request, f"Pomyślnie ukończyłeś wyzwanie '{challenge.title}'! Otrzymano: {challenge.points_for_completion} punktów.")
+                            success_message += f" i odznakę '{badge.name}'"
+                        
+                        # Выдача купона (если есть)
+                        if challenge.reward_coupon and challenge.reward_coupon.active:
+                            UserCoupon.objects.get_or_create(
+                                user=request.user,
+                                coupon=challenge.reward_coupon,
+                                defaults={
+                                    'challenge_source': challenge,
+                                    'is_used': False # Явно указываем, что купон не использован
+                                }
+                            )
+                            coupon_code = challenge.reward_coupon.code
+                            success_message += f". Twój kod rabatowy: {coupon_code}"
+                            # Опционально: можно создать запись UserCoupon, если такая модель будет
+
+                        success_message += "."
+                        messages.success(request, success_message)
                         
                         return redirect(challenge.get_absolute_url()) # Перезагружаем страницу деталей
                 # else: форма не валидна, она будет передана в контекст ниже
@@ -102,17 +111,35 @@ def challenge_detail_view(request, slug):
                     participation.status = 'completed_approved' # Пока авто-подтверждение
                     participation.completed_at = timezone.now()
                     participation.save()
-                    # ... (дублирование кода начисления очков и значков - лучше вынести в функцию) ...
+                    
                     profile, created = Profile.objects.get_or_create(user=request.user)
                     profile.eco_points = F('eco_points') + challenge.points_for_completion
                     profile.last_points_update = timezone.now()
                     profile.save()
+
+                    success_message = f"Pomyślnie ukończyłeś wyзwanie '{challenge.title}'! Оtrzymano: {challenge.points_for_completion} пунктов"
+
                     if challenge.badge_name_reward:
                         badge, badge_created = Badge.objects.get_or_create(name=challenge.badge_name_reward, defaults={'icon_class': challenge.badge_icon_class_reward or 'bi bi-patch-check-fill'})
-                        UserBadge.objects.get_or_create(user=request.user, badge=badge, defaults={'challenge_source': challenge})
-                        messages.success(request, f"Pomyślnie ukończyłeś wyzwanie '{challenge.title}'! Otrzymano: {challenge.points_for_completion} punktов i odznakę '{badge.name}'.")
-                    else:
-                         messages.success(request, f"Pomyślnie ukończyłeś wyzwanie '{challenge.title}'! Otrzymano: {challenge.points_for_completion} punktów.")
+                        UserBadge.objects.get_or_create(user=request.user, badge=badge) # Поле challenge_source отсутствует
+                        success_message += f" i odznakę '{badge.name}'"
+
+                    # Выдача купона (если есть)
+                    if challenge.reward_coupon and challenge.reward_coupon.active:
+                        UserCoupon.objects.get_or_create(
+                            user=request.user,
+                            coupon=challenge.reward_coupon,
+                            defaults={
+                                'challenge_source': challenge,
+                                'is_used': False # Явно указываем, что купон не использован
+                            }
+                        )
+                        coupon_code = challenge.reward_coupon.code
+                        success_message += f". Twój kod rabatowy: {coupon_code}"
+                        # Опционально: можно создать запись UserCoupon, если такая модель будет
+                    
+                    success_message += "."
+                    messages.success(request, success_message)
                     return redirect(challenge.get_absolute_url())
     
     if can_mark_as_done and not form_for_completion: # Если не было POST или форма не была создана из-за ошибки
@@ -187,12 +214,17 @@ def my_progress_view(request):
     ).select_related('challenge').order_by('-completed_at', '-challenge__end_date')
     
     earned_badges = UserBadge.objects.filter(user=user).select_related('badge').order_by('-awarded_at')
+    
+    # Получаем купоны пользователя
+    user_coupons = UserCoupon.objects.filter(user=user).select_related('coupon', 'challenge_source').order_by('-awarded_at')
 
     context = {
         'profile': profile,
         'active_participations': active_participations,
         'completed_participations': completed_participations,
         'earned_badges': earned_badges,
+        'user_coupons': user_coupons, # Добавляем купоны в контекст
+        'current_time': timezone.now(), # Добавляем текущее время для сравнения в шаблоне
         'page_title': 'Moje postępy w wyzwaniach',
     }
     return render(request, 'challenges/my_progress.html', context)

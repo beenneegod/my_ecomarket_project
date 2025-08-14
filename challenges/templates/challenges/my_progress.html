@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load i18n %} {# Для возможной будущей локализации дат и текстов #}
 
 {% block title %}{{ page_title|default:"Mój postęp" }} - EcoMarket{% endblock %}
 
@@ -31,7 +32,7 @@
                     {% if earned_badges %}
                         <div class="row g-3">
                             {% for user_badge in earned_badges %}
-                            <div class="col-auto text-center" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ user_badge.badge.name }} - {{ user_badge.badge.description|default:'' }} (получен {{ user_badge.awarded_at|date:"d.m.Y" }})">
+                            <div class="col-auto text-center" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ user_badge.badge.name }} - {{ user_badge.badge.description|default:'' }} ({% blocktrans with awarded_at_date=user_badge.awarded_at|date:"d.m.Y" %}otrzymano {{ awarded_at_date }}{% endblocktrans %})">
                                 {% if user_badge.badge.icon_class %}
                                     <i class="{{ user_badge.badge.icon_class }} fs-1"></i>
                                 {% else %}
@@ -51,8 +52,59 @@
 
     <hr class="my-5 hr-eco">
 
-    <h3 class="mb-3">Aktywne wyzwania</h3>
-    {% if active_participations %}
+    <section id="my-coupons" class="mb-5">
+        <h2 class="mb-4"><i class="bi bi-ticket-percent-fill me-2"></i>Moje Kupony</h2>
+        {% if user_coupons %}
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                {% for user_coupon_item in user_coupons %}
+                {% with coupon=user_coupon_item.coupon %}
+                <div class="col d-flex align-items-stretch">
+                    <div class="card shadow-sm h-100 w-100 
+                                {% if user_coupon_item.is_used %}border-secondary text-body-secondary bg-light coupon-used
+                                {% elif not coupon.active or coupon.valid_to < current_time %}border-warning text-body-secondary bg-light coupon-expired
+                                {% else %}border-success coupon-active{% endif %}">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title mb-3">
+                                <i class="bi bi-ticket-detailed-fill me-1"></i> {% trans "Kod" %}: <strong class="text-primary">{{ coupon.code }}</strong>
+                            </h5>
+                            <p class="card-text">
+                                {% trans "Zniżka" %}: <strong>{{ coupon.discount|floatformat:"-2g" }}%</strong><br>
+                                {% trans "Ważny od" %}: {{ coupon.valid_from|date:"d.m.Y" }}<br>
+                                {% trans "Ważny do" %}: {{ coupon.valid_to|date:"d.m.Y" }}
+                            </p>
+                            {% if user_coupon_item.challenge_source %}
+                            <p class="card-text small text-muted mt-auto pt-2">
+                                {% blocktrans with challenge_title=user_coupon_item.challenge_source.title %}Otrzymany za: {{ challenge_title }}{% endblocktrans %}
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent pt-0 border-top-0">
+                            {% if user_coupon_item.is_used %}
+                                <span class="badge bg-secondary fs-6"><i class="bi bi-check-circle me-1"></i>{% trans "Wykorzystany" %}</span>
+                            {% elif not coupon.active or coupon.valid_to < current_time %}
+                                <span class="badge bg-warning text-dark fs-6"><i class="bi bi-x-octagon me-1"></i>{% trans "Wygasł / Nieaktywny" %}</span>
+                            {% else %}
+                                <span class="badge bg-success fs-6"><i class="bi bi-check-circle-fill me-1"></i>{% trans "Aktywny" %}</span>
+                                <a href="{% url 'store:cart_detail' %}" class="btn btn-sm btn-primary float-end"><i class="bi bi-cart-plus me-1"></i>{% trans "Użyj" %}</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endwith %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle-fill me-2"></i>{% trans "Nie masz jeszcze żadnych kuponów. Ukończ wyzwania, aby je zdobyć!" %}
+            </div>
+        {% endif %}
+    </section>
+
+    <hr class="my-5 hr-eco">
+
+    <section id="active-challenges">
+        <h2 class="mb-4">{% trans "Aktywne wyzwania" %}</h2>
+        {% if active_participations %}
         <div class="list-group mb-4">
             {% for participation in active_participations %}
             <a href="{{ participation.challenge.get_absolute_url }}" class="list-group-item list-group-item-action">
@@ -68,9 +120,13 @@
     {% else %}
         <p class="text-muted">Nie masz aktywnych wyzwań. <a href="{% url 'challenges:challenge_list' %}">Dołącz do nowych!</a></p>
     {% endif %}
+    </section>
 
-    <h3 class="mb-3 mt-5">Ukończone wyzwania</h3>
-    {% if completed_participations %}
+    <hr class="my-5 hr-eco">
+
+    <section id="completed-challenges">
+        <h2 class="mb-4">{% trans "Ukończone wyzwania" %}</h2>
+        {% if completed_participations %}
          <div class="list-group">
             {% for participation in completed_participations %}
             <div class="list-group-item list-group-item-light">
@@ -93,6 +149,7 @@
     {% else %}
         <p class="text-muted">Nie ukończyłeś jeszcze żadnego wyzwania.</p>
     {% endif %}
+    </section>
 
 </div>
 {% endblock %}

@@ -17,7 +17,10 @@
         <p>Niestety, napotkaliśmy problem podczas próby przetworzenia płatności za Twoją subskrypcję na <strong>"{{ user_subscription.box_type.name }}"</strong>.</p>
         <p>ID Twojej subskrypcji Stripe: <strong>{{ user_subscription.stripe_subscription_id }}</strong>.</p>
         <p>Obecny status Twojej subskrypcji to: <strong>{{ user_subscription.get_status_display }}</strong>.</p>
-        <p>Prosimy o sprawdzenie i zaktualizowanie swoich danych płatniczych. Możesz to zrobić poprzez portal klienta Stripe (jeśli zintegrowany) lub kontaktując się z naszym wsparciem.</p>
+    <p>Prosimy o sprawdzenie i zaktualizowanie swoich danych płatniczych. Możesz to zrobić poprzez portal klienta Stripe (jeśli zintegrowany) lub kontaktując się z naszym wsparciem. </p>
+    {% if profile_url %}
+    <p>Przejdź do <a href="{{ profile_url }}">panelu użytkownika</a>, aby zaktualizować dane kontaktowe.</p>
+    {% endif %}
         <p>Jeśli płatność została już pomyślnie dokonana lub problem został rozwiązany, prosimy zignorować tę wiadomość.</p>
         <p class="footer">Z pozdrowieniami,<br>Zespół EcoMarket</p>
     </div>

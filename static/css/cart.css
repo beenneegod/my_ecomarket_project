@@ -78,3 +78,48 @@
 .continue-shopping-btn:hover {
     background-color: #95a5a6;
 }
+
+/* --- Купон: горизонтальное поле и кнопка --- */
+.coupon-input-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+.coupon-input-group input[type="text"],
+.coupon-input-group input[type="search"],
+.coupon-input-group input[type="email"],
+.coupon-input-group input[type="number"] {
+    flex: 1 1 0%;
+    min-width: 120px;
+    max-width: 250px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+    height: 40px;
+    font-size: 1rem;
+}
+.coupon-input-group button {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    height: 40px;
+    font-size: 1rem;
+    white-space: nowrap;
+}
+
+/* Для мобильных — поле и кнопка в столбик */
+@media (max-width: 480px) {
+    .coupon-input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .coupon-input-group input,
+    .coupon-input-group button {
+        border-radius: var(--border-radius-md) !important;
+        border-right: 1px solid #ced4da !important;
+        margin-bottom: 0.5rem;
+    }
+    .coupon-input-group button {
+        margin-bottom: 0;
+    }
+}

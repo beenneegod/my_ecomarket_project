@@ -1,0 +1,14 @@
+Witaj, {{ user.username }}!
+
+Gratulacje! Z przyjemnością informujemy, że zająłeś {{ place }}. miejsce w naszym miesięcznym rankingu Eko-Aktywistów!
+
+W podziękowaniu za Twój wkład w ochronę środowiska, przyznajemy Ci osobisty kupon rabatowy:
+
+Kod Twojego kuponu: {{ coupon_code }}
+
+Kupon daje Ci {{ discount_value }}% zniżki na kolejne zakupy w naszym sklepie. Jest ważny przez 30 dni.
+
+Dziękujemy, że jesteś z nami i pomagasz zmieniać świat na lepsze!
+
+Z pozdrowieniami,
+Zespół EcoMarket

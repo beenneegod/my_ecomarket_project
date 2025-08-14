@@ -43,14 +43,14 @@
                             <small class="form-text text-muted d-block mt-1">{{ form.username.help_text|safe }}</small>
                         {% endif %}
                         {% if form.username.errors %}
-                            <div class="invalid-feedback d-block"> {# d-block, чтобы ошибка была под полем #}
+                            <div class="invalid-feedback d-block"> {# d-block, aby błąd był pod polem #}
                                 {% for error in form.username.errors %} {{ error }} {% endfor %}
                             </div>
                         {% else %}
                             <div class="invalid-feedback">Proszę podać nazwę użytkownika.</div>
                         {% endif %}
                         {% if form.username.help_text %}
-                            <small class="form-text text-muted d-block">{{ form.username.help_text|safe }}</small> {# d-block для help_text #}
+                            <small class="form-text text-muted d-block">{{ form.username.help_text|safe }}</small> {# d-block dla help_text #}
                         {% endif %}
                     </div>
 
@@ -88,7 +88,7 @@
 {% endblock %}
 
 {% block extra_js %}
-{# Скрипт валидации Bootstrap #}
+{# Skrypt walidacji Bootstrap #}
 <script>
 (() => {
   'use strict'

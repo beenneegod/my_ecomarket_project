@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Oформление заказа - EcoMarket{% endblock %} 
+{% block title %}Realizacja zamówienia - EcoMarket{% endblock %} 
 
 {% block content %}
 <div class="row g-5">
@@ -14,16 +14,31 @@
             {% for item in cart %}
                 <li class="list-group-item d-flex justify-content-between lh-sm">
                     <div>
-                        <h6 class="my-0">{{ item.product.name }}</h6>
+                        <h6 class="my-0">{{ item.product_obj.name }}</h6>
                         <small class="text-body-secondary">Ilość: {{ item.quantity }}</small> 
                     </div>
                     <span class="text-body-secondary">{{ item.total_price }} PLN</span>
                 </li>
             {% endfor %}
             <li class="list-group-item d-flex justify-content-between">
-                <span>Razem (PLN)</span> 
+                <span>Pełna cena (PLN)</span>
+                <span>{{ cart.get_total_price }} PLN</span>
+            </li>
+            {% if cart.coupon %}
+            <li class="list-group-item d-flex justify-content-between text-success">
+                <span>Zniżka ({{ cart.coupon.code }})</span>
+                <span>-{{ cart.get_discount_amount }} PLN</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Do zapłaty (PLN)</span>
+                <strong class="text-success">{{ cart.get_total_price_after_discount }} PLN</strong>
+            </li>
+            {% else %}
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Do zapłaty (PLN)</span>
                 <strong>{{ cart.get_total_price }} PLN</strong>
             </li>
+            {% endif %}
         </ul>
     </div>
 

@@ -1,5 +1,10 @@
 # config/urls.py
 from django.contrib import admin
+
+# Ustawienia polskich tytułów w panelu administracyjnym
+admin.site.site_header = "Panel administracyjny EcoMarket"
+admin.site.site_title = "EcoMarket Admin"
+admin.site.index_title = "Zarządzanie serwisem"
 from django.conf import settings # Импортируем настройки
 from django.conf.urls.static import static # Импортируем помощник для статики/медиа
 from store import views as store_views
@@ -12,7 +17,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', store_views.homepage, name='homepage'),
     path('store/', include('store.urls', namespace='store')),
-    path('payment/', include('payments.urls', namespace='payments')),
+    path('payments/', include('payments.urls', namespace='payments')),
     path('blog/', include('blog.urls', namespace='blog')), # Added blog URLs
     path('accounts/login/', auth_views.LoginView.as_view(
             template_name='registration/login.html',
@@ -51,6 +56,8 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     path('eco-calculator/', include('carbon_calculator.urls', namespace='carbon_calculator')),
     path('eco-challenges/', include('challenges.urls', namespace='challenges')),
+    path('eco-places/', include('places.urls', namespace='places')),
+    path('chat/', include('chat.urls', namespace='chat')),
 ]
 
 # В режиме разработки (DEBUG=True) добавляем обработку медиа-файлов

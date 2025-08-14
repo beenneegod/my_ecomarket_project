@@ -15,8 +15,8 @@ Bieżący okres: {{ user_subscription.current_period_start|date:"d.m.Y" }} - {{ 
 {% endif %}
 --------------------
 
-{% if user_subscription.user %}
-Możesz zarządzać swoją subskrypcją w panelu użytkownika na naszej stronie (funkcjonalność wkrótce).
+{% if user_subscription.user and profile_url %}
+Możesz przeglądać i edytować swoje dane w panelu użytkownika: {{ profile_url }}
 {% endif %}
 
 Dziękujemy,

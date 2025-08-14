@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Выход из системы{% endblock %}
+{% block title %}Wylogowano{% endblock %}
 
 {% block content %}
-    <h2>Выход из системы</h2>
-    <p>Вы успешно вышли из своей учетной записи.</p>
-    <p><a href="{% url 'login' %}">Войти снова</a></p>
+    <h2>Zostałeś wylogowany</h2>
+    <p>Wylogowano Cię z konta.</p>
+    <p><a href="{% url 'login' %}">Zaloguj się ponownie</a></p>
 {% endblock %}

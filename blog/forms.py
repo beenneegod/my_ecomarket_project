@@ -14,8 +14,9 @@ class CommentForm(forms.ModelForm):
                 'rows': 3, # Можно сделать чуть меньше строк по умолчанию
                 'placeholder': 'Napisz swój komentarz...'
             }),
-            'image': forms.ClearableFileInput(attrs={ # Виджет для загрузки файла
-                'class': 'form-control mt-2' # Добавим отступ сверху
+            'image': forms.ClearableFileInput(attrs={ # Виджет для загрузки файла (скрытый, используем кастомную кнопку)
+                'class': 'form-control d-none js-comment-image-input',
+                'accept': 'image/*'
             }),
         }
         labels = {

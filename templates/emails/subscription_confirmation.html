@@ -31,9 +31,9 @@
             {% endif %}
         </div>
 
-        {% if user_subscription.user %}
-        <p>Możesz zarządzać swoją subskrypcją w panelu użytkownika na naszej stronie (funkcjonalność zarządzania subskrypcjami pojawi się wkrótce).</p>
-        {% endif %}
+    {% if user_subscription.user and profile_url %}
+    <p>Możesz zarządzać swoim profilem i danymi w <a href="{{ profile_url }}">panelu użytkownika</a>.</p>
+    {% endif %}
 
         <p class="footer">Z pozdrowieniami,<br>Zespół EcoMarket</p>
     </div>

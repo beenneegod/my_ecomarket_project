@@ -54,7 +54,7 @@
                             {% elif sub.cancel_at_period_end and sub.status == 'active' %}
                                 <div class="mt-3 pt-3 border-top">
                                     <p class="text-info"><i class="bi bi-info-circle-fill"></i> Ta subskrypcja zostanie anulowana {{ sub.current_period_end|date:"d.m.Y" }}.</p>
-                                        {# Опционально: кнопка для отмены немедленной отмены, если Stripe API это легко позволяет #}
+                                        {# Opcjonalnie: przycisk do cofnięcia natychmiastowego anulowania, jeśli Stripe API łatwo na to pozwala #}
                                         {# <form action="{% url 'store:reactivate_subscription' subscription_id=sub.id %}" method="post"> ... Reaktywuj </form> #}
                                     </div>
                             {% elif sub.status == 'canceled' %}

@@ -8,8 +8,9 @@ from django.contrib.auth.forms import (
     SetPasswordForm     
 )
 from django.contrib.auth.models import User # Если нужна стандартная модель User
+from django.utils import timezone # Импортируем timezone
 from .models import Order
-from .models import Profile, SubscriptionBoxType
+from .models import Profile, SubscriptionBoxType, Coupon, UserCoupon # Добавляем Coupon и UserCoupon
 
 
 class OrderCreateForm(forms.ModelForm):
@@ -120,7 +121,8 @@ class ProfileUpdateForm(forms.ModelForm):
         model = Profile
         fields = ['avatar', 'bio'] # Поля, которые пользователь сможет редактировать
         widgets = {
-            'avatar': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            # Hide native file input; we'll show a custom button/label in template
+            'avatar': forms.ClearableFileInput(attrs={'class': 'form-control d-none js-avatar-input', 'accept': 'image/*'}),
             'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Napisz coś o sobie...'}),
         }
         labels = {
@@ -153,3 +155,39 @@ class SubscriptionChoiceForm(forms.Form):
         # Например, если хочешь, чтобы радиокнопки отображались в несколько колонок или иначе.
         # Но Bootstrap 5 хорошо стилизует .form-check-input для RadioSelect.
         self.fields['box_type'].label_attrs = {'class': 'h5 mb-3 d-block'} # Делаем метку побольше и блочной
+
+class CouponApplyForm(forms.Form):
+    code = forms.CharField(
+        label='Kod kuponu',
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Wpisz kod kuponu'})
+    )
+
+class UserCouponChoiceForm(forms.Form):
+    user_coupon = forms.ModelChoiceField(
+        queryset=UserCoupon.objects.none(), # Начальный пустой queryset
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Wybierz jeden z Twoich dostępnych kuponów",
+        empty_label=None, # Не показывать пустой вариант
+        required=True
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None) # Получаем пользователя из kwargs
+        super().__init__(*args, **kwargs)
+
+        if user and user.is_authenticated:
+            now = timezone.now() # Импортировать timezone: from django.utils import timezone
+            self.fields['user_coupon'].queryset = UserCoupon.objects.filter(
+                user=user,
+                is_used=False,
+                coupon__active=True,
+                coupon__valid_from__lte=now,
+                coupon__valid_to__gte=now
+            ).select_related('coupon')
+            # Динамическое формирование метки для каждого выбора в ModelChoiceField
+            self.fields['user_coupon'].label_from_instance = lambda obj: f"{obj.coupon.code} ({obj.coupon.discount}% zniżki, ważny do {obj.coupon.valid_to.strftime('%d.%m.%Y')})"
+        else:
+            # Если пользователя нет, или он не аутентифицирован, оставляем queryset пустым
+            # или можно скрыть поле/форму во view
+            pass

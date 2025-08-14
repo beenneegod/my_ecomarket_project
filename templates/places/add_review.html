@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Dodaj opinię — EcoMarket{% endblock %}
+{% block content %}
+<div class="container mt-4 mb-4" style="max-width: 720px;">
+  <h2>Dodaj opinię</h2>
+  <form method="post" class="mt-3">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Ocena (1-5)</label>
+      {{ form.rating }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Komentarz (opcjonalnie)</label>
+      {{ form.comment }}
+    </div>
+    <button type="submit" class="btn btn-success">Zapisz</button>
+    <a href="{% url 'places:map' %}" class="btn btn-outline-secondary ms-2">Anuluj</a>
+  </form>
+</div>
+{% endblock %}

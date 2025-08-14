@@ -3,45 +3,72 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.urls import reverse
+import re
+import uuid
+from store.models import Coupon
 
 class Challenge(models.Model):
     STATUS_CHOICES = [
         ('upcoming', 'Nadchodzące'),
         ('active', 'Aktywne'),
-        ('completed', 'Zakończone (okres minął)'),
+        ('completed', 'Ukończone (przez użytkownika)'),
+        ('failed', 'Nieukończone (przez użytkownika)'),
+        ('completed_period', 'Zakończone (okres minął)'),
         ('archived', 'Zarchiwizowane'),
     ]
+
     title = models.CharField(max_length=200, verbose_name="Nazwa wyzwania")
-    slug = models.SlugField(max_length=220, unique=True, blank=True, verbose_name="Slug (do URL)")
-    description = models.TextField(verbose_name="Pełny opis i zasady")
-    short_description = models.CharField(max_length=255, blank=True, null=True, verbose_name="Krótki opis (do listy)")
-    image = models.ImageField(upload_to='challenges_images/', blank=True, null=True, verbose_name="Obrazek wyzwania")
+    short_description = models.CharField(max_length=255, blank=True, null=True, verbose_name="Krótki opis")
+    description = models.TextField(verbose_name="Pełny opis")
+    points_for_completion = models.IntegerField(default=10, verbose_name="Punkty za ukończenie")
     start_date = models.DateTimeField(verbose_name="Data rozpoczęcia")
     end_date = models.DateTimeField(verbose_name="Data zakończenia")
-    points_for_completion = models.PositiveIntegerField(default=0, verbose_name="Punkty za ukończenie")
-    badge_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nazwa odznaki (jeśli jest)")
-    badge_icon_class = models.CharField(max_length=50, blank=True, null=True, verbose_name="CSS klasa ikony odznaki") # e.g., 'bi bi-award-fill'
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='upcoming', verbose_name="Status wyzwania")
-    is_recurring = models.BooleanField(default=False, verbose_name="Czy wyzwanie cykliczne?")
-    # recur_frequency = models.CharField(...) # Если да, то как часто (еженедельно, ежемесячно) - это усложнит логику
+    
+    image = models.ImageField(upload_to='challenges_images/', null=True, blank=True, verbose_name="Образек wyzwania")
+    
+    badge_name_reward = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nazwa odznaki za wyzwanie")
+    badge_icon_class_reward = models.CharField(max_length=50, blank=True, null=True, verbose_name="CSS klasa ikony odznaki")
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='upcoming', verbose_name="Status")
+    
+    # --- НОВЫЕ ПОЛЯ ---
+    is_template = models.BooleanField(default=False, verbose_name="Szablon powtarzalny")
+    is_active = models.BooleanField(default=True, verbose_name="Aktywne (widoczne)")
+    template_challenge = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='instances',
+        verbose_name="Szablon tego wyzwania"
+    )
+
+    slug = models.SlugField(max_length=220, unique=True, blank=True, verbose_name="Slug (do URL)")
+    reward_coupon = models.ForeignKey(
+        Coupon,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reward_challenges',
+        verbose_name="Kupón za ukończenie wyzwania"
+    )
 
     class Meta:
-        verbose_name = "Eko-Wyzwanie"
-        verbose_name_plural = "Eko-Wyzwania"
-        ordering = ['-start_date', 'title']
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            from django.utils.text import slugify # Импорт здесь, чтобы избежать циклического импорта на уровне модуля
-            self.slug = slugify(self.title)
-            # Добавить логику уникальности слага, если нужно
-        super().save(*args, **kwargs)
+        verbose_name = "Wyzwanie"
+        verbose_name_plural = "Wyzwania"
+        ordering = ['start_date']
 
     def __str__(self):
-        return self.title
+        base_name = self.title
+        # Проверяем, содержит ли уже заголовок дату в формате (ДД.ММ-ДД.ММ.ГГГГ)
+        if re.search(r'\(\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{4}\)$', self.title):
+            pass # Если да, оставляем как есть
+        elif self.start_date and self.end_date and not self.is_template:
+            base_name = f"{self.title} ({self.start_date.strftime('%d.%m.%Y')} - {self.end_date.strftime('%d.%m.%Y')})"
+
+        if self.is_template:
+            base_name += " (Шаблон)"
+        return base_name
 
     def get_absolute_url(self):
         return reverse('challenges:challenge_detail', kwargs={'slug': self.slug})
@@ -83,13 +110,6 @@ class UserChallengeParticipation(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.challenge.title} ({self.get_status_display()})"
 
-# Модель для очков пользователя можно добавить в store.Profile
-# или создать отдельно, если нужна более сложная история начисления очков.
-# Давайте пока предположим, что очки будут в store.Profile.
-# В store/models.py, в класс Profile, можно добавить:
-# eco_points = models.PositiveIntegerField(default=0, verbose_name="Эко-очки")
-# last_points_updated_at = models.DateTimeField(null=True, blank=True)
-
 class Badge(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Nazwa odznaki")
     description = models.TextField(blank=True, null=True, verbose_name="Opis")
@@ -98,8 +118,8 @@ class Badge(models.Model):
     # criteria_description = models.TextField(blank=True, null=True, verbose_name="За что выдается") # Можно связать с Challenge
 
     class Meta:
-        verbose_name = "Odznaka (Badge)"
-        verbose_name_plural = "Odznaki (Badge)"
+        verbose_name = "Odznaka"
+        verbose_name_plural = "Odznaki"
 
     def __str__(self):
         return self.name
@@ -117,4 +137,4 @@ class UserBadge(models.Model):
         ordering = ['-awarded_at']
 
     def __str__(self):
-        return f"Значок '{self.badge.name}' для {self.user.username}"
+        return f"Odznaka '{self.badge.name}' dla {self.user.username}"

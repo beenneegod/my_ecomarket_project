@@ -1,6 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Cart JS loaded");
 
+    // Global toggle to disable Toastify pop-ups across cart interactions
+    // User request: remove top messages when adding/removing items from cart
+    const SHOW_CART_TOASTS = false;
+    if (!SHOW_CART_TOASTS) {
+        // Replace Toastify with a no-op stub to avoid UI popups while keeping calls harmless
+        window.Toastify = function () {
+            return { showToast() {} };
+        };
+    }
+
     // --- Функция получения CSRF токена ---
     function getCookie(name) {
         let cookieValue = null;
@@ -37,6 +47,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Update summary prices (full price, discount, total to pay) and keep currency PLN
+    function updateSummaryPrices({ cart_total_price, cart_total_price_after_discount, cart_discount_amount }) {
+        const fullPriceEl = document.getElementById('cart-full-price');
+        if (fullPriceEl && typeof cart_total_price !== 'undefined') {
+            fullPriceEl.textContent = `${cart_total_price} PLN`;
+        }
+
+        const totalPayEl = document.getElementById('cart-total-price');
+        if (totalPayEl && typeof cart_total_price_after_discount !== 'undefined') {
+            totalPayEl.textContent = `${cart_total_price_after_discount} PLN`;
+        }
+
+        const discountEl = document.getElementById('cart-discount-amount');
+        if (discountEl && typeof cart_discount_amount !== 'undefined') {
+            discountEl.textContent = `-${cart_discount_amount} PLN`;
+        }
+    }
+
     // --- Функция для фактического выполнения AJAX-запроса на удаление ---
     function performDeleteRequest(productId, url, cartItemRow) {
         fetch(url, {
@@ -66,10 +94,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, { once: true });
                 }
                 updateCartCount(data.cart_total_items);
-                const totalPriceElement = document.getElementById('cart-total-price');
-                if (totalPriceElement) {
-                    totalPriceElement.textContent = data.cart_total_price;
-                }
+                updateSummaryPrices({
+                    cart_total_price: data.cart_total_price,
+                    cart_total_price_after_discount: data.cart_total_price_after_discount,
+                    cart_discount_amount: data.cart_discount_amount,
+                });
                 if (data.cart_total_items === 0) {
                     setTimeout(() => { window.location.reload(); }, 500);
                 }
@@ -172,6 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.status === 'ok') {
                     updateCartCount(data.cart_total_items);
                     console.log(`Product ${productId} added/updated in cart (quantity: ${quantity}).`);
+                    updateSummaryPrices({
+                        cart_total_price: data.cart_total_price,
+                        cart_total_price_after_discount: data.cart_total_price_after_discount,
+                        cart_discount_amount: data.cart_discount_amount,
+                    });
                     Toastify({
                         text: "Produkt dodany do koszyka!",
                         duration: 3000,
@@ -320,10 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         itemTotalPriceElement.textContent = `${data.item_total_price} PLN`;
                     }
 
-                    const cartTotalPriceElement = document.getElementById('cart-total-price');
-                    if (cartTotalPriceElement) {
-                        cartTotalPriceElement.textContent = data.cart_total_price;
-                    }
+                    updateSummaryPrices({
+                        cart_total_price: data.cart_total_price,
+                        cart_total_price_after_discount: data.cart_total_price_after_discount,
+                        cart_discount_amount: data.cart_discount_amount,
+                    });
 
                     updateCartCount(data.cart_total_items);
 

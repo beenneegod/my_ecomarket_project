@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import dotenv # Импортируем dotenv
 import logging
+from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -18,11 +19,6 @@ else:
 # -----------------------------------------------------
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
-
-if not DEBUG:
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-else:
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 
 if not DEBUG:
@@ -60,6 +56,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',  # required for S3Boto3Storage in production
     'background_task',
     'axes',
     'rest_framework',
@@ -70,12 +67,16 @@ INSTALLED_APPS = [
     'blog.apps.BlogConfig', # Add the blog app
     'carbon_calculator.apps.CarbonCalculatorConfig',
     'challenges.apps.ChallengesConfig',
+    'places.apps.PlacesConfig',
+    'chat.apps.ChatConfig',
+    'channels',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # place right after SecurityMiddleware (per WhiteNoise docs)
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -108,21 +109,31 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
-DATABASES = {
-    'default': {
-        'ENGINE': DB_ENGINE,
-        'NAME': os.getenv('DATABASE_NAME'),
-        'USER': os.getenv('DATABASE_USER'),
-        'PASSWORD': os.getenv('DATABASE_PASSWORD'),
-        'HOST': os.getenv('DATABASE_HOST'),
-        'PORT': os.getenv('DATABASE_PORT', 5432),
+# Более дружелюбная конфигурация для разработки: если DEBUG и переменные БД не заданы, используем SQLite
+if DEBUG and not os.getenv('DATABASE_NAME'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': DB_ENGINE,
+            'NAME': os.getenv('DATABASE_NAME'),
+            'USER': os.getenv('DATABASE_USER'),
+            'PASSWORD': os.getenv('DATABASE_PASSWORD'),
+            'HOST': os.getenv('DATABASE_HOST'),
+            'PORT': os.getenv('DATABASE_PORT', 5432),
+        }
+    }
 # Проверка наличия всех переменных БД
 if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
     # Убедимся, что порт не передается как пустая строка, если MySQL этого не любит
@@ -152,6 +163,12 @@ TIME_ZONE = 'Europe/Warsaw'
 
 USE_I18N = True
 
+# Wymuś polski jako jedyny język w interfejsie
+LANGUAGES = [
+    ('pl', 'Polski'),
+]
+LOCALE_PATHS = [ BASE_DIR / 'locale' ]
+
 USE_TZ = True
 
 
@@ -169,6 +186,8 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # https://docs.djangoproject.com/en/stable/howto/static-files/
 
 if not DEBUG: # Настройки для ПРОДАКШЕНА (используем S3)
+    # Используем S3 для хранения медиа-файлов в продакшене
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
@@ -236,6 +255,24 @@ else: # Настройки для РАЗРАБОТКИ (локальное хр�
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CART_SESSION_ID = 'cart'
 
+# Channels: use Redis in production when REDIS_URL is provided, else in-memory for dev
+REDIS_URL = os.getenv('REDIS_URL')
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
+
 # --- Stripe Keys ---
 STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
@@ -271,6 +308,9 @@ EMAIL_TIMEOUT = 60 # Время ожидания ответа от сервер�
 # Проверка наличия основных настроек для SMTP
 if not all([EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD]):
     print("Warning: SMTP Email settings (EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD) are not fully configured in .env. Real email sending might fail.")
+    # In development, fall back to console backend so emails show up in the runserver/process_tasks output
+    if DEBUG:
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
@@ -278,7 +318,8 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 AXES_FAILURE_LIMIT = 10
-AXES_COOLOFF_TIME = 0.25
+# Use timedelta for clarity; 0.25 hours = 15 minutes
+AXES_COOLOFF_TIME = timedelta(minutes=15)
 AXES_LOCKOUT_TEMPLATE = 'registration/lockout.html'
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]
@@ -287,3 +328,49 @@ AXES_ENABLE_ADMIN = True
 
 
 AVERAGE_ANNUAL_CO2_FOOTPRINT_PL_KG = 5600
+
+# --- Дополнительно: логирование в файлы logs/info.log и logs/error.log ---
+LOGS_DIR = BASE_DIR / 'logs'
+os.makedirs(LOGS_DIR, exist_ok=True)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file_info': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': str(LOGS_DIR / 'info.log'),
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'file_error': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': str(LOGS_DIR / 'error.log'),
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file_info', 'file_error'],
+        'level': 'INFO',
+    },
+}
+
+# CSRF_TRUSTED_ORIGINS из окружения (через запятую)
+csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+if csrf_trusted:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in csrf_trusted.split(',') if o.strip()]
+
+# Базовый URL сайта для генерации абсолютных ссылок в письмах
+# Например: https://myecomarket.pl (без завершающего слэша)
+SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000').rstrip('/')

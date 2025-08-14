@@ -1,32 +1,50 @@
-# payments/tasks.py
+"""Background email tasks for payments app."""
+
+import logging
 from background_task import background
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from store.models import Order, UserSubscription  # Импортируем модель Order
+from django.db import transaction
+from store.models import Order, UserSubscription
 
-@background(schedule=5) # Задача будет запущена через 5 секунд после вызова
-def send_order_confirmation_email_task(order_id):
-    """
-    Фоновая задача для отправки email с подтверждением заказа.
-    """
+logger = logging.getLogger(__name__)
+
+
+@background(schedule=5)
+def send_order_confirmation_email_task(order_id: int) -> bool:
+    """Send order confirmation email in background."""
     try:
-        order = Order.objects.get(id=order_id)
+        # Lock row to prevent double-send races if task enqueued twice
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(id=order_id)
+            if order.email_sent:
+                logger.info("TASK: order #%s email already sent, skipping", order.id)
+                return True
+            if not order.email:
+                logger.warning("TASK: cannot send email for Order #%s: customer email is empty", order.id)
+                return False
         if not order.email:
-            print(f"!!! TASK: Невозможно отправить email для Заказа #{order.id}: Email клиента не указан.")
+            logger.warning("TASK: cannot send email for Order #%s: customer email is empty", order.id)
             return False
 
-        subject = f'Подтверждение заказа #{order.id} - EcoMarket' # Используйте f-string для удобства
+        subject = f"Potwierdzenie zamówienia #{order.id} - EcoMarket"
         recipient_email = order.email
         from_email = settings.DEFAULT_FROM_EMAIL
 
-        context = {
-            'order': order,
-            'user': order.user,
-        }
+        profile_url = None
+        orders_url = None
+        try:
+            base = settings.SITE_URL
+            profile_url = f"{base}/store/profile/edit/"
+            orders_url = f"{base}/store/orders/"
+        except Exception:  # noqa: BLE001 - best-effort URL build
+            profile_url = None
+            orders_url = None
 
-        plain_message = render_to_string('emails/order_confirmation.txt', context)
-        html_message = render_to_string('emails/order_confirmation.html', context) # HTML версия
+        context = {"order": order, "user": order.user, "profile_url": profile_url, "orders_url": orders_url}
+        plain_message = render_to_string("emails/order_confirmation.txt", context)
+        html_message = render_to_string("emails/order_confirmation.html", context)
 
         send_mail(
             subject,
@@ -36,43 +54,45 @@ def send_order_confirmation_email_task(order_id):
             html_message=html_message,
             fail_silently=False,
         )
-        print(f"TASK: Email подтверждения для Заказа #{order.id} успешно отправлен.")
+        # Mark as sent after successful send
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(id=order_id)
+            order.email_sent = True
+            order.save(update_fields=["email_sent", "updated_at"]) if hasattr(order, "updated_at") else order.save(update_fields=["email_sent"])  # noqa: E701
+        logger.info("Email confirmation for Order #%s sent", order.id)
         return True
     except Order.DoesNotExist:
-        print(f"!!! TASK ERROR: Заказ с ID {order_id} не найден. Email не отправлен.")
+        logger.error("TASK ERROR: Order with ID %s not found. Email not sent", order_id)
         return False
-    except Exception as e:
-        print(f"!!! TASK ERROR: Ошибка при отправке email для Заказа #{order_id}: {e}")
-        # Здесь можно добавить более продвинутое логирование или повторные попытки,
-        # но для начала достаточно этого.
+    except Exception as e:  # noqa: BLE001 - log and return False
+        logger.exception("TASK ERROR: Failed to send order email for Order #%s: %s", order_id, e)
         return False
-    
 
-@background(schedule=10) # Запускаем с небольшой задержкой
-def send_subscription_confirmation_email_task(user_subscription_id):
-    """
-    Фоновая задача для отправки email с подтверждением подписки.
-    """
+
+@background(schedule=10)
+def send_subscription_confirmation_email_task(user_subscription_id: int) -> bool:
+    """Send subscription confirmation email in background."""
     try:
-        user_sub = UserSubscription.objects.select_related('user', 'box_type').get(id=user_subscription_id) # select_related для оптимизации
-
+        user_sub = UserSubscription.objects.select_related("user", "box_type").get(id=user_subscription_id)
         if not user_sub.user or not user_sub.user.email:
-            # Если пользователя нет или у него нет email (например, анонимная подписка, если бы она была возможна)
-            # или если пользователь есть, но email не указан.
-            print(f"!!! TASK: Невозможно отправить email для UserSubscription #{user_sub.id}: Email клиента не указан или пользователь отсутствует.")
+            logger.warning(
+                "TASK: cannot send subscription email for UserSubscription #%s: user or email missing",
+                user_sub.id,
+            )
             return False
 
-        subject = f'Potwierdzenie subskrypcji: {user_sub.box_type.name} - EcoMarket'
+        subject = f"Potwierdzenie subskrypcji: {user_sub.box_type.name} - EcoMarket"
         recipient_email = user_sub.user.email
         from_email = settings.DEFAULT_FROM_EMAIL
-
-        context = {
-            'user_subscription': user_sub,
-            # 'user': user_sub.user # Уже доступно через user_subscription.user в шаблоне
-        }
-
-        plain_message = render_to_string('emails/subscription_confirmation.txt', context)
-        html_message = render_to_string('emails/subscription_confirmation.html', context)
+        profile_url = None
+        try:
+            base = settings.SITE_URL
+            profile_url = f"{base}/store/profile/edit/"
+        except Exception:
+            profile_url = None
+        context = {"user_subscription": user_sub, "profile_url": profile_url}
+        plain_message = render_to_string("emails/subscription_confirmation.txt", context)
+        html_message = render_to_string("emails/subscription_confirmation.html", context)
 
         send_mail(
             subject,
@@ -82,77 +102,126 @@ def send_subscription_confirmation_email_task(user_subscription_id):
             html_message=html_message,
             fail_silently=False,
         )
-        print(f"TASK: Email подтверждения подписки #{user_sub.id} ({user_sub.box_type.name}) успешно отправлен для {user_sub.user.email}.")
+        logger.info(
+            "Subscription confirmation email sent for UserSubscription #%s to %s",
+            user_sub.id,
+            user_sub.user.email,
+        )
         return True
     except UserSubscription.DoesNotExist:
-        print(f"!!! TASK ERROR: UserSubscription с ID {user_subscription_id} не найдена. Email не отправлен.")
+        logger.error("TASK ERROR: UserSubscription with ID %s not found. Email not sent", user_subscription_id)
         return False
-    except Exception as e:
-        print(f"!!! TASK ERROR: Ошибка при отправке email для UserSubscription #{user_subscription_id}: {e}")
+    except Exception as e:  # noqa: BLE001
+        logger.exception(
+            "TASK ERROR: Failed to send subscription email for UserSubscription #%s: %s",
+            user_subscription_id,
+            e,
+        )
         return False
-    
+
 
 @background(schedule=10)
-def send_subscription_canceled_email_task(user_subscription_id):
-    """
-    Фоновая задача для отправки email об отмене подписки.
-    """
+def send_subscription_canceled_email_task(user_subscription_id: int) -> bool:
+    """Send subscription canceled notice in background."""
     try:
-        user_sub = UserSubscription.objects.select_related('user', 'box_type').get(id=user_subscription_id)
-
+        user_sub = UserSubscription.objects.select_related("user", "box_type").get(id=user_subscription_id)
         if not user_sub.user or not user_sub.user.email:
-            print(f"!!! TASK: Невозможно отправить email (cancel notice) для UserSubscription #{user_sub.id}: Email клиента не указан или пользователь отсутствует.")
+            logger.warning(
+                "TASK: cannot send cancel notice for UserSubscription #%s: user or email missing",
+                user_sub.id,
+            )
             return False
 
         subject = f'Twoja subskrypcja "{user_sub.box_type.name}" została anulowana - EcoMarket'
         recipient_email = user_sub.user.email
         from_email = settings.DEFAULT_FROM_EMAIL
-
-        context = {'user_subscription': user_sub}
-        plain_message = render_to_string('emails/subscription_canceled_notice.txt', context)
-        html_message = render_to_string('emails/subscription_canceled_notice.html', context)
+        profile_url = None
+        try:
+            base = settings.SITE_URL
+            profile_url = f"{base}/store/profile/edit/"
+        except Exception:
+            profile_url = None
+        context = {"user_subscription": user_sub, "profile_url": profile_url}
+        plain_message = render_to_string("emails/subscription_canceled_notice.txt", context)
+        html_message = render_to_string("emails/subscription_canceled_notice.html", context)
 
         send_mail(
-            subject, plain_message, from_email, [recipient_email],
-            html_message=html_message, fail_silently=False,
+            subject,
+            plain_message,
+            from_email,
+            [recipient_email],
+            html_message=html_message,
+            fail_silently=False,
         )
-        print(f"TASK: Email (cancel notice) для UserSubscription #{user_sub.id} ({user_sub.box_type.name}) успешно отправлен для {user_sub.user.email}.")
+        logger.info(
+            "Subscription cancel notice sent for UserSubscription #%s to %s",
+            user_sub.id,
+            user_sub.user.email,
+        )
         return True
     except UserSubscription.DoesNotExist:
-        print(f"!!! TASK ERROR: UserSubscription (cancel notice) с ID {user_subscription_id} не найдена. Email не отправлен.")
+        logger.error(
+            "TASK ERROR: UserSubscription (cancel notice) with ID %s not found. Email not sent",
+            user_subscription_id,
+        )
         return False
-    except Exception as e:
-        print(f"!!! TASK ERROR: Ошибка при отправке email (cancel notice) для UserSubscription #{user_subscription_id}: {e}")
+    except Exception as e:  # noqa: BLE001
+        logger.exception(
+            "TASK ERROR: Failed to send cancel notice for UserSubscription #%s: %s",
+            user_subscription_id,
+            e,
+        )
         return False
-    
 
 
 @background(schedule=10)
-def send_payment_failed_email_task(user_subscription_id):
-    """
-    Фоновая задача для отправки email о проблеме с оплатой подписки.
-    """
+def send_payment_failed_email_task(user_subscription_id: int) -> bool:
+    """Send subscription payment failed email in background."""
     try:
-        user_sub = UserSubscription.objects.select_related('user', 'box_type').get(id=user_subscription_id)
+        user_sub = UserSubscription.objects.select_related("user", "box_type").get(id=user_subscription_id)
         if not user_sub.user or not user_sub.user.email:
-            print(f"!!! TASK: Невозможно отправить email (payment failed) для UserSubscription #{user_sub.id}: Email клиента не указан или пользователь отсутствует.")
+            logger.warning(
+                "TASK: cannot send payment failed email for UserSubscription #%s: user or email missing",
+                user_sub.id,
+            )
             return False
 
         subject = f'Problem z płatnością za subskrypcję "{user_sub.box_type.name}" - EcoMarket'
         from_email = settings.DEFAULT_FROM_EMAIL
-        context = {'user_subscription': user_sub}
-        plain_message = render_to_string('emails/subscription_payment_failed.txt', context)
-        html_message = render_to_string('emails/subscription_payment_failed.html', context)
+        profile_url = None
+        try:
+            base = settings.SITE_URL
+            profile_url = f"{base}/store/profile/edit/"
+        except Exception:
+            profile_url = None
+        context = {"user_subscription": user_sub, "profile_url": profile_url}
+        plain_message = render_to_string("emails/subscription_payment_failed.txt", context)
+        html_message = render_to_string("emails/subscription_payment_failed.html", context)
 
         send_mail(
-            subject, plain_message, from_email, [user_sub.user.email], # Убедитесь, что from_email определен
-            html_message=html_message, fail_silently=False,
+            subject,
+            plain_message,
+            from_email,
+            [user_sub.user.email],
+            html_message=html_message,
+            fail_silently=False,
         )
-        print(f"TASK: Email (payment failed) для UserSubscription #{user_sub.id} ({user_sub.box_type.name}) успешно отправлен для {user_sub.user.email}.")
+        logger.info(
+            "Payment failed email sent for UserSubscription #%s to %s",
+            user_sub.id,
+            user_sub.user.email,
+        )
         return True
-    except UserSubscription.DoesNotExist: # и другие except блоки
-        print(f"!!! TASK ERROR: UserSubscription (payment failed) с ID {user_subscription_id} не найдена. Email не отправлен.")
+    except UserSubscription.DoesNotExist:
+        logger.error(
+            "TASK ERROR: UserSubscription (payment failed) with ID %s not found. Email not sent",
+            user_subscription_id,
+        )
         return False
-    except Exception as e:
-        print(f"!!! TASK ERROR: Ошибка при отправке email (payment failed) для UserSubscription #{user_subscription_id}: {e}")
+    except Exception as e:  # noqa: BLE001
+        logger.exception(
+            "TASK ERROR: Failed to send payment failed email for UserSubscription #%s: %s",
+            user_subscription_id,
+            e,
+        )
         return False

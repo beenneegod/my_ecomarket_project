@@ -2,37 +2,34 @@
 
 from decimal import Decimal
 from django.conf import settings
-from .models import Product
+from .models import Product, Coupon # Added Coupon
+from django.utils import timezone # Added timezone
 import logging
 
 logger = logging.getLogger(__name__)
 class Cart:
     def __init__(self, request):
         self.session = request.session
-        cart = self.session.get(settings.CART_SESSION_ID)
-        if not cart:
-            cart = self.session[settings.CART_SESSION_ID] = {}
-        self.cart = cart
+        cart_data = self.session.get(settings.CART_SESSION_ID)
+        if not cart_data:
+            # Initialize cart and coupon_id if not present
+            cart_data = self.session[settings.CART_SESSION_ID] = {}
+        self.cart = cart_data
 
-    def add(self, product, quantity=1, update_quantity=False):
-        # ... (остальной код метода add без изменений) ...
-        product_id = str(product.id) 
-
-        if product_id not in self.cart:
-            self.cart[product_id] = {'quantity': 0, 'price': str(product.price)}
-
-        if update_quantity:
-            self.cart[product_id]['quantity'] = quantity
-        else:
-            self.cart[product_id]['quantity'] += quantity
-
-        if self.cart[product_id]['quantity'] > product.stock:
-             self.cart[product_id]['quantity'] = product.stock
-
-        if self.cart[product_id]['quantity'] <= 0:
-             self.remove(product)
-        else:
-             self.save()
+        # Coupon handling
+        self.coupon = None
+        coupon_id = self.session.get('coupon_id')
+        if coupon_id:
+            try:
+                coupon = Coupon.objects.get(id=coupon_id)
+                now = timezone.now()
+                if coupon.active and coupon.valid_from <= now and coupon.valid_to >= now:
+                    self.coupon = coupon
+                else:
+                    # Coupon is invalid (e.g., expired, inactive)
+                    self.clear_coupon() # This will remove coupon_id from session
+            except Coupon.DoesNotExist:
+                self.clear_coupon() # Coupon ID in session but no such coupon
 
     def add(self, product, quantity=1, update_quantity=False):
         """
@@ -51,7 +48,7 @@ class Cart:
             self.cart[product_id]['quantity'] += quantity
 
         # Проверка, чтобы количество не превышало остаток на складе
-        if self.cart[product_id]['quantity'] > product.stock:
+        if product.stock is not None and self.cart[product_id]['quantity'] > product.stock:
              self.cart[product_id]['quantity'] = product.stock # Ограничиваем максимальным количеством на складе
              # Можно добавить сообщение для пользователя здесь или в представлении
 
@@ -68,7 +65,11 @@ class Cart:
         product_id = str(product.id)
         if product_id in self.cart:
             del self.cart[product_id]
-            self.save()
+            # Если после удаления корзина пуста — полностью очищаем её и купон
+            if not self.cart:  # пустой dict
+                self.clear()  # также очистит купон и пометит сессию изменённой
+            else:
+                self.save()
 
     def __iter__(self):
         product_ids = self.cart.keys()
@@ -125,13 +126,17 @@ class Cart:
         """
         Подсчет общей стоимости товаров в корзине.
         """
-        return sum(Decimal(item['price']) * item['quantity'] for item in self.cart.values())
+        # Возвращаем Decimal даже если корзина пуста, чтобы избежать ошибок при quantize
+        return sum((Decimal(item['price']) * item['quantity'] for item in self.cart.values()), Decimal('0.00'))
 
     def clear(self):
         """
-        Удаление корзины из сессии.
+        Удаление корзины из сессии и сброс купона.
         """
-        del self.session[settings.CART_SESSION_ID]
+        # del self.session[settings.CART_SESSION_ID] # This would delete the cart items too
+        # Instead, clear the cart items and then the coupon
+        self.cart = self.session[settings.CART_SESSION_ID] = {}
+        self.clear_coupon() # Ensure coupon is cleared when cart is cleared
         self.save()
 
     def save(self):
@@ -139,3 +144,54 @@ class Cart:
         Помечает сессию как "измененную", чтобы убедиться, что она сохранена.
         """
         self.session.modified = True
+
+    def set_coupon(self, coupon):
+        """
+        Применяет купон к корзине.
+        """
+        self.session['coupon_id'] = coupon.id
+        self.coupon = coupon
+        self.save()
+
+    def get_discount(self):
+        """
+        Возвращает процент скидки из купона, если применён и валиден.
+        """
+        if self.coupon:
+            now = timezone.now()
+            if self.coupon.active and self.coupon.valid_from <= now and self.coupon.valid_to >= now:
+                return self.coupon.discount # This is an integer percentage
+        return 0
+
+    def get_total_price_after_discount(self):
+        """
+        Возвращает итоговую сумму с учетом скидки по купону.
+        """
+        total_price = self.get_total_price()
+        discount_percentage = self.get_discount()
+        if discount_percentage > 0:
+            discount_amount = total_price * (Decimal(discount_percentage) / Decimal(100))
+            return (total_price - discount_amount).quantize(Decimal('0.01'))
+        return total_price.quantize(Decimal('0.01'))
+    
+    def clear_coupon(self):
+        """
+        Удаляет купон из сессии (сброс скидки).
+        """
+        if 'coupon_id' in self.session:
+            del self.session['coupon_id']
+        # Remove old session keys if they exist, for cleanup
+        if 'coupon_code' in self.session:
+            del self.session['coupon_code']
+        if 'coupon_discount' in self.session:
+            del self.session['coupon_discount']
+        self.coupon = None
+        self.save()
+
+    def get_discount_amount(self):
+        """
+        Возвращает сумму скидки в валюте (например, PLN).
+        """
+        total = self.get_total_price()
+        total_after = self.get_total_price_after_discount()
+        return (total - total_after).quantize(Decimal('0.01'))

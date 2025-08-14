@@ -117,6 +117,26 @@ class Product(models.Model):
                 pass 
         super().save(*args, **kwargs)
 
+class Coupon(models.Model):
+    from django.core.validators import MinValueValidator, MaxValueValidator
+    code = models.CharField(max_length=50, unique=True, verbose_name="Kod kuponu")
+    valid_from = models.DateTimeField(verbose_name="Początek ważności")
+    valid_to = models.DateTimeField(verbose_name="Koniec ważności")
+    discount = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        verbose_name="Zniżka (%)",
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    active = models.BooleanField(default=True, verbose_name="Aktywny")
+
+    class Meta:
+        verbose_name = "Kupon rabatowy"
+        verbose_name_plural = "Kupony rabatowe"
+
+    def __str__(self):
+        return self.code
+
 class Order(models.Model):
     """Модель заказа"""
     # Связь с пользователем. Используем settings.AUTH_USER_MODEL для гибкости.
@@ -137,6 +157,10 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Data aktualizacji")
     paid = models.BooleanField(default=False, verbose_name="Opłacone") # Статус оплаты
     stripe_id = models.CharField(max_length=250, blank=True, verbose_name="ID transakcji Stripe") # Для хранения ID сессии/платежа Stripe
+    coupon = models.ForeignKey(Coupon, related_name='orders', null=True, blank=True, on_delete=models.SET_NULL, verbose_name="Kupon")
+    discount = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Zniżka (%)")
+    # Флаг, чтобы не отправлять подтверждение повторно при повторах вебхука/таска
+    email_sent = models.BooleanField(default=False, verbose_name="Email potwierdzający wysłany")
 
     class Meta:
         verbose_name = "Zamówienie"
@@ -147,8 +171,10 @@ class Order(models.Model):
         return f"Zamówienie №{self.id}"
 
     def get_total_cost(self):
-        """Возвращает общую стоимость заказа"""
-        return sum(item.get_cost() for item in self.items.all())
+        total = sum(item.get_cost() for item in self.items.all())
+        if self.discount:
+            return total - (total * (self.discount / 100))
+        return total
 
 class OrderItem(models.Model):
     """Модель элемента заказа (конкретный товар в заказе)"""
@@ -173,6 +199,41 @@ class OrderItem(models.Model):
         return self.price * self.quantity
     
 
+class UserCoupon(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='coupons', verbose_name="Użytkownik")
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, related_name='user_coupons', verbose_name="Kupon")
+    awarded_at = models.DateTimeField(auto_now_add=True, verbose_name="Data przyznania")
+    is_used = models.BooleanField(default=False, verbose_name="Czy wykorzystany")
+    # Дата использования купона (если применён к заказу)
+    used_at = models.DateTimeField(null=True, blank=True, verbose_name="Data wykorzystania")
+    # Ссылка на заказ, в котором купон был использован (если применимо)
+    order = models.ForeignKey(
+        'store.Order',  # строковая ссылка, чтобы избежать проблем порядка импорта
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='used_user_coupons',
+        verbose_name="Zamówienie (wykorzystanie kuponu)"
+    )
+    challenge_source = models.ForeignKey(
+        'challenges.Challenge',  # Используем строковую ссылку для избежания циклического импорта
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='awarded_user_coupons',
+        verbose_name="Wyzwanie (źródło kuponu)"
+    )
+
+    class Meta:
+        verbose_name = "Kupon użytkownika"
+        verbose_name_plural = "Kupony użytkowników"
+        unique_together = ('user', 'coupon') # Пользователь может получить конкретный купон только один раз
+        ordering = ['-awarded_at']
+
+    def __str__(self):
+        return f"Kupon {self.coupon.code} dla {self.user.username} (Przyznany: {self.awarded_at.strftime('%Y-%m-%d %H:%M')})"
+
+
 class Profile(models.Model): # Без отступа в начале строки
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
     avatar = models.ImageField(
@@ -191,7 +252,7 @@ class Profile(models.Model): # Без отступа в начале строк�
         verbose_name_plural = "Profile użytkowników"
 
     def __str__(self):
-        return f"Profil użytkownika {self.user.username}"
+        return f"Profil użytknika {self.user.username}"
 
     @property
     def avatar_url(self):
@@ -199,7 +260,7 @@ class Profile(models.Model): # Без отступа в начале строк�
             return self.avatar.url
         else:
             from django.templatetags.static import static
-            return static('img/default_avatar.png')
+            return static('img/default_avatar.svg')
         
 
 

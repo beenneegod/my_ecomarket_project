@@ -16,6 +16,7 @@ from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.utils import timezone
 from django.conf import settings
+import re
 
 User = get_user_model()
 
@@ -39,6 +40,8 @@ class CreatePostAPIView(APIView):
                 return Response({"error": f"Could not determine API post author: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             title = serializer.validated_data['title']
+            # Remove leading markdown hashes from titles like "## Title"
+            title = re.sub(r"^\s*#{1,6}\s+", "", title or "").strip()
             new_slug = slugify(title)
             # Проверка на уникальность слага и добавление суффикса, если необходимо
             original_slug = new_slug
@@ -53,6 +56,10 @@ class CreatePostAPIView(APIView):
             post_status = serializer.validated_data.get('status', 'published')
 
 
+            # Sanitize heading hashes in body as well (best effort)
+            body = serializer.validated_data['body']
+            body = re.sub(r"^(\s{0,3})#{1,6}(\s+)", r"\1\2", body or "", flags=re.MULTILINE)
+
             # Сохраняем пост с нужным автором и слагом
             # Мы не вызываем serializer.save() напрямую, так как нам нужно добавить author и slug.
             # Вместо этого, создаем объект Post вручную.
@@ -61,7 +68,7 @@ class CreatePostAPIView(APIView):
                     author=author,
                     title=title,
                     slug=new_slug,
-                    body=serializer.validated_data['body'],
+                    body=body,
                     image=serializer.validated_data.get('image'), # get, так как image опционально
                     status=post_status,
                     published_at=published_at

@@ -4,20 +4,23 @@ from .models import Challenge, UserChallengeParticipation, Badge, UserBadge
 
 @admin.register(Challenge)
 class ChallengeAdmin(admin.ModelAdmin):
-    list_display = ('title', 'status', 'start_date', 'end_date', 'points_for_completion', 'is_active_now', 'is_recurring')
-    list_filter = ('status', 'is_recurring', 'start_date', 'end_date')
+    list_display = ('title', 'status', 'start_date', 'end_date', 'points_for_completion', 'is_active_now', 'is_template', 'is_active')
+    list_filter = ('status', 'is_template', 'is_active', 'start_date', 'end_date')
     search_fields = ('title', 'description')
     prepopulated_fields = {'slug': ('title',)}
     list_editable = ('status', 'points_for_completion')
     fieldsets = (
         (None, {
-            'fields': ('title', 'slug', 'short_description', 'description', 'image')
+            'fields': ('title', 'slug', 'short_description', 'description', 'image'),
+            'description': 'Podstawowe informacje o wyzwaniu.'
         }),
         ('Terminy i status', {
-            'fields': ('start_date', 'end_date', 'status', 'is_recurring')
+            'fields': ('start_date', 'end_date', 'status', 'is_template', 'is_active'),
+            'description': 'Ustaw daty, status, czy to szablon powtarzalny oraz widoczność.'
         }),
         ('Nagrody', {
-            'fields': ('points_for_completion', 'badge_name', 'badge_icon_class')
+            'fields': ('points_for_completion', 'badge_name_reward', 'badge_icon_class_reward'),
+            'description': 'Punkty i odznaka za ukończenie wyzwania.'
         }),
     )
 

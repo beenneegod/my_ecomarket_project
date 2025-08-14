@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Подтверждение заказа #{{ order.id }}</title>
+    <title>Potwierdzenie zamówienia #{{ order.id }}</title>
     <style>
         body { font-family: sans-serif; line-height: 1.5; color: #333; }
         .container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
@@ -18,19 +18,19 @@
 </head>
 <body>
     <div class="container">
-        <h2>Спасибо за ваш заказ в EcoMarket!</h2>
+    <h2>Dziękujemy za zamówienie w EcoMarket!</h2>
 
-        <p>Здравствуйте, {{ order.get_full_name }}!</p>
-        <p>Ваш заказ номер <strong>#{{ order.id }}</strong> от {{ order.created_at|date:"d.m.Y H:i" }} был успешно оформлен и оплачен.</p>
+    <p>Witaj, {{ order.get_full_name }}!</p>
+    <p>Twoje zamówienie nr <strong>#{{ order.id }}</strong> z {{ order.created_at|date:"d.m.Y H:i" }} zostało pomyślnie złożone i opłacone.</p>
 
-        <h3>Детали заказа:</h3>
+    <h3>Szczegóły zamówienia:</h3>
         <table>
             <thead>
                 <tr>
-                    <th>Товар</th>
-                    <th>Кол-во</th>
-                    <th>Цена за шт.</th>
-                    <th>Сумма</th>
+                    <th>Produkt</th>
+                    <th>Ilość</th>
+                    <th>Cena za szt.</th>
+                    <th>Suma</th>
                 </tr>
             </thead>
             <tbody>
@@ -43,17 +43,17 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="4">Нет информации о товарах.</td>
+                        <td colspan="4">Brak pozycji w zamówieniu.</td>
                     </tr>
                 {% endfor %}
                 <tr class="total-row">
-                    <td colspan="3"><strong>Итого:</strong></td>
+                    <td colspan="3"><strong>Razem:</strong></td>
                     <td><strong>{{ order.get_total_cost }} PLN</strong></td>
                 </tr>
             </tbody>
         </table>
 
-        <h3>Адрес доставки:</h3>
+    <h3>Adres dostawy:</h3>
         <address>
             {{ order.first_name }} {{ order.last_name }}<br>
             {{ order.address_line_1 }}<br>
@@ -62,11 +62,13 @@
             {{ order.country }}
         </address>
 
-        {% if user %}
-        <p>Вы можете посмотреть детали заказа в <a href="#">вашем личном кабинете</a> (ссылку нужно будет настроить).</p>
-        {% endif %}
+    {% if user and orders_url %}
+    <p>Możesz zobaczyć szczegóły zamówienia w <a href="{{ orders_url }}">Twoim koncie</a>.</p>
+    {% elif user and profile_url %}
+    <p>Możesz zobaczyć i zaktualizować swoje dane w <a href="{{ profile_url }}">Twoim koncie</a>.</p>
+    {% endif %}
 
-        <p class="footer">С уважением,<br>Команда EcoMarket</p>
+    <p class="footer">Pozdrawiamy,<br>Zespół EcoMarket</p>
     </div>
 </body>
 </html>

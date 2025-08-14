@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Gratulacje! Jesteś zwycięzcą w EcoMarket!</title>
+</head>
+<body>
+    <h2>Witaj, {{ user.username }}!</h2>
+    <p>
+        Gratulacje! Z przyjemnością informujemy, że zająłeś <strong>{{ place }}. miejsce</strong> w naszym miesięcznym rankingu Eko-Aktywistów!
+    </p>
+    <p>
+        W podziękowaniu za Twój wkład w ochronę środowiska, przyznajemy Ci osobisty kupon rabatowy:
+    </p>
+    <h3 style="text-align: center; background-color: #f0f0f0; padding: 15px; border-radius: 5px;">
+        Kod Twojego kuponu: <strong>{{ coupon_code }}</strong>
+    </h3>
+    <p>
+        Kupon daje Ci <strong>{{ discount_value }}% zniżki</strong> na kolejne zakupy w naszym sklepie. Jest ważny przez 30 dni.
+    </p>
+    <p>
+        Dziękujemy, że jesteś z nami i pomagasz zmieniać świat na lepsze!
+    </p>
+    <p>
+        Z pozdrowieniami,<br>
+        Zespół EcoMarket
+    </p>
+</body>
+</html>

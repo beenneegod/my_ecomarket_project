@@ -1,7 +1,7 @@
 # store/admin.py
 
 from django.contrib import admin
-from .models import (Category, Product, Order, OrderItem, Profile, SubscriptionBoxType, UserSubscription)
+from .models import (Category, Product, Order, OrderItem, Profile, SubscriptionBoxType, UserSubscription, Coupon, UserCoupon)
 from import_export.admin import ImportExportModelAdmin
 from .admin_resources import CategoryResource, ProductResource
 from django.utils.safestring import mark_safe
@@ -169,3 +169,103 @@ class UserSubscriptionAdmin(admin.ModelAdmin):
             if 'status' not in base_readonly_fields:
                  base_readonly_fields.append('status')
         return base_readonly_fields
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = ('code', 'discount', 'valid_from', 'valid_to', 'active')
+    list_filter = ('active', 'valid_from', 'valid_to')
+    search_fields = ('code',)
+    ordering = ('-valid_from',)
+    fieldsets = (
+        (None, {
+            'fields': ('code', 'discount', 'valid_from', 'valid_to', 'active')
+        }),
+    )
+
+@admin.action(description="Отметить как использованные")
+def mark_as_used(modeladmin, request, queryset):
+    queryset.update(is_used=True)
+
+@admin.action(description="Отметить как неиспользованные")
+def mark_as_unused(modeladmin, request, queryset):
+    queryset.update(is_used=False)
+
+@admin.action(description="Удалить все неиспользованные и истекшие купоны")
+def delete_expired_unused_coupons(modeladmin, request, queryset):
+    from django.utils import timezone
+    now = timezone.now()
+    count, _ = queryset.filter(is_used=False, coupon__valid_to__lt=now).delete()
+    modeladmin.message_user(request, f"Удалено {count} неиспользованных истекших купонов.")
+
+@admin.action(description="Экспортировать выбранные купоны в CSV")
+def export_to_csv(modeladmin, request, queryset):
+    import csv
+    from django.http import HttpResponse
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename=user_coupons.csv'
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Пользователь', 'Купон', 'Код', 'Скидка', 'Использован', 'Дата выдачи', 'Источник'])
+    for uc in queryset:
+        writer.writerow([
+            uc.id, uc.user.username, uc.coupon.id, uc.coupon.code, uc.coupon.discount, uc.is_used, uc.awarded_at, getattr(uc.challenge_source, 'title', '')
+        ])
+    return response
+
+@admin.action(description="Отправить email-напоминание о неиспользованных купонах")
+def send_coupon_reminder(modeladmin, request, queryset):
+    from django.core.mail import send_mail
+    for uc in queryset.filter(is_used=False):
+        send_mail(
+            subject="У вас есть неиспользованный купон!",
+            message=f"Здравствуйте, {uc.user.username}! У вас есть купон {uc.coupon.code} на скидку {uc.coupon.discount}%. Не забудьте использовать его до {uc.coupon.valid_to.strftime('%d.%m.%Y')}!",
+            from_email=None,
+            recipient_list=[uc.user.email],
+            fail_silently=True,
+        )
+    modeladmin.message_user(request, f"Отправлено {queryset.filter(is_used=False).count()} напоминаний.")
+
+@admin.action(description="Выдать выбранный купон выбранным пользователям")
+def assign_coupon_to_users(modeladmin, request, queryset):
+    from django.contrib.auth import get_user_model
+    from django import forms
+    from django.shortcuts import render
+    from .models import Coupon, UserCoupon
+    class CouponChoiceForm(forms.Form):
+        coupon = forms.ModelChoiceField(queryset=Coupon.objects.filter(active=True), label="Купон для выдачи")
+    if 'apply' in request.POST:
+        form = CouponChoiceForm(request.POST)
+        if form.is_valid():
+            coupon = form.cleaned_data['coupon']
+            count = 0
+            for user_coupon in queryset:
+                user = user_coupon.user
+                # Не выдаём дубликаты
+                if not UserCoupon.objects.filter(user=user, coupon=coupon).exists():
+                    UserCoupon.objects.create(user=user, coupon=coupon)
+                    count += 1
+            modeladmin.message_user(request, f"Выдано {count} купонов.")
+            return
+    else:
+        form = CouponChoiceForm()
+    return render(request, 'admin/assign_coupon.html', context={'form': form, 'queryset': queryset})
+
+@admin.register(UserCoupon)
+class UserCouponAdmin(admin.ModelAdmin):
+    list_display = ('coupon', 'user', 'is_used', 'awarded_at', 'challenge_source', 'colored_status')
+    list_filter = ('is_used', 'awarded_at', 'coupon', 'challenge_source')
+    search_fields = ('coupon__code', 'user__username', 'user__email')
+    autocomplete_fields = ['user', 'coupon', 'challenge_source']
+    readonly_fields = ('awarded_at',)
+    ordering = ('-awarded_at',)
+    actions = [mark_as_used, mark_as_unused, delete_expired_unused_coupons, export_to_csv, send_coupon_reminder, assign_coupon_to_users]
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'coupon', 'is_used', 'awarded_at', 'challenge_source')
+        }),
+    )
+
+    def colored_status(self, obj):
+        color = '#28a745' if not obj.is_used else '#6c757d'
+        label = 'Активен' if not obj.is_used else 'Использован'
+        return mark_safe(f'<span style="color: {color}; font-weight: bold;">{label}</span>')
+    colored_status.short_description = 'Статус'

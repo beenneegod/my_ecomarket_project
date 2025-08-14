@@ -32,6 +32,10 @@
                         <div class="mb-3">
                             <label for="{{ form.avatar.id_for_label }}" class="form-label">{{ form.avatar.label }}</label>
                             {{ form.avatar }}
+                               <div class="d-flex align-items-center gap-2 flex-wrap">
+                                   <button type="button" class="btn btn-outline-success" id="btn-choose-avatar"><i class="bi bi-upload"></i> Wybierz plik</button>
+                                   <span id="avatar-filename" class="text-muted small" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nie wybrano pliku</span>
+                               </div>
                             {% if form.avatar.help_text %}
                                 <small class="form-text text-muted d-block mt-1">{{ form.avatar.help_text|safe }}</small>
                             {% endif %}
@@ -56,7 +60,7 @@
                         </div>
 
                         <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg">Zapisz zmiany</button>
+                            <button type="submit" class="btn btn-success btn-lg">Zapisz zmiany</button>
                         </div>
                     </form>
                 </div>
@@ -67,20 +71,45 @@
 {% endblock %}
 
 {% block extra_js %}
-{# Bootstrap validation script, если еще не подключен глобально или нужен здесь #}
 <script>
 (() => {
-  'use strict'
-  const forms = document.querySelectorAll('.needs-validation')
-  Array.from(forms).forEach(form => {
-    form.addEventListener('submit', event => {
-      if (!form.checkValidity()) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
-      form.classList.add('was-validated')
-    }, false)
-  })
-})()
+    'use strict';
+
+    // Bootstrap validation (scoped)
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    });
+
+    // Custom avatar picker logic
+    const hiddenInput = document.querySelector('.js-avatar-input');
+    const chooseBtn = document.getElementById('btn-choose-avatar');
+    const fileNameField = document.getElementById('avatar-filename');
+    const previewImg = document.querySelector('img[alt="Twój awatar"]');
+
+    if (chooseBtn && hiddenInput) {
+        chooseBtn.addEventListener('click', () => hiddenInput.click());
+    }
+
+    if (hiddenInput) {
+        hiddenInput.addEventListener('change', () => {
+            const file = hiddenInput.files && hiddenInput.files[0];
+            if (fileNameField) {
+                fileNameField.textContent = file ? file.name : 'Nie wybrano pliku';
+            }
+            if (file && previewImg) {
+                const url = URL.createObjectURL(file);
+                previewImg.src = url;
+                previewImg.onload = () => URL.revokeObjectURL(url);
+            }
+        });
+    }
+})();
 </script>
 {% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Czaty — EcoMarket{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Czaty</h2>
+    <a href="{% url 'chat:room_create' %}" class="btn btn-success">Utwórz pokój</a>
+  </div>
+  {% if rooms %}
+    <ul class="list-group">
+      {% for r in rooms %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-bold">{{ r.name }}</div>
+            {% if r.topic %}<div class="text-muted small">{{ r.topic }}</div>{% endif %}
+          </div>
+          <a class="btn btn-outline-primary" href="{% url 'chat:room_detail' r.id %}">Wejdź</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="alert alert-info">Brak pokoi. Utwórz pierwszy!</div>
+  {% endif %}
+</div>
+{% endblock %}

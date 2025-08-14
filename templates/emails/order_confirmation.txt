@@ -1,28 +1,30 @@
 {% comment %} templates/emails/order_confirmation.txt {% endcomment %}
-Здравствуйте, {{ order.get_full_name }}!
+Witaj, {{ order.get_full_name }}!
 
-Спасибо за ваш заказ #{% if order %}{{ order.id }}{% else %}?{% endif %} в EcoMarket.
+Dziękujemy za Twoje zamówienie #{% if order %}{{ order.id }}{% else %}?{% endif %} w EcoMarket.
 
-Детали заказа:
+Szczegóły zamówienia:
 --------------------
 {% for item in order.items.all %}
-* {{ item.product.name }} ({{ item.quantity }} шт.) - {{ item.get_cost }} PLN
+* {{ item.product.name }} ({{ item.quantity }} szt.) - {{ item.get_cost }} PLN
 {% empty %}
-Нет информации о товарах.
+Brak pozycji w zamówieniu.
 {% endfor %}
 --------------------
-Общая стоимость: {{ order.get_total_cost }} PLN
+Razem: {{ order.get_total_cost }} PLN
 
-Адрес доставки:
+Adres dostawy:
 {{ order.first_name }} {{ order.last_name }}
 {{ order.address_line_1 }}
 {% if order.address_line_2 %}{{ order.address_line_2 }}{% endif %}
 {{ order.postal_code }}, {{ order.city }}
 {{ order.country }}
 
-{% if user %}
-Вы можете посмотреть детали заказа в вашем личном кабинете: [ссылка на историю заказов - добавим позже]
+{% if user and orders_url %}
+Możesz zobaczyć szczegóły zamówienia w Twoim koncie: {{ orders_url }}
+{% elif user and profile_url %}
+Możesz zobaczyć i zaktualizować swoje dane w Twoim koncie: {{ profile_url }}
 {% endif %}
 
-С уважением,
-Команда EcoMarket
+Pozdrawiamy,
+Zespół EcoMarket

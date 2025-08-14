@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static image_extras %}
 
 {% block title %}{{ product.name }} - EcoMarket{% endblock %}
 
@@ -7,16 +7,14 @@
 <div class="container mt-4" data-aos="fade-in">
     <div class="row">
         <div class="col-md-6 mb-4" data-aos="fade-right" data-aos-delay="100">
-            {% if product.image %}
-                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded shadow-sm" style="max-height: 500px; object-fit: contain;">
-            {% else %}
-                <img src="{% static 'img/no_image.png' %}" alt="Brak zdjęcia" class="img-fluid rounded shadow-sm" style="max-height: 500px; object-fit: contain;">
-            {% endif %}
+            <img src="{% product_image product 'detail' %}" alt="{{ product.name }}" class="img-fluid rounded shadow-sm" style="max-height: 500px; object-fit: contain;">
         </div>
 
         <div class="col-md-6" data-aos="fade-left" data-aos-delay="200">
             <h2 class="mb-3">{{ product.name }}</h2>
-            <p class="display-5 text-primary fw-bold mb-3">{{ product.price }} PLN</p>
+            <p class="display-5 fw-bold mb-3" style="color: #218838;">
+                {{ product.price }} PLN
+            </p>
 
             <div class="product-description mb-4">
                 <h4>Opis:</h4>
