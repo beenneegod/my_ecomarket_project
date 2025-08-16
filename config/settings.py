@@ -2,9 +2,9 @@
 
 import os
 from pathlib import Path
-import dotenv # Импортируем dotenv
-import logging
+import dotenv
 from datetime import timedelta
+import logging  # <-- добавляем импорт
 
 logger = logging.getLogger(__name__)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -33,11 +33,12 @@ if not DEBUG:
     USE_X_FORWARDED_HOST = True
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
-if not SECRET_KEY and DEBUG: # В режиме DEBUG можно сгенерировать временный ключ
-    # ... (логика генерации временного ключа или предупреждение)
-    print("Warning: SECRET_KEY not set in .env for DEBUG mode. Using a temporary key or raise error in production.")
-elif not SECRET_KEY and not DEBUG:
-    raise ValueError("No SECRET_KEY set for Django application in production")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'dev-insecure-secret-key'  # DO NOT USE IN PRODUCTION
+        logger.warning("SECRET_KEY not set in .env; using an insecure development key.")
+    else:
+        raise ValueError("No SECRET_KEY set for Django application in production")
 
 
 # --- Получаем ALLOWED_HOSTS из переменной окружения ---
@@ -47,6 +48,8 @@ if DEBUG and not ALLOWED_HOSTS: # Если DEBUG и список пуст, до�
     ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
 elif not ALLOWED_HOSTS and not DEBUG: # Если не DEBUG и список пуст - это ошибка
     raise ValueError("ALLOWED_HOSTS must be set in production via environment variable.")
+if 'healthcheck.railway.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('healthcheck.railway.app')
 # ----------------------------------------------------
 
 # Application definition
@@ -118,8 +121,15 @@ ASGI_APPLICATION = 'config.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
-# Более дружелюбная конфигурация для разработки: если DEBUG и переменные БД не заданы, используем SQLite
-if DEBUG and not os.getenv('DATABASE_NAME'):
+
+# Если есть DATABASE_URL (Railway) — используем его
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+    }
+elif DEBUG and not os.getenv('DATABASE_NAME'):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -137,12 +147,11 @@ else:
             'PORT': os.getenv('DATABASE_PORT', 5432),
         }
     }
-# Проверка наличия всех переменных БД
+
+# Настройки MySQL (на всякий случай)
 if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
-    # Убедимся, что порт не передается как пустая строка, если MySQL этого не любит
     if not DATABASES['default']['PORT']:
-        del DATABASES['default']['PORT'] # Удаляем ключ PORT, если он пустой для MySQL
-    # Дополнительные опции для MySQL можно добавить здесь, если они специфичны
+        del DATABASES['default']['PORT']
     DATABASES['default'].setdefault('OPTIONS', {}).update({'charset': 'utf8mb4'})
 
 
@@ -176,15 +185,15 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images in our code)
-# https://docs.djangoproject.com/en/stable/howto/static-files/
-
 STATIC_URL = '/static/'
-# Папка, куда `collectstatic` будет собирать все статические файлы для production
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# Дополнительные папки, где Django будет искать статические файлы (кроме папок static внутри приложений)
 STATICFILES_DIRS = [ BASE_DIR / 'static', ]
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Определяем storage один раз, без дублей
+if DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+else:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Media files (User uploaded files like product images)
 # https://docs.djangoproject.com/en/stable/howto/static-files/
 
@@ -202,38 +211,19 @@ if not DEBUG: # Настройки для ПРОДАКШЕНА (использу
         'CacheControl': 'max-age=86400', # Кеширование на 1 день
     }
     AWS_LOCATION = 'media' # Файлы будут в s3://<bucket_name>/media/
-    AWS_DEFAULT_ACL = None # Сделать файлы публично читаемыми
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False      # public, unsigned URLs
+    AWS_S3_FILE_OVERWRITE = False
 
     # Формирование MEDIA_URL
     if AWS_S3_CUSTOM_DOMAIN:
         MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
     elif AWS_S3_ENDPOINT_URL:
-        # Для S3-совместимых хранилищ. Эта логика может потребовать адаптации
-        # в зависимости от того, как твой провайдер формирует URL (path-style vs virtual-hosted style)
-        # Часто django-storages сам формирует правильный URL для файла.
-        # MEDIA_URL может быть просто корневым путем на этом эндпоинте для бакета.
-        # Безопасный вариант - позволить django-storages генерировать полные URL для каждого файла,
-        # а MEDIA_URL использовать для {{ MEDIA_URL }} в шаблонах, если нужно.
-        # Пример для virtual-hosted style (если бакет доступен как bucket.endpoint.com):
-        # endpoint_hostname = AWS_S3_ENDPOINT_URL.split('//')[-1]
-        # MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{endpoint_hostname}/{AWS_LOCATION}/'
-        # Более простой вариант, если django-storages сам строит полный URL:
-        MEDIA_URL = f'/{AWS_LOCATION}/' # Django будет использовать это как относительный путь для {{ MEDIA_URL }}
-                                     # а file.url будет полным S3 URL.
-                                     # Однако, если ты всегда используешь file.url, то точное значение MEDIA_URL в settings
-                                     # для S3 (без кастомного домена) менее критично, если оно не пустое.
-                                     # Твой существующий вариант:
-                                     # base_s3_url = AWS_S3_ENDPOINT_URL
-                                     # location_path = f"{AWS_LOCATION.strip('/')}/" if AWS_LOCATION else ""
-                                     # MEDIA_URL = f'{base_s3_url}/{AWS_STORAGE_BUCKET_NAME}/{location_path}'
-                                     # Этот вариант предполагает path-style доступ.
-                                     # Оставим его, если он у тебя работал для S3-совместимого хранилища.
-        base_s3_url = AWS_S3_ENDPOINT_URL.rstrip('/')
-        location_inner = AWS_LOCATION.strip('/')
-        bucket_name_part = AWS_STORAGE_BUCKET_NAME.strip('/')
-        MEDIA_URL = f'{base_s3_url}/{bucket_name_part}/{location_inner}/'
-
-    else: # Стандартный Amazon S3
+        base = AWS_S3_ENDPOINT_URL.rstrip('/')
+        bucket = AWS_STORAGE_BUCKET_NAME.strip('/')
+        loc = AWS_LOCATION.strip('/')
+        MEDIA_URL = f'{base}/{bucket}/{loc}/'
+    else:
         MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/{AWS_LOCATION}/'
 
     # Убедимся, что MEDIA_URL всегда заканчивается на /
@@ -251,7 +241,13 @@ else: # Настройки для РАЗРАБОТКИ (локальное хр�
     MEDIA_ROOT = BASE_DIR / 'media'
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
-
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
 # Default primary key field type
 # https://docs.djangoproject.com/en/stable/ref/settings/#default-auto-field
 
@@ -261,12 +257,13 @@ CART_SESSION_ID = 'cart'
 # Channels: use Redis in production when REDIS_URL is provided, else in-memory for dev
 REDIS_URL = os.getenv('REDIS_URL')
 if REDIS_URL:
+    config = {'hosts': [REDIS_URL]}
+    if REDIS_URL.startswith('rediss://'):
+        config = {'hosts': [{'address': REDIS_URL, 'ssl': True}]}
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {
-                'hosts': [REDIS_URL],
-            },
+            'CONFIG': config,
         },
     }
 else:
@@ -275,7 +272,15 @@ else:
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
-
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+}
 # --- Stripe Keys ---
 STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
@@ -301,7 +306,9 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') # Пароль или API
 # Конвертируем строковые 'True'/'False' из .env в булевы значения
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() == 'true'
-
+if EMAIL_USE_SSL and EMAIL_USE_TLS:
+    logger.warning("Both EMAIL_USE_SSL and EMAIL_USE_TLS were True. Forcing TLS only.")
+    EMAIL_USE_SSL = False
 # Email отправителя по умолчанию
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER) # Часто совпадает с логином
 
@@ -328,52 +335,46 @@ AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]
 AXES_VERBOSE = True 
 AXES_ENABLE_ADMIN = True
-
+AXES_BEHIND_REVERSE_PROXY = True
+AXES_REVERSE_PROXY_HEADER = 'HTTP_X_FORWARDED_FOR'
 
 AVERAGE_ANNUAL_CO2_FOOTPRINT_PL_KG = 5600
+
 
 # --- Дополнительно: логирование в файлы logs/info.log и logs/error.log ---
 LOGS_DIR = BASE_DIR / 'logs'
 os.makedirs(LOGS_DIR, exist_ok=True)
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
-        },
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-        'file_info': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': str(LOGS_DIR / 'info.log'),
-            'formatter': 'verbose',
-            'encoding': 'utf-8',
-        },
-        'file_error': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': str(LOGS_DIR / 'error.log'),
-            'formatter': 'verbose',
-            'encoding': 'utf-8',
-        },
-    },
-    'root': {
-        'handlers': ['console', 'file_info', 'file_error'],
-        'level': 'INFO',
-    },
-}
 
 # CSRF_TRUSTED_ORIGINS из окружения (через запятую)
 csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 if csrf_trusted:
-    CSRF_TRUSTED_ORIGINS = [o.strip() for o in csrf_trusted.split(',') if o.strip()]
+    CSRF_TRUSTED_ORIGINS = []
+    for o in csrf_trusted.split(','):
+        o = o.strip()
+        if not o:
+            continue
+        if o.startswith('http://') or o.startswith('https://'):
+            CSRF_TRUSTED_ORIGINS.append(o)
+        else:
+            CSRF_TRUSTED_ORIGINS.append(f'https://{o}')
+            if DEBUG:
+                CSRF_TRUSTED_ORIGINS.append(f'http://{o}')
 
 # Базовый URL сайта для генерации абсолютных ссылок в письмах
 # Например: https://myecomarket.pl (без завершающего слэша)
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000').rstrip('/')
+IN_RAILWAY = bool(os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('RAILWAY_STATIC_URL'))
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': { 'verbose': { 'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s' }, },
+    'handlers': {
+        'console': { 'class': 'logging.StreamHandler', 'formatter': 'verbose', },
+        'file_info': { 'level': 'INFO', 'class': 'logging.FileHandler', 'filename': str(LOGS_DIR / 'info.log'), 'formatter': 'verbose', 'encoding': 'utf-8', },
+        'file_error': { 'level': 'ERROR', 'class': 'logging.FileHandler', 'filename': str(LOGS_DIR / 'error.log'), 'formatter': 'verbose', 'encoding': 'utf-8', },
+    },
+    'root': {
+        'handlers': ['console'] if (IN_RAILWAY and not DEBUG) else ['console', 'file_info', 'file_error'],
+        'level': 'INFO',
+    },
+}
