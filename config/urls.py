@@ -11,10 +11,13 @@ from store import views as store_views
 from django.contrib.auth import views as auth_views # Импортируем auth_views
 from store.forms import CustomAuthenticationForm, CustomPasswordResetForm, CustomSetPasswordForm
 from django.urls import path, include, reverse_lazy
+from django.http import HttpResponse  # <-- добавить
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Healthcheck для Railway
+    path('healthz/', lambda r: HttpResponse('ok'), name='healthz'),  # <-- добавить
     path('', store_views.homepage, name='homepage'),
     path('store/', include('store.urls', namespace='store')),
     path('payments/', include('payments.urls', namespace='payments')),

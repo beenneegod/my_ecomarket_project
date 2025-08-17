@@ -119,23 +119,37 @@ ASGI_APPLICATION = 'config.asgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/stable/ref/settings/#databases
 DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
-
-# Если есть DATABASE_URL (Railway) — используем его
 DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL:
-    import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
-    }
-elif DEBUG and not os.getenv('DATABASE_NAME'):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+
+def _is_valid_db_url(url: str) -> bool:
+    if not url:
+        return False
+    if url.startswith('${'):  # неразрешённый плейсхолдер Railway
+        return False
+    return '://' in url
+
+if _is_valid_db_url(DATABASE_URL):
+    try:
+        import dj_database_url
+        DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+        logger.info("DATABASES: using DATABASE_URL")
+    except Exception as e:
+        logger.warning("Invalid DATABASE_URL (%s). Falling back to individual DB_* vars.", e)
+        DATABASES = {
+            'default': {
+                'ENGINE': DB_ENGINE,
+                'NAME': os.getenv('DATABASE_NAME'),
+                'USER': os.getenv('DATABASE_USER'),
+                'PASSWORD': os.getenv('DATABASE_PASSWORD'),
+                'HOST': os.getenv('DATABASE_HOST'),
+                'PORT': os.getenv('DATABASE_PORT', 5432),
+                'CONN_MAX_AGE': 600,
+            }
         }
-    }
+elif DEBUG and not os.getenv('DATABASE_NAME'):
+    DATABASES = { 'default': { 'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3' } }
+    logger.info("DATABASES: using SQLite (DEBUG)")
 else:
     DATABASES = {
         'default': {
@@ -145,8 +159,10 @@ else:
             'PASSWORD': os.getenv('DATABASE_PASSWORD'),
             'HOST': os.getenv('DATABASE_HOST'),
             'PORT': os.getenv('DATABASE_PORT', 5432),
+            'CONN_MAX_AGE': 600,
         }
     }
+    logger.info("DATABASES: using individual DB_* vars")
 
 # Настройки MySQL (на всякий случай)
 if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
