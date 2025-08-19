@@ -62,7 +62,7 @@ def load_prompt_template(topic_prompt_str: str, topic_slug_for_hashtag_str: str)
 def generate_content_with_gemini(topic_prompt_text: str, gemini_api_key: str) -> dict | None:
     logger.info(f"Kontaktowanie się z API Gemini w celu wygenerowania posta na temat: '{topic_prompt_text}'...")
 
-    if not gemini_api_key: # Sprawdzenie pustego klucza (z get_gemini_api_key)
+    if not gemini_api_key:  # Sprawdzenie pustego klucza (z get_gemini_api_key)
         logger.error("Brak klucza Gemini API. Generowanie anulowane.")
         return None
 
@@ -73,108 +73,140 @@ def generate_content_with_gemini(topic_prompt_text: str, gemini_api_key: str) ->
         logger.exception(f"Nie udało się skonfigurować Gemini API z podanym kluczem: {e}")
         return None
 
-    model = None
-    try:
-        logger.debug(f"Próba inicjalizacji głównego modelu Gemini ('{PRIMARY_GEMINI_MODEL}')...")
-        model = genai.GenerativeModel(PRIMARY_GEMINI_MODEL)
-    except Exception as e_primary:
-        logger.warning(f"Nie udało się zainicjalizować głównego modelu Gemini ('{PRIMARY_GEMINI_MODEL}'): {e_primary}")
-        try:
-            logger.info(f"Próba użycia modelu zapasowego ('{FALLBACK_GEMINI_MODEL}')...")
-            model = genai.GenerativeModel(FALLBACK_GEMINI_MODEL)
-        except Exception as e_fallback:
-            logger.exception(f"Nie udało się zainicjalizować zapasowego modelu Gemini ('{FALLBACK_GEMINI_MODEL}'): {e_fallback}")
-            return None
+    # Przygotowanie promptu bazowego
+    topic_slug = slugify(topic_prompt_text, allow_unicode=True).replace("-", "_") if topic_prompt_text else "ecotips"
+    base_prompt = load_prompt_template(topic_prompt_text, topic_slug)
+    if not base_prompt:
+        return None  # Błąd już zalogowany w load_prompt_template
 
-    if not model:
-        logger.error("Model Gemini nie może zostać zainicjalizowany.")
+    def strict_suffix(lang: str = 'pl') -> str:
+        if lang == 'pl':
+            return ("\n\nWAŻNE: ZWRÓĆ WYŁĄCZNIE surowy JSON bez żadnych bloków kodu, bez komentarza, bez dodatkowego tekstu."
+                    " Nie używaj znaczników ```json. Tylko poprawny JSON z polami 'title' i 'body'.")
+        return ("\n\nIMPORTANT: Return ONLY raw JSON. No prose, no markdown, no code fences."
+                " Provide valid JSON object with 'title' and 'body' keys only.")
+
+    attempts = [
+        {"model": PRIMARY_GEMINI_MODEL, "temperature": 0.7, "suffix": ""},
+        {"model": PRIMARY_GEMINI_MODEL, "temperature": 0.4, "suffix": strict_suffix('pl')},
+        {"model": FALLBACK_GEMINI_MODEL, "temperature": 0.2, "suffix": strict_suffix('pl')},
+    ]
+
+    def try_parse_json(text: str) -> dict | None:
+        if not text:
+            return None
+        s = text.strip()
+        # 1) Usuń fenced code blocks ```json ... ```
+        m = re.search(r"```json\s*(\{[\s\S]*\})\s*```", s, re.DOTALL)
+        if m:
+            s = m.group(1).strip()
+        # 2) Spróbuj bezpośrednio
+        try:
+            return json.loads(s)
+        except Exception:
+            pass
+        # 3) Spróbuj znaleźć największy zbalansowany blok JSON od pierwszej '{'
+        start = s.find('{')
+        end = s.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            candidate = s[start:end + 1]
+            # Upewnij się, że nawiasy są zbalansowane
+            depth = 0
+            for ch in candidate:
+                if ch == '{':
+                    depth += 1
+                elif ch == '}':
+                    depth -= 1
+                    if depth < 0:
+                        break
+            if depth == 0:
+                try:
+                    return json.loads(candidate)
+                except Exception:
+                    pass
         return None
 
-    topic_slug = slugify(topic_prompt_text, allow_unicode=True).replace("-", "_") if topic_prompt_text else "ecotips"
+    # Bezpieczne ustawienia
+    safety_settings = [
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    ]
 
-    formatted_prompt = load_prompt_template(topic_prompt_text, topic_slug)
-    if not formatted_prompt:
-        return None # Błąd już zalogowany w load_prompt_template
+    last_error_preview = None
+    for idx, cfg in enumerate(attempts, start=1):
+        model_name = cfg["model"]
+        temp = cfg["temperature"]
+        prompt = base_prompt + cfg["suffix"]
+        logger.info(f"Próba {idx}/%d z modelem '%s' i temperaturą %.2f..." % (len(attempts), model_name, temp))
 
-    logger.info(f"Wysyłanie sformatowanej podpowiedzi do API Gemini (długość: {len(formatted_prompt)} znaków)...")
-
-    try:
-        generation_config = genai.types.GenerationConfig(
-            temperature=0.7,
-            response_mime_type="application/json" # ŻĄDAMY JSON
-        ) # type: ignore
-
-        # Ustawiamy safety_settings, aby uniknąć blokad bezpieczeństwa
-        # dla niewinnych tematów, jeśli takie się zdarzają. Dostosuj w razie potrzeby.
-        safety_settings = [
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-        ]
-
-        response = model.generate_content(
-            formatted_prompt, 
-            generation_config=generation_config,
-            safety_settings=safety_settings
-        )
-
-        generated_json_text = None
-        if response.text:
-            generated_json_text = response.text
-            logger.info("Otrzymano surową odpowiedź od Gemini (przez response.text). Próba bezpośredniego parsowania JSON.")
-        elif response.candidates and response.candidates[0].content.parts:
-            generated_json_text = response.candidates[0].content.parts[0].text
-            logger.info("Surowa odpowiedź wyodrębniona z kandydatów Gemini.")
-        else:
-            error_message = "API Gemini zwróciło odpowiedź bez treści tekstowej lub prawidłowych kandydatów."
-            if hasattr(response, 'prompt_feedback') and response.prompt_feedback: # type: ignore
-                feedback = response.prompt_feedback # type: ignore
-                error_message += f" Powód blokady podpowiedzi: {feedback.block_reason}."
-                if feedback.block_reason_message:
-                     error_message += f" Wiadomość: {feedback.block_reason_message}."
-            logger.error(error_message)
-            return None
-
-        if not generated_json_text:
-            logger.error("Nie udało się wyodrębnić tekstu z odpowiedzi Gemini do parsowania JSON.")
-            return None
+        # Inicjalizuj model dla tej próby
+        try:
+            model = genai.GenerativeModel(model_name)
+        except Exception as e_model:
+            logger.warning(f"Nie udało się zainicjalizować modelu '{model_name}' w próbie {idx}: {e_model}")
+            continue
 
         try:
-            # Usuwamy możliwe owinięcia ```json ... ``` przed parsowaniem
-            # To może być zbędne, jeśli response_mime_type="application/json" działa idealnie
-            match_md_json = re.search(r"```json\s*(\{[\s\S]*?\})\s*```", generated_json_text, re.DOTALL)
-            if match_md_json:
-                json_to_parse = match_md_json.group(1).strip()
-                logger.info("JSON wyodrębniony z bloku Markdown ```json ... ```.")
-            else:
-                json_to_parse = generated_json_text.strip()
+            generation_config = genai.types.GenerationConfig(
+                temperature=temp,
+                response_mime_type="application/json",
+            )  # type: ignore
 
-            generated_data = json.loads(json_to_parse)
-            title = generated_data.get("title")
-            body = generated_data.get("body")
+            response = model.generate_content(
+                prompt,
+                generation_config=generation_config,
+                safety_settings=safety_settings,
+            )
 
-            if isinstance(title, str) and title.strip() and \
-               isinstance(body, str) and body.strip():
-                logger.info("Gemini pomyślnie wygenerował i sparsował treść JSON.")
+            raw_text = None
+            if getattr(response, 'text', None):
+                raw_text = response.text
+            elif getattr(response, 'candidates', None):
+                try:
+                    raw_text = response.candidates[0].content.parts[0].text
+                except Exception:
+                    raw_text = None
+
+            if not raw_text:
+                msg = "Pusta odpowiedź tekstowa od Gemini."
+                if hasattr(response, 'prompt_feedback') and response.prompt_feedback:  # type: ignore
+                    fb = response.prompt_feedback  # type: ignore
+                    msg += f" Powód: {getattr(fb, 'block_reason', '?')}"
+                logger.warning(f"Próba {idx}: {msg}")
+                continue
+
+            data = try_parse_json(raw_text)
+            if not data:
+                last_error_preview = raw_text[:500]
+                logger.warning(f"Próba {idx}: nie udało się sparsować JSON. Podgląd: '{last_error_preview}'")
+                continue
+
+            title = data.get("title")
+            body = data.get("body")
+            if isinstance(title, str) and title.strip() and isinstance(body, str) and body.strip():
+                logger.info(f"Próba {idx}: sukces — poprawny JSON.")
                 return {"title": title.strip(), "body": body.strip()}
             else:
-                missing_fields_msg = []
-                if not (isinstance(title, str) and title.strip()): missing_fields_msg.append("'title'")
-                if not (isinstance(body, str) and body.strip()): missing_fields_msg.append("'body'")
-                logger.error(f"Sparsowany JSON z Gemini nie zawiera wymaganych pól, pola są puste lub mają nieprawidłowy typ: {', '.join(missing_fields_msg)}. Otrzymane dane: {generated_data}")
-                return None
-        except json.JSONDecodeError as e_json:
-            logger.error(f"Błąd dekodowania JSON: {e_json}. Tekst do parsowania (pierwsze 500 znaków): '{generated_json_text[:500]}'")
-            # Jeśli response_mime_type="application/json" nie zadziałał i nie zwrócił JSON,
-            # można tutaj zostawić starą logikę z re.search dla całego tekstu, jeśli to konieczne.
-            # Ale lepiej jest sprawić, by API zwracało czysty JSON.
-            return None
+                logger.warning(f"Próba {idx}: JSON bez wymaganych pól lub puste wartości. Dane: {data}")
+                continue
 
-    except Exception as e_api:
-        logger.exception(f"BŁĄD KRYTYCZNY podczas żądania do API Gemini lub przetwarzania odpowiedzi: {e_api}")
-        # traceback.print_exc() jest już zawarty w logger.exception
-        return None
+        except Exception as e_api:
+            # Nie przerywaj — spróbuj następnej próby
+            preview = ''
+            try:
+                preview = (raw_text or '')[:200]  # type: ignore
+            except Exception:
+                preview = ''
+            logger.warning(f"Próba {idx}: wyjątek podczas generowania/parsing: {e_api}. Podgląd: '{preview}'")
+            continue
+
+    if last_error_preview:
+        logger.error(f"Wszystkie próby nieudane. Ostatni podgląd odpowiedzi: '{last_error_preview}'")
+    else:
+        logger.error("Wszystkie próby nieudane bez treści do podglądu.")
+    return None
 
 class Command(BaseCommand):
     help = 'Generuje i publikuje nowy post na blogu o tematyce ekologicznej przy użyciu API Gemini.'
