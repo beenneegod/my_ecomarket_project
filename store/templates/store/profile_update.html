@@ -29,13 +29,20 @@
                             </div>
                         {% endif %}
 
-                        <div class="mb-3">
+                        <div class="mb-3 avatar-field">
                             <label for="{{ form.avatar.id_for_label }}" class="form-label">{{ form.avatar.label }}</label>
-                            {{ form.avatar }}
-                               <div class="d-flex align-items-center gap-2 flex-wrap">
-                                   <button type="button" class="btn btn-outline-success" id="btn-choose-avatar"><i class="bi bi-upload"></i> Wybierz plik</button>
-                                   <span id="avatar-filename" class="text-muted small" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nie wybrano pliku</span>
-                               </div>
+                            {# Ensure the file input has an id to match the label 'for' #}
+                            <span class="avatar-input-wrapper">
+                                <input type="file"
+                                       name="{{ form.avatar.name }}"
+                                       id="{{ form.avatar.id_for_label }}"
+                                       accept="image/*"
+                                       class="d-none js-avatar-input">
+                            </span>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <label for="{{ form.avatar.id_for_label }}" class="btn btn-outline-success mb-0"><i class="bi bi-upload"></i> Wybierz plik</label>
+                                <span id="avatar-filename" class="text-muted small" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nie wybrano pliku</span>
+                            </div>
                             {% if form.avatar.help_text %}
                                 <small class="form-text text-muted d-block mt-1">{{ form.avatar.help_text|safe }}</small>
                             {% endif %}
@@ -89,13 +96,8 @@
 
     // Custom avatar picker logic
     const hiddenInput = document.querySelector('.js-avatar-input');
-    const chooseBtn = document.getElementById('btn-choose-avatar');
     const fileNameField = document.getElementById('avatar-filename');
     const previewImg = document.querySelector('img[alt="Twój awatar"]');
-
-    if (chooseBtn && hiddenInput) {
-        chooseBtn.addEventListener('click', () => hiddenInput.click());
-    }
 
     if (hiddenInput) {
         hiddenInput.addEventListener('change', () => {
@@ -112,4 +114,33 @@
     }
 })();
 </script>
+<style>
+/* Visually hide file input but keep it accessible and clickable via label */
+.visually-hidden-file {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+/* Extra: ensure any input[type=file] inside wrapper is fully hidden */
+.avatar-input-wrapper input[type="file"] {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+.avatar-field input[type="file"] {
+    display: none !important;
+}
+</style>
 {% endblock %}

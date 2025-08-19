@@ -193,7 +193,19 @@ def generate_content_with_gemini(topic_prompt_text: str, gemini_api_key: str) ->
                 continue
 
         except Exception as e_api:
-            # Nie przerywaj — spróbuj następnej próby
+            # Specjalna obsługa ograniczenia klucza przez HTTP referrer (403)
+            err_txt = str(e_api)
+            if "API_KEY_HTTP_REFERRER_BLOCKED" in err_txt or ("referer" in err_txt.lower() and "blocked" in err_txt.lower()):
+                logger.error(
+                    "Wykryto błąd 403: API_KEY_HTTP_REFERRER_BLOCKED — Klucz Gemini ma ograniczenia HTTP referrer. "
+                    "Wywołania backendu (serwer-serwer) nie wysyłają referera, więc taki klucz jest odrzucany. "
+                    "Rozwiązanie: utwórz NOWY klucz API przeznaczony dla backendu (bez ograniczeń HTTP referrer) "
+                    "lub usuń restrykcje referera z obecnego klucza. Następnie ustaw go w zmiennej środowiskowej '%s'." % ENV_GEMINI_API_KEY
+                )
+                # Nie ma sensu ponawiać — zakończ pętlę prób
+                return None
+
+            # Inne wyjątki: loguj i próbuj dalej
             preview = ''
             try:
                 preview = (raw_text or '')[:200]  # type: ignore

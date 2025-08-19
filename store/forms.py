@@ -121,8 +121,8 @@ class ProfileUpdateForm(forms.ModelForm):
         model = Profile
         fields = ['avatar', 'bio'] # Поля, которые пользователь сможет редактировать
         widgets = {
-            # Hide native file input; we'll show a custom button/label in template
-            'avatar': forms.ClearableFileInput(attrs={'class': 'form-control d-none js-avatar-input', 'accept': 'image/*'}),
+            # Hide native file input; label[for] triggers it
+            'avatar': forms.ClearableFileInput(attrs={'class': 'js-avatar-input', 'accept': 'image/*', 'style': 'display:none'}),
             'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Napisz coś o sobie...'}),
         }
         labels = {
