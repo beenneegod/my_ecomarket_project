@@ -1,0 +1,48 @@
+{% load static %}
+<div class="d-flex mb-4 comment pb-3 border-bottom-dashed" id="comment-{{ comment.id }}">
+  <div class="flex-shrink-0">
+    {% if comment.author.profile and comment.author.profile.avatar_url %}
+      <img class="rounded-circle shadow-sm" src="{{ comment.author.profile.avatar_url }}" alt="{{ comment.author.username }} avatar" width="50" height="50" style="object-fit: cover;" />
+    {% else %}
+      <img class="rounded-circle shadow-sm" src="{% static 'img/default_avatar.png' %}" alt="Domyślny awatar użytkownika" width="50" height="50" />
+    {% endif %}
+  </div>
+  <div class="ms-3 flex-grow-1">
+  <div class="fw-bold comment-author">
+      {% if comment.author.profile.get_full_name %}
+        {{ comment.author.profile.get_full_name }}
+      {% else %}
+        {{ comment.author.username|default:"Anonim" }}
+      {% endif %}
+  <span class="ms-2 comment-rating d-inline-flex align-items-center" data-comment-id="{{ comment.id }}" data-rate-url="{% url 'blog:rate_comment' comment.id %}" data-user-rating="{{ comment.user_rating_value|default:'' }}" data-disabled="{% if not request.user.is_authenticated or comment.author_id == request.user.id %}1{% else %}0{% endif %}" title="{% if not request.user.is_authenticated %}Zaloguj się, aby oceniać{% elif comment.author_id == request.user.id %}Nie możesz oceniać własnego komentarza{% else %}Oceń ten komentarz{% endif %}">
+        {% with avg=comment.rating_avg|default:0 count=comment.rating_count|default:0 %}
+      {% for i in "12345" %}
+            {% with idx=forloop.counter %}
+        {% if idx <= avg %}
+                <button type="button" class="btn btn-link p-0 m-0 star-icon text-warning rating-star" data-value="{{ idx }}" aria-label="Oceń na {{ idx }}" title="Oceń na {{ idx }}">&#9733;</button>
+              {% else %}
+                <button type="button" class="btn btn-link p-0 m-0 star-icon text-secondary rating-star" data-value="{{ idx }}" aria-label="Oceń na {{ idx }}" title="Oceń na {{ idx }}">&#9733;</button>
+              {% endif %}
+            {% endwith %}
+          {% endfor %}
+          <small class="text-muted ms-2 rating-meta">(Śr: {{ avg|floatformat:1 }}, głosów: {{ count }})</small>
+        {% endwith %}
+      </span>
+    </div>
+  <div class="text-muted fst-italic mb-1 comment-date"><small>{{ comment.created_at|date:"F j, Y, H:i" }}</small></div>
+    <div class="comment-body">
+      {{ comment.body|linebreaks }}
+    </div>
+
+    {% if comment.image %}
+      <div class="mt-2 comment-image-container">
+        <a href="{{ comment.image.url }}" class="chat-attach-thumb-link" data-image="1" title="Kliknij, aby powiększyć">
+          <img src="{% if comment.image_thumb %}{{ comment.image_thumb.url }}{% else %}{{ comment.image.url }}{% endif %}"
+               alt="Obrazek do komentarza od {{ comment.author.username }}"
+               class="chat-attach-thumb"
+               loading="lazy">
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</div>

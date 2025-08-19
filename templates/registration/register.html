@@ -37,7 +37,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="{{ user_form.email.id_for_label }}" class="form-label">{{ user_form.email.label_tag|default:"Email" }}</label>
+                        <label for="{{ user_form.email.id_for_label }}" class="form-label">{{ user_form.email.label_tag|default:"Adres email" }}</label>
                         {{ user_form.email }}
                          {% if user_form.email.errors %}
                             <div class="invalid-feedback d-block">

@@ -191,7 +191,16 @@ def vote_review(request, pk: int, value: str):
     # value in {"up","down"}
     helpful = True if value == "up" else False
     review = get_object_or_404(PlaceReview, pk=pk, is_approved=True)
-    obj, _created = PlaceReviewVote.objects.update_or_create(
+    PlaceReviewVote.objects.update_or_create(
         review=review, user=request.user, defaults={"helpful": helpful}
     )
+    if request.method == 'POST':
+        data = {
+            'ok': True,
+            'value': value,
+            'helpful': review.votes.filter(helpful=True).count(),
+            'not_helpful': review.votes.filter(helpful=False).count(),
+        }
+        return JsonResponse(data)
+    # Fallback for non-AJAX/GET usage
     return redirect("places:map")

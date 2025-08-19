@@ -2,22 +2,40 @@
 <html lang="{{ LANGUAGE_CODE|default:"pl" }}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>{% block title %}EcoMarket{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EcoMarket{% endblock %}</title>
+    {% block meta %}
+    <meta name="description" content="{% block meta_description %}EcoMarket — ekologiczne produkty, Eko‑Boxy, blog i kalkulator CO2.{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}EcoMarket{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}EcoMarket — ekologiczne produkty, Eko‑Boxy, blog i kalkulator CO2.{% endblock %}">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri|default:'' }}">
+    <meta property="og:image" content="{% block og_image %}{% static 'img/placeholder_box.png' %}{% endblock %}">
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
+    <meta name="twitter:title" content="{% block twitter_title %}EcoMarket{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}EcoMarket — ekologiczne produkty, Eko‑Boxy, blog i kalkulator CO2.{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{% static 'img/placeholder_box.png' %}{% endblock %}">
+    {% endblock %}
     <link rel="icon" type="image/x-icon" href="{% static 'img/favicon-32x32.png' %}">
+    <script src="{% static 'js/early-theme.js' %}"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/custom_styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}">
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Przejdź do treści</a>
     <header>
-        <nav class="navbar navbar-expand-lg">
+    <nav class="navbar navbar-expand-lg navbar-light" aria-label="Główna nawigacja">
             <div class="container">
                 <a class="navbar-brand" href="{% url 'homepage' %}">EcoMarket</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Przełącz nawigację">
@@ -26,71 +44,77 @@
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %}active{% endif %}" href="{% url 'store:product_list' %}"><i class="bi bi-basket3-fill me-1"></i> Produkty</a>
+                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %}active{% endif %}" href="{% url 'store:product_list' %}"{% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %} aria-current="page"{% endif %}><i class="bi bi-basket3-fill me-1"></i> Produkty</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.view_name == 'store:subscription_box_list' %}active{% endif %}" style="white-space: nowrap;" href="{% url 'store:subscription_box_list' %}"><i class="bi bi-box-seam-fill me-1"></i> Eko-Boxy</a>
+                            <a class="nav-link d-flex align-items-center gap-1 ws-nowrap {% if request.resolver_match.view_name == 'store:subscription_box_list' %}active{% endif %}" href="{% url 'store:subscription_box_list' %}"{% if request.resolver_match.view_name == 'store:subscription_box_list' %} aria-current="page"{% endif %}><i class="bi bi-box-seam-fill me-1"></i> Eko-Boxy</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.app_name == 'carbon_calculator' %}active{% endif %}" style="white-space: nowrap;" href="{% url 'carbon_calculator:calculate_page' %}"><i class="bi bi-calculator-fill me-1"></i> Eko-Kalkulator</a>
+                            <a class="nav-link d-flex align-items-center gap-1 ws-nowrap {% if request.resolver_match.app_name == 'carbon_calculator' %}active{% endif %}" href="{% url 'carbon_calculator:calculate_page' %}"{% if request.resolver_match.app_name == 'carbon_calculator' %} aria-current="page"{% endif %}><i class="bi bi-calculator-fill me-1"></i> Eko-Kalkulator</a>
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if request.resolver_match.app_name == 'challenges' %}active{% endif %}" href="#" id="navbarChallengesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle {% if request.resolver_match.app_name == 'challenges' %}active{% endif %}" href="#" id="navbarChallengesDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="bi bi-trophy me-1"></i> Eko-Wyzwania
                             </a>
-                            <ul class="dropdown-menu" aria-labelledby="navbarChallengesDropdown">
-                                <li><a class="dropdown-item" href="{% url 'challenges:challenge_list' %}"><i class="bi bi-list-task me-1"></i> Lista wyzwań</a></li>
-                                <li><a class="dropdown-item" href="{% url 'challenges:my_progress' %}"><i class="bi bi-person-badge me-1"></i> Mój postęp</a></li>
-                                <li><a class="dropdown-item" href="{% url 'challenges:leaderboard' %}"><i class="bi bi-bar-chart-line-fill me-1"></i> Tablica liderów</a></li>
+                            <ul class="dropdown-menu" aria-labelledby="navbarChallengesDropdown" role="menu">
+                                <li><a class="dropdown-item" role="menuitem" href="{% url 'challenges:challenge_list' %}"><i class="bi bi-list-task me-1"></i> Lista wyzwań</a></li>
+                                <li><a class="dropdown-item" role="menuitem" href="{% url 'challenges:my_progress' %}"><i class="bi bi-person-badge me-1"></i> Mój postęp</a></li>
+                                <li><a class="dropdown-item" role="menuitem" href="{% url 'challenges:leaderboard' %}"><i class="bi bi-bar-chart-line-fill me-1"></i> Tablica liderów</a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if request.resolver_match.app_name == 'blog' or request.resolver_match.app_name == 'chat' %}active{% endif %}" href="#" id="navbarBlogChatDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle {% if request.resolver_match.app_name == 'blog' or request.resolver_match.app_name == 'chat' %}active{% endif %}" href="#" id="navbarBlogChatDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="bi bi-journal-text me-1"></i> Blog/Chat
                             </a>
-                            <ul class="dropdown-menu" aria-labelledby="navbarBlogChatDropdown">
-                                <li><a class="dropdown-item" href="{% url 'blog:post_list' %}"><i class="bi bi-journal-text me-1"></i> Blog</a></li>
-                                <li><a class="dropdown-item" href="{% url 'chat:room_list' %}"><i class="bi bi-chat-dots me-1"></i> Chat</a></li>
+                            <ul class="dropdown-menu" aria-labelledby="navbarBlogChatDropdown" role="menu">
+                                <li><a class="dropdown-item" role="menuitem" href="{% url 'blog:post_list' %}"><i class="bi bi-journal-text me-1"></i> Blog</a></li>
+                                <li><a class="dropdown-item" role="menuitem" href="{% url 'chat:room_list' %}"><i class="bi bi-chat-dots me-1"></i> Chat</a></li>
                             </ul>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.app_name == 'places' %}active{% endif %}" style="white-space: nowrap;" href="{% url 'places:map' %}"><i class="bi bi-geo-alt-fill me-1"></i> Eko‑Miejsca</a>
+                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.app_name == 'places' %}active{% endif %}" style="white-space: nowrap;" href="{% url 'places:map' %}"{% if request.resolver_match.app_name == 'places' %} aria-current="page"{% endif %}><i class="bi bi-geo-alt-fill me-1"></i> Eko‑Miejsca</a>
                         </li>
                     </ul>
-                    <form method="get" action="{% url 'store:product_list' %}" class="d-flex align-items-center flex-grow-1 me-3" style="max-width: 400px; min-width: 200px;">
-                        <input class="form-control me-2 flex-grow-1" type="search" name="query" placeholder="Wyszukaj..." aria-label="Szukaj" value="{{ request.GET.query }}" style="min-width: 0;">
+                    <form method="get" action="{% url 'store:product_list' %}" class="d-flex align-items-center flex-grow-1 me-3 search-form-narrow">
+                        <label for="navbarSearch" class="visually-hidden">Szukaj</label>
+                        <input id="navbarSearch" class="form-control me-2 flex-grow-1" type="search" name="query" placeholder="Wyszukaj..." aria-label="Szukaj" value="{{ request.GET.query }}" style="min-width: 0;">
                         <button class="btn btn-outline-success" type="submit">Szukaj</button>
                     </form>
 
                     <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <button id="theme-toggle-btn" class="theme-toggle-btn nav-link" type="button" aria-label="Przełącz motyw">
+                                <i class="bi bi-moon-fill"></i>
+                            </button>
+                        </li>
                          <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center gap-1" href="{% url 'store:cart_detail' %}" id="cart-link" style="white-space: nowrap;">
+                            <a class="nav-link d-flex align-items-center gap-1 ws-nowrap" href="{% url 'store:cart_detail' %}" id="cart-link">
                                 <i class="bi bi-cart3 me-1"></i>
                                 <span>Koszyk</span>
-                                <span class="badge bg-success rounded-pill ms-1" id="cart-count">{{ cart|length }}</span>
+                                <span class="badge bg-success rounded-pill ms-1" id="cart-count" aria-live="polite" aria-atomic="true">{{ cart|length }}</span>
                             </a>
                         </li>
                         {% if user.is_authenticated %}
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     {% if user.profile and user.profile.avatar_url %}
-                                        <img src="{{ user.profile.avatar_url }}" alt="{{ user.username }}" class="rounded-circle me-2" style="width: 30px; height: 30px; object-fit: cover;">
+                                        <img src="{{ user.profile.avatar_url }}" alt="{{ user.username }}" class="rounded-circle me-2 avatar-30">
                                     {% else %}
                                         <i class="bi bi-person-circle fs-5 me-2"></i>
                                     {% endif %}
                                     Cześć, {{ user.username }}!
                                 </a>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
-                                    <li><a class="dropdown-item" href="{% url 'store:profile_update' %}">Edytuj profil</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'password_change' %}">Zmień hasło</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'store:order_history' %}">Moje zamówienia</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'carbon_calculator:footprint_history' %}">Moje emisje CO2</a></li>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown" role="menu">
+                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'store:profile_update' %}">Edytuj profil</a></li>
+                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'password_change' %}">Zmień hasło</a></li>
+                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'store:order_history' %}">Moje zamówienia</a></li>
+                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'carbon_calculator:footprint_history' %}">Moje emisje CO2</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: none;">
+                                        <form id="logout-form" action="{% url 'logout' %}" method="post" class="d-none">
                                             {% csrf_token %}
                                         </form>
-                                        <a class="dropdown-item logout-button-bs" href="#" onclick="document.getElementById('logout-form').submit(); return false;">Wyloguj się</a>
+                                        <a class="dropdown-item logout-button-bs" role="menuitem" href="#">Wyloguj się</a>
                                     </li>
                                 </ul>
                             </li>
@@ -108,7 +132,7 @@
         </nav>
     </header>
 
-    <main class="container">
+    <main id="main-content" class="container" role="main">
         {% if messages %}
             <div class="django-messages">
                 {% for message in messages %}
@@ -132,19 +156,14 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
-    {# Toasts disabled for cart interactions; Toastify not loaded to prevent popups #}
+    {# Cart interactions (add/update/remove). Toasts are stubbed in cart.js via SHOW_CART_TOASTS=false. #}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="{% static 'js/cart.js' %}"></script>
+    <script src="{% static 'js/cart.js' %}?v=20250818-3"></script>
+    <script src="{% static 'js/anti-flicker.js' %}"></script>
+    
+    <script src="{% static 'js/theme-toggle.js' %}"></script>
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
-    <script>
-        AOS.init({
-            // Globalne ustawienia AOS (opcjonalnie):
-            // duration: 800, // czas trwania animacji w ms
-            // once: true, // animować tylko raz przy przewijaniu
-            // offset: 120, // przesunięcie (w px) od oryginalnego punktu wyzwalania
-            // delay: 100, // opóźnienie animacji w ms
-        });
-</script>
+    <script src="{% static 'js/base.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

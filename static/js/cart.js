@@ -1,8 +1,7 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initCartInteractions() {
     console.log("Cart JS loaded");
 
     // Global toggle to disable Toastify pop-ups across cart interactions
-    // User request: remove top messages when adding/removing items from cart
     const SHOW_CART_TOASTS = false;
     if (!SHOW_CART_TOASTS) {
         // Replace Toastify with a no-op stub to avoid UI popups while keeping calls harmless
@@ -11,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- Функция получения CSRF токена ---
+    // --- CSRF helpers ---
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -26,24 +25,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return cookieValue;
     }
-    const csrftoken = getCookie('csrftoken');
+    function getCsrfTokenFromElement(el) {
+        const form = el && el.closest ? el.closest('form') : null;
+        if (form) {
+            const input = form.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (input && input.value) return input.value;
+        }
+        const anyInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (anyInput && anyInput.value) return anyInput.value;
+        // Fallback (works only if CSRF_COOKIE_HTTPONLY is False)
+        return getCookie('csrftoken');
+    }
 
     // --- Обновление счетчика корзины в шапке ---
     function updateCartCount(newCount) {
         const cartCountElement = document.getElementById('cart-count');
-        if (cartCountElement) {
-            cartCountElement.textContent = newCount;
-            const cartLinkElement = cartCountElement.closest('a');
+        if (!cartCountElement) return;
 
-            if (cartLinkElement) {
-                cartLinkElement.classList.remove('animate-pop');
-                requestAnimationFrame(() => {
-                    cartLinkElement.classList.add('animate-pop');
-                });
+        const prev = parseInt(cartCountElement.textContent) || 0;
+        cartCountElement.textContent = newCount;
+
+        const cartLinkElement = cartCountElement.closest('a');
+        if (!cartLinkElement) return;
+
+        // Анимируем только когда количество растет, чтобы не мигать при удалении
+        if (newCount > prev) {
+            cartLinkElement.classList.remove('animate-pop');
+            // Мини-дебаунс на один кадр, чтобы класс успел сняться
+            requestAnimationFrame(() => {
+                cartLinkElement.classList.add('animate-pop');
                 setTimeout(() => {
                     cartLinkElement.classList.remove('animate-pop');
-                }, 300);
-            }
+                }, 220);
+            });
         }
     }
 
@@ -65,21 +79,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Надёжное удаление строки товара по productId ---
+    function removeCartRowById(productId) {
+        const pid = String(productId);
+        const selector = (window.CSS && CSS.escape) ? `.cart-item[data-product-id="${CSS.escape(pid)}"]` : `.cart-item[data-product-id="${pid}"]`;
+        const row = document.querySelector(selector);
+        if (row) {
+            row.remove();
+            return true;
+        }
+        return false;
+    }
+
     // --- Функция для фактического выполнения AJAX-запроса на удаление ---
-    function performDeleteRequest(productId, url, cartItemRow) {
+    function performDeleteRequest(productId, url, cartItemRow, currentButton) {
+        const token = getCsrfTokenFromElement(cartItemRow || document.body);
+        if (currentButton) currentButton.disabled = true;
+        const formData = new URLSearchParams();
+        if (token) {
+            formData.append('csrfmiddlewaretoken', token);
+        }
+
         fetch(url, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': csrftoken,
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+                'X-CSRFToken': token || '',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            credentials: 'same-origin',
+            body: formData
         })
         .then(response => {
             if (!response.ok) {
-                return response.json().then(errData => {
-                    throw new Error(errData.error || `HTTP error! status: ${response.status}`);
-                }).catch(() => {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json().catch(() => ({})).then(err => {
+                    throw new Error(err.error || `HTTP error! status: ${response.status}`);
                 });
             }
             return response.json();
@@ -88,10 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'ok') {
                 console.log(`Product ${productId} removed from cart.`);
                 if (cartItemRow) {
-                    cartItemRow.classList.add('is-removing');
-                    cartItemRow.addEventListener('transitionend', () => {
-                        cartItemRow.remove();
-                    }, { once: true });
+                    cartItemRow.remove();
+                } else {
+                    removeCartRowById(productId);
                 }
                 updateCartCount(data.cart_total_items);
                 updateSummaryPrices({
@@ -102,33 +135,62 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.cart_total_items === 0) {
                     setTimeout(() => { window.location.reload(); }, 500);
                 }
-                Toastify({
-                    text: "Produkt usunięty z koszyka.",
-                    duration: 3000,
-                    gravity: "top",
-                    position: "right",
-                    style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
-                }).showToast();
+                if (window.Swal && typeof Swal.fire === 'function') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Usunięto z koszyka',
+                        text: 'Produkt usunięty z koszyka.',
+                        position: 'center',
+                        showConfirmButton: false,
+                        timer: 1500,
+                        timerProgressBar: true,
+                    });
+                } else if (SHOW_CART_TOASTS && window.Toastify) {
+                    Toastify({
+                        text: "Produkt usunięty z koszyka.",
+                        duration: 3000,
+                        gravity: "top",
+                        position: "right",
+                        style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
+                    }).showToast();
+                } else {
+                    alert('Produkt usunięty z koszyka.');
+                }
             } else {
-                console.error("Error removing product:", data.error || 'Unknown server error');
+                console.error("Błąd usuwania produktu:", data && data.error ? data.error : 'Nieznany błąd serwera');
+                // Fallback: optimistically remove row and refresh key UI parts
+                if (!removeCartRowById(productId) && cartItemRow) {
+                    try { cartItemRow.remove(); } catch (_) {}
+                }
+                // If cart becomes empty or unknown state, do a light reload to sync UI
+                setTimeout(() => { window.location.reload(); }, 250);
+                if (currentButton) currentButton.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Fetch Error during delete:', error);
+            if (window.Swal && typeof Swal.fire === 'function') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Błąd',
+                    text: 'Wystąpił błąd podczas usuwania produktu. Spróbuj ponownie.',
+                    position: 'center',
+                    showConfirmButton: false,
+                    timer: 1800,
+                    timerProgressBar: true,
+                });
+            } else if (SHOW_CART_TOASTS && window.Toastify) {
                 Toastify({
-                    text: `Nie udało się usunąć produktu: ${data.error || 'Błąd serwera'}`,
+                    text: 'Wystąpił błąd podczas usuwania produktu. Spróbuj ponownie.',
                     duration: 3000,
                     gravity: "top",
                     position: "right",
                     style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" }
                 }).showToast();
+            } else {
+                alert('Wystąpił błąd podczas usuwania produktu. Spróbuj ponownie.');
             }
-        })
-        .catch(error => {
-            console.error('Fetch Error during delete:', error);
-            Toastify({
-                text: 'Wystąpił błąd podczas usuwania produktu. Spróbuj ponownie.',
-                duration: 3000,
-                gravity: "top",
-                position: "right",
-                style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" }
-            }).showToast();
+            if (currentButton) currentButton.disabled = false;
         });
     }
 
@@ -166,13 +228,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     duration: 3000,
                     gravity: "top",
                     position: "right",
-                    style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // ИСПРАВЛЕНО
+                    style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" }
                 }).showToast();
                 return;
             }
 
+            const token = getCsrfTokenFromElement(btn);
             const formData = new URLSearchParams();
             formData.append('quantity', quantity);
+            if (token) {
+                formData.append('csrfmiddlewaretoken', token);
+            }
 
             btn.disabled = true;
             const originalButtonContent = btn.innerHTML;
@@ -181,10 +247,11 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch(url, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': csrftoken,
+                    'X-CSRFToken': token || '',
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
+                credentials: 'same-origin',
                 body: formData
             })
             .then(response => {
@@ -234,9 +301,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         }).showToast();
                     }
                 } else {
-                    console.error("Error adding product:", data.error || 'Unknown server error');
+                    console.error("Błąd dodawania produktu:", data.error || 'Nieznany błąd serwera');
                     Toastify({
-                        text: `Nie udało się dodać produktu: ${data.error || 'Błąd serwera'}`, // Текст был на русском, заменил
+                        text: `Nie udało się dodać produktu: ${data.error || 'Błąd serwera'}`,
                         duration: 3000,
                         gravity: "top",
                         position: "right",
@@ -265,9 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
         button.addEventListener('click', event => {
             const currentButton = event.target.closest('.remove-from-cart-btn');
-            if (!currentButton) {
-                return;
-            }
+            if (!currentButton) { return; }
             const productId = currentButton.dataset.productId;
             const removeUrl = currentButton.dataset.removeUrl;
             const cartItemRow = currentButton.closest('.cart-item');
@@ -284,20 +349,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            Swal.fire({
-                title: 'Potwierdź usunięcie',
-                text: "Czy na pewno chcesz usunąć ten produkt z koszyka?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Tak, usuń',
-                cancelButtonText: 'Anuluj',
-                confirmButtonColor: 'var(--color-primary)',
-                cancelButtonColor: 'var(--color-text-medium)',
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    performDeleteRequest(productId, removeUrl, cartItemRow);
+            if (window.Swal && typeof Swal.fire === 'function') {
+                Swal.fire({
+                    title: 'Potwierdź usunięcie',
+                    text: "Czy na pewno chcesz usunąć ten produkt z koszyka?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Tak, usuń',
+                    cancelButtonText: 'Anuluj',
+                    confirmButtonColor: 'var(--color-primary)',
+                    cancelButtonColor: 'var(--color-text-medium)',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        performDeleteRequest(productId, removeUrl, cartItemRow, currentButton);
+                    }
+                });
+            } else {
+                if (window.confirm("Czy na pewno chcesz usunąć ten produkt z koszyka?")) {
+                    performDeleteRequest(productId, removeUrl, cartItemRow, currentButton);
                 }
-            });
+            }
         });
     });
 
@@ -306,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('change', event => {
             const productId = event.target.dataset.productId;
             const newQuantity = parseInt(event.target.value);
-            const url = event.target.dataset.updateUrl; // Используется тот же URL, что и для добавления
+            const url = event.target.dataset.updateUrl;
             const cartItemRow = event.target.closest('.cart-item');
 
             if (isNaN(newQuantity) || newQuantity < 0) {
@@ -322,17 +393,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const token = getCsrfTokenFromElement(event.target);
             const formData = new URLSearchParams();
             formData.append('quantity', newQuantity);
             formData.append('update', 'true');
+            if (token) {
+                formData.append('csrfmiddlewaretoken', token);
+            }
 
             fetch(url, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': csrftoken,
+                    'X-CSRFToken': token || '',
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
+                credentials: 'same-origin',
                 body: formData
             })
             .then(response => {
@@ -364,21 +440,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (data.item_removed) {
                         if (cartItemRow) {
-                            cartItemRow.classList.add('is-removing');
-                            cartItemRow.addEventListener('transitionend', () => {
-                                cartItemRow.remove();
-                            }, { once: true });
+                            cartItemRow.remove();
+                        } else {
+                            removeCartRowById(productId);
                         }
                         if (data.cart_total_items === 0) {
                             setTimeout(() => { window.location.reload(); }, 500);
                         }
-                        Toastify({
-                            text: "Produkt usunięty (ilość 0).",
-                            duration: 3000,
-                            gravity: "top",
-                            position: "right",
-                            style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
-                        }).showToast();
+                        if (window.Swal && typeof Swal.fire === 'function') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Usunięto z koszyka',
+                                text: 'Produkt usunięty (Ilość 0).',
+                                position: 'center',
+                                showConfirmButton: false,
+                                timer: 1500,
+                                timerProgressBar: true,
+                            });
+                        } else if (SHOW_CART_TOASTS && window.Toastify) {
+                            Toastify({
+                                text: "Produkt usunięty (Ilość 0).",
+                                duration: 3000,
+                                gravity: "top",
+                                position: "right",
+                                style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
+                            }).showToast();
+                        } else {
+                            alert('Produkt usunięty (Ilość 0).');
+                        }
 
                     } else if (data.quantity_adjusted) {
                         event.target.value = data.adjusted_quantity;
@@ -387,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             duration: 5000,
                             gravity: "top",
                             position: "right",
-                            style: { background: "linear-gradient(to right, #ff8c00, #ffc371)" } // ИСПРАВЛЕНО
+                            style: { background: "linear-gradient(to right, #ff8c00, #ffc371)" }
                         }).showToast();
                     } else {
                         Toastify({
@@ -395,22 +484,22 @@ document.addEventListener('DOMContentLoaded', () => {
                             duration: 3000,
                             gravity: "top",
                             position: "right",
-                            style: { background: "linear-gradient(to right, #00b09b, #96c93d)" } // ИСПРАВЛЕНО
+                            style: { background: "linear-gradient(to right, #00b09b, #96c93d)" }
                         }).showToast();
                     }
                 } else {
-                    console.error("Error updating quantity:", data.error || 'Unknown server error');
+                    console.error("Błąd aktualizacji ilości:", data.error || 'Nieznany błąd serwera');
                     Toastify({
                         text: `Nie udało się zaktualizować ilości: ${data.error || 'Błąd serwera'}`,
                         duration: 3000,
                         gravity: "top",
                         position: "right",
-                        style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" } // ИСПРАВЛЕНО
+                        style: { background: "linear-gradient(to right, #ff5f6d, #ffc371)" }
                     }).showToast();
                 }
             })
             .catch(error => {
-                console.error('Fetch Error updating quantity:', error);
+                console.error('Błąd żądania podczas aktualizacji ilości:', error);
                 Toastify({
                     text: `Błąd przy aktualizacji ilości: ${error.message}`,
                     duration: 3000,
@@ -422,4 +511,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-});
+}
+
+// Initialize immediately if DOM is ready, otherwise wait for DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCartInteractions);
+} else {
+    initCartInteractions();
+}

@@ -23,6 +23,7 @@ class Message(models.Model):
     room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name='messages')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_messages')
     text = models.TextField()
+    reply_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='replies', verbose_name='Odpowiedź na')
     is_removed = models.BooleanField(default=False, verbose_name='Usunięta')
     created_at = models.DateTimeField(auto_now_add=True)
 

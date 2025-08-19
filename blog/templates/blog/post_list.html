@@ -4,19 +4,26 @@
 
 {% block title %}Blog - EcoMarket{% endblock %}
 
+{% block meta_description %}Najnowsze wpisy na blogu EcoMarket: ekologia, zdrowe jedzenie i porady.{% endblock %}
+{% block og_title %}Blog — EcoMarket{% endblock %}
+{% block og_description %}Czytaj o ekologii, zero waste i zdrowym stylu życia na blogu EcoMarket.{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block twitter_title %}Blog — EcoMarket{% endblock %}
+{% block twitter_description %}Czytaj o ekologii, zero waste i zdrowym stylu życia na blogu EcoMarket.{% endblock %}
+
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'blog/css/blog.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4 blog-post-list">
-    <h1 class="mb-4">Blog Posts</h1>
+    <h1 class="mb-4">Wpisy na blogu</h1>
 
     {% for post in posts %}
     <div class="card mb-3 post-item" data-aos="fade-up" data-aos-delay="{% widthratio forloop.counter0 1 100 %}">
         <div class="card-body">
             <h2 class="card-title post-title"><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h2>
-            <p class="card-text post-meta"><small class="text-muted">{{ post.published_at|date:"F j, Y, P" }} by {{ post.author.username|default:"Unknown" }}</small></p>
+            <p class="card-text post-meta"><small class="text-muted">{{ post.published_at|date:"F j, Y, P" }} · autor: {{ post.author.username|default:"Nieznany" }}</small></p>
             <p class="card-text">{{ post.body|md_sanitize_headings|truncatewords:30|linebreaks }}</p>
             <a href="{{ post.get_absolute_url }}" class="btn btn-primary btn-sm">Więcej</a>
         </div>
@@ -30,16 +37,16 @@
         <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Poprzednia strona">
                     <span aria-hidden="true">&laquo;</span>
-                    <span class="sr-only">Previous</span>
+                    <span class="sr-only">Poprzednia</span>
                 </a>
             </li>
             {% else %}
             <li class="page-item disabled">
-                <span class="page-link" aria-label="Previous">
+                <span class="page-link" aria-label="Poprzednia strona">
                     <span aria-hidden="true">&laquo;</span>
-                    <span class="sr-only">Previous</span>
+                    <span class="sr-only">Poprzednia</span>
                 </span>
             </li>
             {% endif %}
@@ -54,16 +61,16 @@
 
             {% if page_obj.has_next %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Następna strona">
                     <span aria-hidden="true">&raquo;</span>
-                    <span class="sr-only">Next</span>
+                    <span class="sr-only">Następna</span>
                 </a>
             </li>
             {% else %}
             <li class="page-item disabled">
-                <span class="page-link" aria-label="Next">
+                <span class="page-link" aria-label="Następna strona">
                     <span aria-hidden="true">&raquo;</span>
-                    <span class="sr-only">Next</span>
+                    <span class="sr-only">Następna</span>
                 </span>
             </li>
             {% endif %}

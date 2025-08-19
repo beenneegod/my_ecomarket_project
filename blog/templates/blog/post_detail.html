@@ -3,9 +3,18 @@
 {% load markdown_filters %}
 
 {% block title %}{{ post.title }} - Blog - EcoMarket{% endblock %}
+{% block meta_description %}{{ post.title }} — {{ post.body|striptags|truncatewords:30 }}{% endblock %}
+{% block og_title %}{{ post.title }} — EcoMarket Blog{% endblock %}
+{% block og_description %}{{ post.body|striptags|truncatewords:35 }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_image %}{% if post.image %}{{ post.image.url }}{% endif %}{% endblock %}
+{% block twitter_title %}{{ post.title }} — EcoMarket Blog{% endblock %}
+{% block twitter_description %}{{ post.body|striptags|truncatewords:35 }}{% endblock %}
+{% block twitter_image %}{% if post.image %}{{ post.image.url }}{% endif %}{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'blog/css/blog.css' %}">
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -26,7 +35,10 @@
                 </header>
                 {% if post.image %}
                 <figure class="mb-4" data-aos="zoom-in">
-                    <img src="{{ post.image.url }}" alt="{{ post.title }}" class="img-fluid rounded post-image shadow-sm">
+                    <img src="{{ post.image.url }}"
+                         alt="{{ post.title }}"
+                         class="img-fluid rounded post-image shadow-sm"
+                         {% if post.image.width and post.image.height %}width="{{ post.image.width }}" height="{{ post.image.height }}"{% endif %}>
                 </figure>
                 {% endif %}
                 <section class="mb-5 post-body-content">
@@ -37,73 +49,24 @@
             <section class="mb-5 comments-section" id="comments-section"> {# Добавлен ID для якоря #}
                 <div class="card shadow-sm" style="background-color: var(--color-surface-alt);"> {# Используем наш бежевый фон для карточки комментариев #}
                     <div class="card-body p-4">
-                        <h2 class="mb-4 h3">Komentarze ({{ comments.count }})</h2>
+                        <h2 class="mb-4 h3">Komentarze (<span id="comments-count">{{ comments.count }}</span>)</h2>
                         
                         <hr class="my-4">
 
-                        {% for comment in comments %}
-                        <div class="d-flex mb-4 comment pb-3 border-bottom-dashed" id="comment-{{ comment.id }}" data-aos="fade-up"
-                            data-aos-delay="{% if forloop.counter0 < 10 %}{% widthratio forloop.counter0 1 50 %}{% else %}500{% endif %}">
-                            <div class="flex-shrink-0">
-                                {% if comment.author.profile and comment.author.profile.avatar_url %}
-                                    <img class="rounded-circle shadow-sm" src="{{ comment.author.profile.avatar_url }}" alt="{{ comment.author.username }} avatar" width="50" height="50" style="object-fit: cover;" />
-                                {% else %}
-                                    <img class="rounded-circle shadow-sm" src="{% static 'img/default_avatar.png' %}" alt="Domyślny awatar użytkownika" width="50" height="50" />
-                                {% endif %}
-                            </div>
-                            <div class="ms-3 flex-grow-1">
-                                <div class="fw-bold comment-author">
-                                    {% if comment.author.profile.get_full_name %}
-                                        {{ comment.author.profile.get_full_name }}
-                                    {% else %}
-                                        {{ comment.author.username|default:"Anonim" }}
-                                    {% endif %}
-                                </div>
-                                <div class="text-muted fst-italic mb-1 comment-date"><small>{{ comment.created_at|date:"F j, Y, H:i" }}</small></div>
-                                <div class="comment-body">
-                                    {{ comment.body|linebreaks }}
-                                </div>
-
-                                {% if comment.image %}
-                                    <div class="mt-2 comment-image-container">
-                                        <a href="{{ comment.image.url }}" data-bs-toggle="modal" data-bs-target="#imageModal-{{ comment.id }}" title="Kliknij, aby powiększyć obrazek">
-                                            <img src="{{ comment.image.url }}" alt="Obrazek do komentarza od {{ comment.author.username }}" class="img-fluid rounded shadow-sm" style="max-height: 150px; max-width: 100%; cursor: pointer;">
-                                        </a>
-                                    </div>
-
-                                    <div class="modal fade" id="imageModal-{{ comment.id }}" tabindex="-1" aria-labelledby="imageModalLabel-{{ comment.id }}" aria-hidden="true">
-                                        <div class="modal-dialog modal-xl modal-dialog-centered"> {# modal-xl для большего размера #}
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title" id="imageModalLabel-{{ comment.id }}">
-                                                        Obrazek od 
-                                                        {% if comment.author.profile.get_full_name %}
-                                                            {{ comment.author.profile.get_full_name }}
-                                                        {% else %}
-                                                            {{ comment.author.username }}
-                                                        {% endif %}
-                                                    </h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body text-center p-0"> {# p-0 чтобы картинка занимала все место #}
-                                                    <img src="{{ comment.image.url }}" alt="Obrazek do komentarza - powiększenie" class="img-fluid">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            </div>
+                        <div id="comments-list">
+                            {% for comment in comments %}
+                                {% include 'blog/_comment_item.html' with comment=comment %}
+                            {% empty %}
+                                <p class="text-muted mb-0" id="no-comments-placeholder">Brak komentarzy. Bądź pierwszy!</p>
+                            {% endfor %}
                         </div>
-                        {% empty %}
-                        <p class="text-muted">Brak komentarzy. Bądź pierwszy!</p>
-                        {% endfor %}
                         
                         <hr class="my-4">
 
                         {% if user.is_authenticated %}
                             <div class="comment-form-container mt-4 p-4 rounded shadow-sm" style="background-color: var(--color-surface);"> {# Белый фон для формы на бежевом фоне карточки #}
                                 <h3 class="mb-3 h4">Zostaw komentarz</h3>
-                                <form method="post" class="comment-form" enctype="multipart/form-data" novalidate>
+                                <form method="post" action="{{ post.get_absolute_url }}" class="comment-form" enctype="multipart/form-data" novalidate>
                                     {% csrf_token %}
                                     
                                     <div class="mb-3">
@@ -139,7 +102,22 @@
                                         {% endif %}
                                     </div>
 
-                                    <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-send-fill me-2"></i>Wyślij komentarz</button>
+                                    <button type="submit" class="btn btn-primary mt-2" id="comment-submit-btn"><i class="bi bi-send-fill me-2"></i>Wyślij komentarz</button>
+                                    <div id="comment-form-error" class="text-danger small mt-2" role="alert" aria-live="polite" style="display:none;"></div>
+                                    <div class="d-none" aria-hidden="true">
+                                        <label for="hp-website">Twoja strona</label>
+                                        <input id="hp-website" type="text" name="website" tabindex="-1" autocomplete="off" />
+                                    </div>
+                                    <div class="mt-3">
+                                        <label for="id_captcha" class="form-label">{{ comment_form.captcha.label }}</label>
+                                        {{ comment_form.captcha_key }}
+                                        {{ comment_form.captcha }}
+                                        {% if comment_form.captcha.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in comment_form.captcha.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </form>
                             </div>
                         {% else %}
@@ -183,11 +161,50 @@
                     </div>
                     <div class="card-body">
                         <form method="get" action="#"> {# TODO: Добавить URL для поиска по блогу, если нужен #}
-                            <div class="input-group">
+                            <div class="input-group blog-search-group">
                                 <input class="form-control" type="text" name="q_blog" placeholder="Wpisz słowa kluczowe..." aria-label="Wpisz słowa kluczowe..." aria-describedby="button-search-blog" />
                                 <button class="btn btn-primary" id="button-search-blog" type="submit"><i class="bi bi-search"></i></button>
                             </div>
                         </form>
+                    </div>
+                </div>
+                
+                <!-- Latest Posts Widget -->
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header py-3">
+                        <h5 class="m-0 fw-bold">Najnowsze wpisy</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="latest-posts-widget">
+                            {% for post in latest_posts|slice:":5" %}
+                                <div class="widget-post p-3">
+                                    <div class="widget-post-title">
+                                        <a href="{{ post.get_absolute_url }}">{{ post.title }}</a>
+                                    </div>
+                                    <div class="widget-post-date">
+                                        <i class="bi bi-calendar3 me-1"></i> {{ post.published_at|date:"d.m.Y" }}
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <p class="text-muted p-3 mb-0">Brak wpisów do wyświetlenia.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tags Widget (if you have tags for posts) -->
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header py-3">
+                        <h5 class="m-0 fw-bold">Tagi</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="#" class="badge bg-light text-dark text-decoration-none p-2">Ekologia</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none p-2">Żywność Bio</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none p-2">Zero Waste</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none p-2">Zdrowe Odżywianie</a>
+                            <a href="#" class="badge bg-light text-dark text-decoration-none p-2">Przepisy</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -197,23 +214,5 @@
 {% endblock %}
             {% block extra_js %}
             {{ block.super }}
-            <script>
-            (() => {
-                'use strict';
-                const hiddenInput = document.querySelector('.js-comment-image-input');
-                const chooseBtn = document.getElementById('btn-choose-comment-image');
-                const fileNameField = document.getElementById('comment-image-filename');
-                if (chooseBtn && hiddenInput) {
-                    chooseBtn.addEventListener('click', () => hiddenInput.click());
-                }
-                if (hiddenInput) {
-                    hiddenInput.addEventListener('change', () => {
-                        const file = hiddenInput.files && hiddenInput.files[0];
-                        if (fileNameField) {
-                            fileNameField.textContent = file ? file.name : 'Nie wybrano pliku';
-                        }
-                    });
-                }
-            })();
-            </script>
+            <script src="{% static 'js/blog_comments.js' %}"></script>
             {% endblock %}

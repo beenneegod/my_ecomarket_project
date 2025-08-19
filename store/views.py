@@ -3,12 +3,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse # Для AJAX ответов
-from django.views.decorators.csrf import ensure_csrf_cookie # Импортируем декоратор
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from .models import Product, Order, Category, Profile, SubscriptionBoxType, UserSubscription, Coupon, UserCoupon # Импортируем UserCoupon
 from .cart import Cart
 from decimal import Decimal
 from django.contrib.auth import login # Функция для автоматического входа пользователя
-from .forms import UserRegistrationForm, ProfileUpdateForm, SubscriptionChoiceForm, CouponApplyForm, UserCouponChoiceForm # Импортируем UserCouponChoiceForm
+from .forms import UserRegistrationForm, ProfileUpdateForm, SubscriptionChoiceForm, CouponApplyForm, UserCouponChoiceForm, CartAddProductForm # Добавлен CartAddProductForm
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
@@ -121,69 +121,103 @@ def order_history(request):
     return render(request, 'store/order_history.html', context)
 
 
-@require_POST
+@ensure_csrf_cookie  # This ensures CSRF cookie is set
 def cart_add(request, product_id):
     """
     Представление для добавления товара в корзину или обновления количества.
     Ожидает AJAX запрос. Возвращает расширенный JSON ответ.
     """
     cart = Cart(request)
-    product = get_object_or_404(Product, id=product_id) # Разрешаем добавлять/обновлять даже если available=False (если он уже в корзине)
 
+    # For AJAX requests, we'll be more lenient with CSRF
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            product = Product.objects.get(id=product_id, available=True)
+        except Product.DoesNotExist:
+            return JsonResponse({'status': 'error', 'error': 'Produkt nie został znaleziony'}, status=404)
+
+        # Extract quantity directly from POST data if form validation fails
+        try:
+            quantity = int(request.POST.get('quantity', 1))
+            update = request.POST.get('update', 'false').lower() in ('true', '1', 't')
+            
+            # Basic validation: allow 0 only when updating (treats as item removal)
+            if quantity < 0 or (not update and quantity == 0):
+                return JsonResponse({'status': 'error', 'error': 'Ilość musi być większa od 0'}, status=400)
+                
+            # Preserve the form for cleaner code path when it works
+            # If quantity==0 and update==True, skip form (its min_value=1)
+            if quantity == 0 and update:
+                pass
+            else:
+                form = CartAddProductForm(request.POST)
+                if not form.is_valid():
+                    # Fall back to direct POST data extraction
+                    print(f"Form invalid, using direct POST data. Errors: {form.errors}")
+                else:
+                    # Use form data when valid
+                    quantity = form.cleaned_data['quantity']
+                    update = form.cleaned_data['update']
+            
+            # Сохраняем количество ДО операции, чтобы проверить, было ли оно скорректировано
+            original_quantity_in_cart = cart.cart.get(str(product.id), {}).get('quantity', 0)
+
+            cart.add(product=product, quantity=quantity, update_quantity=update)
+
+            # Получаем обновленное состояние элемента из корзины ПОСЛЕ операции add
+            updated_item_data = cart.cart.get(str(product.id))
+            item_removed = updated_item_data is None
+            final_quantity = 0 if item_removed else updated_item_data['quantity']
+            item_total_price = "0.00" # По умолчанию, если товар удален
+
+            quantity_adjusted = False
+            adjusted_quantity = final_quantity
+
+            if not item_removed:
+                item_total_price = str(Decimal(updated_item_data['price']) * final_quantity)
+                # Проверяем, было ли количество скорректировано из-за остатков
+                # (если мы обновляли и итоговое количество меньше запрошенного, но > 0 ИЛИ если добавляли и итоговое кол-во не равно предыдущему + запрошенному)
+                if update and final_quantity < quantity and final_quantity > 0:
+                     quantity_adjusted = True
+                elif not update and final_quantity != original_quantity_in_cart + quantity and final_quantity > 0:
+                     # Случай, когда при добавлении уперлись в сток
+                     quantity_adjusted = True
+
+
+            response_data = {
+                'status': 'ok',
+                'cart_total_items': len(cart),
+                'cart_total_price': str(cart.get_total_price()), # Конвертируем Decimal в строку для JSON
+                'cart_total_price_after_discount': str(cart.get_total_price_after_discount()),
+                'cart_discount_amount': str(cart.get_discount_amount()),
+                'item_removed': item_removed, # Флаг, был ли товар удален (кол-во <= 0)
+                'quantity_adjusted': quantity_adjusted, # Флаг, было ли кол-во скорректировано
+                'adjusted_quantity': adjusted_quantity, # Итоговое количество в корзине
+                'product_name': product.name, # Имя товара для сообщений
+                'item_total_price': item_total_price # Общая цена для этой позиции
+            }
+            return JsonResponse(response_data)
+        except ValueError:
+            return JsonResponse({'status': 'error', 'error': 'Nieznany błąd'}, status=400)
+        except Exception as e:
+            print(f"Unexpected error in cart_add: {str(e)}")
+            return JsonResponse({'status': 'error', 'error': str(e)}, status=500)
+
+    # Regular non-AJAX request handling
+    product = get_object_or_404(Product, id=product_id) # Разрешаем добавлять/обновлять даже если available=False (если он уже в корзине)
     try:
         quantity = int(request.POST.get('quantity', 1))
         update = request.POST.get('update', 'false').lower() == 'true'
 
         if quantity < 0:
-            raise ValueError("Quantity cannot be negative")
+            messages.error(request, "Ilość nie może być ujemna")
+        else:
+            cart.add(product=product, quantity=quantity, update_quantity=update)
+            messages.success(request, f"Produkt '{product.name}' dodano do koszyka")
+    except (ValueError, TypeError):
+        messages.error(request, "Nieprawidłowa ilość produktu")
 
-        # Сохраняем количество ДО операции, чтобы проверить, было ли оно скорректировано
-        original_quantity_in_cart = cart.cart.get(str(product.id), {}).get('quantity', 0)
-
-        cart.add(product=product, quantity=quantity, update_quantity=update)
-
-        # Получаем обновленное состояние элемента из корзины ПОСЛЕ операции add
-        updated_item_data = cart.cart.get(str(product.id))
-        item_removed = updated_item_data is None
-        final_quantity = 0 if item_removed else updated_item_data['quantity']
-        item_total_price = "0.00" # По умолчанию, если товар удален
-
-        quantity_adjusted = False
-        adjusted_quantity = final_quantity
-
-        if not item_removed:
-            item_total_price = str(Decimal(updated_item_data['price']) * final_quantity)
-            # Проверяем, было ли количество скорректировано из-за остатков
-            # (если мы обновляли и итоговое количество меньше запрошенного, но > 0 ИЛИ если добавляли и итоговое кол-во не равно предыдущему + запрошенному)
-            if update and final_quantity < quantity and final_quantity > 0:
-                 quantity_adjusted = True
-            elif not update and final_quantity != original_quantity_in_cart + quantity and final_quantity > 0:
-                 # Случай, когда при добавлении уперлись в сток
-                 quantity_adjusted = True
-
-
-        response_data = {
-            'status': 'ok',
-            'cart_total_items': len(cart),
-            'cart_total_price': str(cart.get_total_price()), # Конвертируем Decimal в строку для JSON
-            'cart_total_price_after_discount': str(cart.get_total_price_after_discount()),
-            'cart_discount_amount': str(cart.get_discount_amount()),
-            'item_removed': item_removed, # Флаг, был ли товар удален (кол-во <= 0)
-            'quantity_adjusted': quantity_adjusted, # Флаг, было ли кол-во скорректировано
-            'adjusted_quantity': adjusted_quantity, # Итоговое количество в корзине
-            'product_name': product.name, # Имя товара для сообщений
-            'item_total_price': item_total_price # Общая цена для этой позиции
-        }
-        return JsonResponse(response_data)
-
-    except Product.DoesNotExist:
-         return JsonResponse({'status': 'error', 'error': 'Товар не найден'}, status=404)
-    except ValueError as e:
-         return JsonResponse({'status': 'error', 'error': f'Некорректное значение: {e}'}, status=400)
-    except Exception as e:
-         # Логирование ошибки здесь было бы полезно
-         print(f"Error in cart_add: {e}") # Просто выводим в консоль для отладки
-         return JsonResponse({'status': 'error', 'error': 'Внутренняя ошибка сервера'}, status=500)
+    return redirect('store:cart_detail')
 
 
 @require_POST # Разрешаем только POST запросы
@@ -428,11 +462,11 @@ def cancel_subscription(request, subscription_id):
     user_subscription = get_object_or_404(UserSubscription, id=subscription_id, user=request.user)
 
     if not user_subscription.stripe_subscription_id:
-        messages.error(request, "Для этой подписки отсутствует ID в системе Stripe. Обратитесь в поддержку.")
+        messages.error(request, "Dla tej subskrypcji brakuje identyfikatora w systemie Stripe. Skontaktuj się z pomocą techniczną.")
         return redirect('store:order_history')
 
     if user_subscription.status == 'canceled' or user_subscription.cancel_at_period_end:
-        messages.info(request, f"Подписка на '{user_subscription.box_type.name}' уже отменена или запланирована к отмене.")
+        messages.info(request, f"Subskrypcja na '{user_subscription.box_type.name}' jest już anulowana lub zaplanowana do anulowania.")
         return redirect('store:order_history')
 
     if request.method == 'POST':
@@ -450,14 +484,14 @@ def cancel_subscription(request, subscription_id):
             # user_subscription.cancel_at_period_end = True
             # user_subscription.save(update_fields=['cancel_at_period_end'])
 
-            messages.success(request, f"Ваша подписка на '{user_subscription.box_type.name}' будет отменена в конце текущего расчетного периода.")
+            messages.success(request, f"Twoja subskrypcja na '{user_subscription.box_type.name}' zostanie anulowana na koniec bieżącego okresu rozliczeniowego.")
             print(f"User {request.user.id} requested to cancel Stripe subscription {user_subscription.stripe_subscription_id} at period end.")
 
         except stripe.error.StripeError as e:
-            messages.error(request, f"Произошла ошибка при отмене подписки в Stripe: {e}")
+            messages.error(request, f"Wystąpił błąd podczas anulowania subskrypcji w Stripe: {e}")
             print(f"StripeError cancelling subscription {user_subscription.stripe_subscription_id}: {e}")
         except Exception as e:
-            messages.error(request, f"Произошла непредвиденная ошибка: {e}")
+            messages.error(request, f"Wystąpił nieoczekiwany błąd: {e}")
             print(f"Error cancelling subscription {user_subscription.stripe_subscription_id}: {e}")
 
         return redirect('store:order_history')
@@ -465,7 +499,7 @@ def cancel_subscription(request, subscription_id):
         # Для GET-запроса можно показать страницу подтверждения отмены,
         # но для простоты мы будем использовать POST-запрос напрямую с кнопки.
         # Если нужна страница подтверждения, здесь нужно будет рендерить шаблон.
-        messages.warning(request, "Для отмены подписки используйте соответствующую кнопку.")
+        messages.warning(request, "Aby anulować subskrypcję, użyj odpowiedniego przycisku.")
         return redirect('store:order_history')
 
 
@@ -531,3 +565,15 @@ def remove_coupon(request):
     cart.clear_coupon()
     messages.info(request, "Kupon został usunięty z koszyka.")
     return redirect('store:cart_detail')
+
+
+def cart_count(request):
+    """
+    Simple view to return the current cart count as JSON.
+    Used for AJAX requests after iframe form submissions.
+    """
+    cart = Cart(request)
+    return JsonResponse({
+        'count': len(cart),
+        'total': str(cart.get_total_price()),
+    })

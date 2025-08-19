@@ -5,9 +5,23 @@
     {{ page_title|default:"Witamy w EcoMarket!" }}
 {% endblock %}
 
+{% block meta_description %}
+    Ekologiczne produkty, świeże warzywa i owoce oraz wygodne zestawy subskrypcyjne prosto pod Twoje drzwi.
+{% endblock %}
+{% block og_title %}{{ page_title|default:"Witamy w EcoMarket!" }} — EcoMarket{% endblock %}
+{% block og_description %}
+    Odkryj świat zdrowia z EcoMarket: świeże, ekologiczne produkty i eko‑boxy z dostawą.
+{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block twitter_title %}{{ page_title|default:"Witamy w EcoMarket!" }} — EcoMarket{% endblock %}
+{% block twitter_description %}
+    Odkryj świat zdrowia z EcoMarket: świeże, ekologiczne produkty i eko‑boxy z dostawą.
+{% endblock %}
+
 {% block extra_css %}
     {# Если нужны специфичные стили для главной, можно создать homepage.css #}
     {# <link rel="stylesheet" href="{% static 'css/homepage.css' %}"> #}
+    <link rel="stylesheet" href="{% static 'css/homepage.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -15,7 +29,7 @@
 <section class="hero-section text-center bg-light py-5 mb-5" data-aos="fade-in">
     <div class="container">
     <img src="{% static 'img/placeholder_box.png' %}" alt="EcoMarket - Świeże produkty dla Ciebie" class="img-fluid rounded mb-4" style="max-height: 400px; object-fit: cover;">
-        <h1 class="display-4 fw-bold text-success">Odkryj Świat Zdrowia z EcoMarket!</h1>
+    <h1 class="display-4 fw-bold text-primary">Odkryj Świat Zdrowia z EcoMarket!</h1>
         <p class="lead text-muted col-lg-8 mx-auto">
             Najlepsze ekologiczne produkty, świeże warzywa, owoce i wyjątkowe zestawy subskrypcyjne prosto pod Twoje drzwi.
         </p>
@@ -34,21 +48,21 @@
         <div class="row text-center">
             <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
                 <div class="feature-item p-4 border rounded shadow-sm bg-white h-100"> {# Используем белый фон для контраста #}
-                    <i class="bi bi-brightness-high-fill display-3 text-success mb-3"></i>
+                    <i class="bi bi-brightness-high-fill display-3 text-primary mb-3"></i>
                     <h4>Zawsze Świeże</h4>
                     <p class="text-muted">Codzienne dostawy od lokalnych rolników gwarantują najwyższą jakość.</p>
                 </div>
             </div>
             <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
                 <div class="feature-item p-4 border rounded shadow-sm bg-white h-100">
-                    <i class="bi bi-box-seam-fill display-3 text-success mb-3"></i>
+                    <i class="bi bi-box-seam-fill display-3 text-primary mb-3"></i>
                     <h4>Eko Opakowania</h4>
                     <p class="text-muted">Dbamy o planetę, używając opakowań przyjaznych środowisku.</p>
                 </div>
             </div>
             <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
                 <div class="feature-item p-4 border rounded shadow-sm bg-white h-100">
-                    <i class="bi bi-truck display-3 text-success mb-3"></i>
+                    <i class="bi bi-truck display-3 text-primary mb-3"></i>
                     <h4>Szybka Dostawa</h4>
                     <p class="text-muted">Zamów dziś, a zdrowe produkty trafią do Ciebie błyskawicznie.</p>
                 </div>
@@ -108,7 +122,7 @@
                 <div class="card blog-post-preview h-100"> {# .blog-post-preview - новый класс #}
                     {% if post.image %}
                         <a href="{{ post.get_absolute_url }}">
-                            <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}" style="height: 200px; object-fit: cover;">
+                            <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}">
                         </a>
                     {% endif %}
                     <div class="card-body d-flex flex-column">
@@ -128,6 +142,31 @@
 </section>
 {% endif %}
 
-{# TODO: Добавить секцию-тизер для подписки на "здоровые боксы", когда она будет готова #}
+{# 6. Subscription Box Teaser Section #}
+<section class="subscription-teaser py-5 eco-teaser" data-aos="fade-up">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-7 mb-4 mb-lg-0" data-aos="fade-right">
+                <h2 class="display-5 fw-bold mb-3 text-primary">Odkryj nasze Eko-Boxy!</h2>
+                <p class="lead mb-4">Nasze zestawy subskrypcyjne to najłatwiejszy sposób na regularne dostawy świeżych, ekologicznych produktów prosto pod Twoje drzwi.</p>
+                <ul class="list-unstyled mb-4">
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Świeże ekologiczne produkty co tydzień</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Dopasowane do Twoich preferencji</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Oszczędzasz do 15% w porównaniu do regularnych zakupów</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-primary me-2"></i> Możliwość anulowania lub zawieszenia w dowolnym momencie</li>
+                </ul>
+                <a href="{% url 'store:subscription_box_list' %}" class="btn btn-primary btn-lg px-4">Sprawdź nasze Eko-Boxy</a>
+            </div>
+            <div class="col-lg-5" data-aos="fade-left">
+                <div class="position-relative">
+                    <img src="{% static 'img/placeholder_box.png' %}" alt="EcoMarket Eko-Box" class="img-fluid rounded shadow-lg">
+                    <div class="position-absolute top-0 end-0 bg-primary text-white py-2 px-3 rounded-pill mt-3 me-3 shadow">
+                        <span class="fw-bold">-15%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
 {% endblock %}

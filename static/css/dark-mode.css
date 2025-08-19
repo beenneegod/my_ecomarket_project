@@ -1,0 +1,534 @@
+/* Dark Mode Styles */
+:root.dark-mode {
+    --color-bg: #121212;
+    --color-surface: #1e1e1e;
+    --color-surface-alt: #2a2a2a;
+    --color-text-dark: #e0e0e0;
+    --color-text-medium: #b0b0b0;
+    --color-text-light: #909090;
+    --color-border: #3a3a3a;
+    
+    /* We keep primary colors for branding consistency */
+    --color-primary: #4CAF50;
+    --color-primary-dark: #3B873E;
+    --color-primary-light: #66BB6A;
+}
+
+.dark-mode body {
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 15px,
+        rgba(255, 255, 255, 0.05) 15px,
+        rgba(255, 255, 255, 0.05) 16px
+    );
+}
+
+.dark-mode .navbar,
+.dark-mode .card,
+.dark-mode .list-group-item,
+.dark-mode footer.bg-light {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark);
+}
+
+.dark-mode .bg-light {
+    background-color: var(--color-surface-alt) !important;
+}
+
+.dark-mode .navbar-brand,
+.dark-mode h1, 
+.dark-mode h2, 
+.dark-mode h3, 
+.dark-mode h4, 
+.dark-mode h5, 
+.dark-mode h6 {
+    color: var(--color-text-dark);
+}
+
+.dark-mode .nav-link,
+.dark-mode .dropdown-item {
+    color: var(--color-text-medium) !important;
+}
+
+.dark-mode .nav-link:hover,
+.dark-mode .nav-link.active,
+.dark-mode .dropdown-item:hover {
+    color: var(--color-primary) !important;
+}
+
+.dark-mode .dropdown-menu {
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    /* Override Bootstrap dropdown variables for dark theme */
+    --bs-dropdown-bg: var(--color-surface);
+    --bs-dropdown-border-color: var(--color-border);
+    --bs-dropdown-color: #fff;
+    --bs-dropdown-link-color: #fff;
+    --bs-dropdown-link-hover-color: var(--color-primary);
+    --bs-dropdown-link-hover-bg: rgba(255,255,255,0.08);
+    --bs-dropdown-link-active-color: #fff;
+    --bs-dropdown-link-active-bg: rgba(76, 175, 80, 0.22);
+    --bs-dropdown-header-color: #cfcfcf;
+}
+
+/* Ensure dropdown text is readable in dark mode */
+.dark-mode .navbar .dropdown-item,
+.dark-mode .dropdown-menu .dropdown-item {
+    color: #ffffff !important;
+    background-color: transparent !important;
+}
+.dark-mode .dropdown-menu .dropdown-item:hover,
+.dark-mode .dropdown-menu .dropdown-item:focus {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: var(--color-primary) !important;
+}
+
+/* Ensure icons inherit the item color */
+.dark-mode .dropdown-menu .dropdown-item i { color: inherit !important; }
+
+.dark-mode .form-control,
+.dark-mode .form-select {
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text-dark);
+}
+
+.dark-mode .form-control:focus,
+.dark-mode .form-select:focus {
+    background-color: var(--color-surface);
+    border-color: var(--color-primary);
+}
+
+.dark-mode .form-control::placeholder {
+    color: var(--color-text-medium);
+}
+
+.dark-mode .card-header {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom-color: var(--color-border);
+}
+
+.dark-mode .border-bottom,
+.dark-mode .border-top,
+.dark-mode .border {
+    border-color: var(--color-border) !important;
+}
+
+.dark-mode .text-muted {
+    color: var(--color-text-medium) !important;
+}
+
+.dark-mode .bg-white {
+    background-color: var(--color-surface) !important;
+}
+
+.dark-mode .table,
+.dark-mode .table-striped>tbody>tr:nth-of-type(odd)>* {
+    color: var(--color-text-dark);
+}
+
+.dark-mode .table-striped>tbody>tr:nth-of-type(odd)>* {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode .cart-table th, 
+.dark-mode .cart-table td {
+    border-color: var(--color-border);
+}
+
+.dark-mode .cart-table th {
+    background-color: var(--color-surface-alt);
+}
+
+/* Theme toggle button */
+.theme-toggle-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    color: var(--color-text-medium);
+}
+
+.theme-toggle-btn:hover {
+    background-color: rgba(0,0,0,0.1);
+    color: var(--color-primary);
+}
+
+.dark-mode .theme-toggle-btn:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+/* Fix for pagination in dark mode */
+.dark-mode .pagination .page-link {
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text-medium);
+}
+
+.dark-mode .pagination .page-item.active .page-link {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+.dark-mode .pagination .page-item.disabled .page-link {
+    background-color: var(--color-surface-alt);
+    border-color: var(--color-border);
+    color: var(--color-text-light);
+}
+
+.dark-mode .pagination .page-link:hover:not(.active):not(.disabled) {
+    background-color: var(--color-surface-alt);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+/* Fix for category flashing */
+.dark-mode .list-group,
+.dark-mode .list-group-item,
+.dark-mode .category-item,
+.dark-mode .category-card {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-dark) !important;
+    transition: none !important;
+}
+
+.dark-mode .list-group-item:hover,
+.dark-mode .category-item:hover {
+    background-color: var(--color-surface-alt) !important;
+}
+
+.dark-mode .list-group-item.active {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: #fff !important;
+}
+
+/* Prevent flashing during page transitions: removed global override to avoid reflows/flicker */
+/* Intentionally left blank: rely on targeted rules above. */
+
+/* Dark mode styles for subscription teaser */
+.dark-mode .subscription-teaser.bg-success-subtle {
+    background-color: var(--color-surface-alt) !important;
+}
+
+.dark-mode .subscription-teaser .text-success {
+    color: var(--color-primary) !important;
+}
+
+.dark-mode .subscription-teaser .lead,
+.dark-mode .subscription-teaser li {
+    color: var(--color-text-dark);
+}
+
+/* SweetAlert2 dark mode overrides */
+.dark-mode .swal2-popup {
+    background: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+    border: 1px solid var(--color-border) !important;
+}
+.dark-mode .swal2-title,
+.dark-mode .swal2-html-container {
+    color: var(--color-text-dark) !important;
+}
+.dark-mode .swal2-styled.swal2-confirm {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: #fff !important;
+}
+.dark-mode .swal2-styled.swal2-cancel {
+    background-color: transparent !important;
+    color: var(--color-text-dark) !important;
+    border: 1px solid var(--color-border) !important;
+}
+.dark-mode .swal2-actions .swal2-styled:focus {
+    box-shadow: 0 0 0 0.2rem rgba(var(--color-primary-rgb), 0.25) !important;
+}
+
+/* Dark mode styles for Order History and Subscriptions */
+.dark-mode .order-history-table,
+.dark-mode .subscription-history-table,
+.dark-mode .order-item,
+.dark-mode .subscription-item {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-dark) !important;
+}
+
+.dark-mode .order-header,
+.dark-mode .subscription-header,
+.dark-mode .table thead th,
+.dark-mode .history-header {
+    background-color: var(--color-surface-alt) !important;
+    color: var(--color-text-dark) !important;
+    border-color: var(--color-border) !important;
+}
+
+.dark-mode .order-card,
+.dark-mode .subscription-card,
+.dark-mode .history-card {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+}
+
+.dark-mode .table-striped > tbody > tr,
+.dark-mode .table-hover > tbody > tr {
+    background-color: var(--color-surface) !important;
+}
+
+.dark-mode .table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark-mode .table-hover > tbody > tr:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Fix for generic panels and cards that might be used in history pages */
+.dark-mode .card,
+.dark-mode .list-group-item,
+.dark-mode .table,
+.dark-mode .table td,
+.dark-mode .table th {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-dark) !important;
+}
+
+/* Dark mode styles for Order History and Subscriptions - based on screenshot */
+.dark-mode .subskrypcja,
+.dark-mode [class*="subskrypcja"],
+.dark-mode .subscription-header,
+.dark-mode [class^="zamowienie_"] {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+    border-color: var(--color-border) !important;
+}
+
+/* Fix for the accordion items in history pages */
+.dark-mode .accordion-item,
+.dark-mode .accordion-header,
+.dark-mode .accordion-button:not(.collapsed) {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+    border-color: var(--color-border) !important;
+}
+
+.dark-mode .accordion-button::after {
+    filter: invert(1);
+}
+
+/* Fix for status badges - preserve their colors but adjust contrast */
+.dark-mode [class*="status-"],
+.dark-mode .badge {
+    border: 1px solid var(--color-border);
+}
+
+/* Specific fix for the light blue backgrounds seen in the screenshot */
+.dark-mode .subscription-item,
+.dark-mode [id^="subskrypcja_"],
+.dark-mode [class*="subskrypcja"] {
+    background-color: var(--color-surface-alt) !important;
+}
+
+/* Fix for "Szczegóły Subskrypcji" section */
+.dark-mode .subskrypcja .details,
+.dark-mode .subscription-details,
+.dark-mode [class*="subskrypcja"] > div {
+    background-color: var(--color-surface) !important;
+    border-top: 1px solid var(--color-border);
+    padding-top: 1rem;
+}
+
+/* Fix for the payment status indicators (like "Oczekuje na płatność") */
+.dark-mode .payment-pending,
+.dark-mode .payment-status,
+.dark-mode [class*="oczekuje"] {
+    background-color: rgba(255, 193, 7, 0.2) !important;
+    color: #ffc107 !important;
+    border-color: rgba(255, 193, 7, 0.3) !important;
+}
+
+.dark-mode .payment-completed,
+.dark-mode .status-completed,
+.dark-mode .opłacone {
+    background-color: rgba(40, 167, 69, 0.2) !important;
+    color: #28a745 !important;
+    border-color: rgba(40, 167, 69, 0.3) !important;
+}
+
+.dark-mode .status-cancelled,
+.dark-mode .anulowana {
+    background-color: rgba(108, 117, 125, 0.2) !important;
+    color: #adb5bd !important;
+    border-color: rgba(108, 117, 125, 0.3) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not(.light-mode) {
+        --color-bg: #121212;
+        --color-surface: #1e1e1e;
+        --color-surface-alt: #2a2a2a;
+        --color-text-dark: #e0e0e0;
+        --color-text-medium: #b0b0b0;
+        --color-text-light: #909090;
+        --color-border: #3a3a3a;
+    }
+    
+    body:not(.light-mode) {
+        background-image: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 15px,
+            rgba(255, 255, 255, 0.05) 15px,
+            rgba(255, 255, 255, 0.05) 16px
+        );
+    }
+}
+
+/* Fix for collapsed accordion items in dark mode */
+.dark-mode .accordion-button.collapsed {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+    border-color: var(--color-border) !important;
+}
+
+/* Target the accordion headers and items directly */
+.dark-mode .accordion-item,
+.dark-mode .accordion-header,
+.dark-mode .accordion-button,
+.dark-mode .accordion-collapse {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+}
+
+/* Specifically target the order history rows */
+.dark-mode [class^="zamowienie_"],
+.dark-mode [id^="zamowienie_"],
+.dark-mode .zamowienie-item {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+}
+
+/* Make sure the subskrypcja elements are properly styled */
+.dark-mode .subskrypcja,
+.dark-mode [id^="subskrypcja_"],
+.dark-mode [class^="subskrypcja_"] {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+}
+
+/* Fix for all generic rows in the history tables */
+.dark-mode .row.order-row,
+.dark-mode .row.subscription-row,
+.dark-mode .list-group-item.order-item,
+.dark-mode .list-group-item.subscription-item {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+}
+
+/* Fix for any bootstrap cards used in the history pages */
+.dark-mode .card-header {
+    background-color: var(--color-surface-alt) !important;
+    border-color: var(--color-border) !important;
+}
+
+/* Fix for any tables used to display order details */
+.dark-mode table.table,
+.dark-mode table.table tr,
+.dark-mode table.table td,
+.dark-mode table.table th {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-dark) !important;
+}
+
+/* Fix the status badges that could have light backgrounds */
+.dark-mode span.badge.bg-light,
+.dark-mode span.badge.text-dark {
+    background-color: var(--color-surface-alt) !important;
+    color: var(--color-text-dark) !important;
+    border: 1px solid var(--color-border);
+}
+
+/* Make sure the "Status:" labels are visible */
+.dark-mode .status-label {
+    color: var(--color-text-medium) !important;
+}
+
+/* Fix for blog tags in dark mode */
+.dark-mode .badge.bg-light.text-dark,
+.dark-mode a.badge.bg-light,
+.dark-mode .badge.text-dark {
+    background-color: var(--color-surface-alt) !important;
+    color: var(--color-text-dark) !important;
+    border: 1px solid var(--color-border);
+}
+
+.dark-mode a.badge:hover {
+    background-color: var(--color-primary) !important;
+    color: #fff !important;
+    border-color: var(--color-primary);
+}
+
+/* Fix for tag containers/sections */
+.dark-mode .tags-section,
+.dark-mode .tag-cloud,
+.dark-mode .tags-widget {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+}
+
+/* Product detail page styles for dark mode */
+.dark-mode .quantity-input,
+.dark-mode .quantity-input-detail,
+.dark-mode input[type="number"],
+.dark-mode .form-control {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-dark) !important;
+}
+
+.dark-mode .product-detail-card,
+.dark-mode .product-info,
+.dark-mode .product-description,
+.dark-mode .related-products {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+    border-color: var(--color-border) !important;
+}
+
+/* Fix for product availability badge in dark mode */
+.dark-mode .badge.bg-success-subtle,
+.dark-mode .badge.text-success-emphasis {
+    background-color: rgba(40, 167, 69, 0.2) !important;
+    color: #4CAF50 !important;
+}
+
+/* Fix for product detail container */
+.dark-mode .container > .row > .col > div,
+.dark-mode .container > .row > div > div {
+    background-color: transparent !important;
+}
+
+/* Fix for any input groups */
+.dark-mode .input-group,
+.dark-mode .input-group-text {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-dark) !important;
+}
+
+/* Prevent white flash on add to cart */
+.dark-mode * {
+    transition-property: transform, box-shadow, color, background-image !important;
+    transition-duration: 0.3s !important;
+}

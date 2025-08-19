@@ -18,7 +18,7 @@ class EcoPlaceForm(forms.ModelForm):
             "name": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "Напр.: Zero‑waste магазин",
+                    "placeholder": "Np.: Sklep zero‑waste",
                 }
             ),
             "category": forms.Select(
@@ -29,20 +29,20 @@ class EcoPlaceForm(forms.ModelForm):
             "city": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "Город",
+                    "placeholder": "Miasto",
                 }
             ),
             "address": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "placeholder": "Улица, дом (необязательно)",
+                    "placeholder": "Ulica, numer domu (opcjonalnie)",
                 }
             ),
             "lat": forms.NumberInput(
                 attrs={
                     "class": "form-control",
                     "step": "any",
-                    "placeholder": "напр. 52.2298",
+                    "placeholder": "Np. 52.2298",
                     "min": "-90",
                     "max": "90",
                 }
@@ -51,7 +51,7 @@ class EcoPlaceForm(forms.ModelForm):
                 attrs={
                     "class": "form-control",
                     "step": "any",
-                    "placeholder": "напр. 21.0118",
+                    "placeholder": "Np. 21.0118",
                     "min": "-180",
                     "max": "180",
                 }
@@ -60,7 +60,7 @@ class EcoPlaceForm(forms.ModelForm):
                 attrs={
                     "rows": 3,
                     "class": "form-control",
-                    "placeholder": "Короткое описание (необязательно)",
+                    "placeholder": "Krótki opis (opcjonalnie)",
                 }
             ),
         }

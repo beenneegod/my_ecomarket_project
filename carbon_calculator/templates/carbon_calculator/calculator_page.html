@@ -85,10 +85,11 @@
             font-weight: bold;
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/calculator.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4 mb-5" data-aos="fade-in">
+<div class="container mt-4 mb-5 calculator-page" data-aos="fade-in">
     <header class="text-center mb-5">
         <h1 class="display-5 fw-bold">{{ page_title|default:"Eко-калькулятор" }}</h1>
         <p class="lead text-muted col-lg-9 mx-auto">
@@ -301,6 +302,7 @@
 
 {% block extra_js %}
 {{ block.super }}
+<script src="{% static 'js/calculator.js' %}"></script>
 {% if results_data and results_data.breakdown_annual_json %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>

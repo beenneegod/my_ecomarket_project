@@ -5,6 +5,17 @@
     {{ page_title|default:box_type.name }} - EcoMarket
 {% endblock %}
 
+{% block meta_description %}
+    {{ box_type.name }} — {{ box_type.price }} PLN / {{ box_type.get_billing_period_display }}. {{ box_type.description|striptags|truncatewords:25 }}
+{% endblock %}
+{% block og_title %}{{ box_type.name }} — EcoMarket{% endblock %}
+{% block og_description %}{{ box_type.description|striptags|truncatewords:30 }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_image %}{% if box_type.image %}{{ box_type.image.url }}{% endif %}{% endblock %}
+{% block twitter_title %}{{ box_type.name }} — EcoMarket{% endblock %}
+{% block twitter_description %}{{ box_type.description|striptags|truncatewords:30 }}{% endblock %}
+{% block twitter_image %}{% if box_type.image %}{{ box_type.image.url }}{% endif %}{% endblock %}
+
 {% block content %}
 <div class="container mt-4 mb-5" data-aos="fade-in">
     <div class="row justify-content-center">
@@ -20,7 +31,7 @@
                     </div>
                     <div class="col-md-7 d-flex flex-column">
                         <div class="card-body p-4 p-md-5">
-                            <h1 class="card-title display-5 fw-bold mb-3">{{ box_type.name }}</h1>
+                            <h1 class="card-title display-5 fw-bold mb-3 text-reset">{{ box_type.name }}</h1>
                             
                             <div class="mb-4">
                                 <span class="display-4 fw-bold text-primary">{{ box_type.price }} PLN</span>

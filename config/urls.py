@@ -11,6 +11,14 @@ from store import views as store_views
 from django.contrib.auth import views as auth_views # Импортируем auth_views
 from store.forms import CustomAuthenticationForm, CustomPasswordResetForm, CustomSetPasswordForm
 from django.urls import path, include, reverse_lazy
+from django.contrib.sitemaps.views import sitemap
+from .sitemaps import (
+    ProductSitemap,
+    CategorySitemap,
+    BlogPostSitemap,
+    StaticViewSitemap,
+    SubscriptionBoxSitemap,
+)
 from django.http import HttpResponse  # <-- добавить
 
 
@@ -61,6 +69,21 @@ urlpatterns = [
     path('eco-challenges/', include('challenges.urls', namespace='challenges')),
     path('eco-places/', include('places.urls', namespace='places')),
     path('chat/', include('chat.urls', namespace='chat')),
+    # SEO: Sitemaps
+    path('sitemap.xml', sitemap, {
+        'sitemaps': {
+            'static': StaticViewSitemap,
+            'products': ProductSitemap,
+            'categories': CategorySitemap,
+            'blog': BlogPostSitemap,
+            'subscription_boxes': SubscriptionBoxSitemap,
+        }
+    }, name='django.contrib.sitemaps.views.sitemap'),
+    # robots.txt (простая статика через HttpResponse)
+    path('robots.txt', lambda r: HttpResponse(
+        "User-agent: *\nAllow: /\nSitemap: {}/sitemap.xml\n".format(settings.SITE_URL),
+        content_type='text/plain'
+    )),
 ]
 
 # В режиме разработки (DEBUG=True) добавляем обработку медиа-файлов

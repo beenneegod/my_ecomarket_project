@@ -1,10 +1,10 @@
 {% if user.is_authenticated %}
-    <h3>Leave a comment</h3>
+    <h3>Zostaw komentarz</h3>
     <form method="post" class="mt-3">
         {% csrf_token %}
         {{ comment_form.as_p }}
-        <button type="submit" class="btn btn-primary mt-2">Submit Comment</button>
+        <button type="submit" class="btn btn-primary mt-2">Wyślij komentarz</button>
     </form>
 {% else %}
-    <p>Please <a href="{% url 'login' %}?next={{ request.path }}">log in</a> to post a comment.</p>
+    <p>Proszę <a href="{% url 'login' %}?next={{ request.path }}">zalogować się</a>, aby dodać komentarz.</p>
 {% endif %}

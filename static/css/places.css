@@ -1,0 +1,38 @@
+.leaflet-map{height:540px;border-radius:8px;overflow:hidden;border:1px solid #e5e5e5}
+.dark-mode .leaflet-tile-container img{filter:brightness(0.9)}
+
+/* Leaflet popup enhancements */
+.leaflet-popup-content .reviews-scroll{max-height:240px;overflow:auto;padding-right:2px}
+.leaflet-popup-content .btn-tight{padding:2px 8px;line-height:1.2}
+.leaflet-popup-content .btn-primary{background-color:var(--color-primary);border-color:var(--color-primary)}
+.leaflet-popup-content .btn-outline-primary{--bs-btn-color:var(--color-primary);--bs-btn-border-color:var(--color-primary);--bs-btn-hover-bg:var(--color-primary);--bs-btn-hover-border-color:var(--color-primary);--bs-btn-active-bg:var(--color-primary);--bs-btn-active-border-color:var(--color-primary)}
+.dark-mode .leaflet-popup-content .btn-primary{background-color:var(--color-primary);border-color:var(--color-primary)}
+.dark-mode .leaflet-popup-content .btn-outline-primary{--bs-btn-color:var(--color-primary);--bs-btn-border-color:var(--color-primary);--bs-btn-hover-bg:var(--color-primary);--bs-btn-hover-border-color:var(--color-primary);--bs-btn-active-bg:var(--color-primary);--bs-btn-active-border-color:var(--color-primary)}
+
+/* Custom select for city filter */
+.custom-select{ position: relative; display:inline-block; }
+.custom-select-hidden{ position:absolute !important; left:-9999px; width:1px; height:1px; }
+.custom-select-trigger{
+	display:inline-flex; align-items:center; justify-content:space-between; gap:8px;
+	min-width:220px; height:38px; padding:6px 12px;
+	background: var(--color-surface); color: var(--color-text-dark);
+	border: 1px solid var(--color-border); border-radius: 8px;
+	cursor:pointer;
+}
+.custom-select-trigger::after{ content:'▾'; opacity:.8; font-size:12px; }
+.custom-select-menu{
+	position:absolute; z-index: 1000; top: calc(100% + 6px); left:0; right:0;
+	background: var(--color-surface); border:1px solid var(--color-border); border-radius: 10px;
+	box-shadow: 0 8px 24px rgba(0,0,0,.2);
+	padding:6px; display:none;
+}
+.custom-select-menu.is-open{ display:block; }
+.custom-select-option{
+	display:block; width:100%; text-align:left; border:none; background:transparent; color:var(--color-text-dark);
+	padding:8px 10px; border-radius:6px; cursor:pointer;
+}
+.custom-select-option:hover, .custom-select-option:focus{ background: rgba(46,125,50,.12); color:var(--color-primary); outline:none; }
+.custom-select-option.is-selected{ background: rgba(46,125,50,.18); color:var(--color-primary); }
+.dark-mode .custom-select-trigger{ background: var(--color-surface); border-color: var(--color-border); color: var(--color-text-dark); }
+.dark-mode .custom-select-menu{ background: var(--color-surface); border-color: var(--color-border); }
+.dark-mode .custom-select-option{ color: var(--color-text-dark); }

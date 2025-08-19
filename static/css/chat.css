@@ -1,0 +1,160 @@
+/* Chat area respects theme; no forced white in dark mode */
+.chat-messages { 
+  height: 420px; 
+  overflow-y: auto; 
+  overflow-x: hidden; /* avoid horizontal scroll */
+  background: var(--color-surface); 
+  color: var(--color-text-dark); 
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; /* space between bubbles */
+  padding-bottom: 6px; /* breathing room for the scroll button */
+}
+/* Narrow the whole chat area */
+#chat-root{ max-width: 920px; width: 100%; margin-inline: auto; }
+/* User messages can be highlighted */
+.dark-mode .chat-messages .from-current-user [data-text] { color: #ffffff; }
+/* Keep timestamps muted in both themes */
+.chat-messages small.text-muted { color: var(--color-text-light) !important; }
+
+/* Inputs */
+.chat-invite-input { max-width: 260px; }
+
+/* Attachments preview */
+.chat-attachments-preview{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px }
+.chat-attachments-item{ position:relative; width:64px; height:64px; border-radius:6px; overflow:hidden; border:1px solid var(--color-border) }
+.chat-attachments-item img{ width:100%; height:100%; object-fit:cover; display:block }
+.chat-attachments-remove{ position:absolute; top:2px; right:2px; width:20px; height:20px; line-height:18px; text-align:center; border:none; border-radius:10px; background:rgba(0,0,0,.5); color:#fff; cursor:pointer }
+.chat-attachments-remove:hover{ background:rgba(0,0,0,.7) }
+.dark-mode .chat-attachments-item{ border-color: var(--color-border) }
+
+/* Floating scroll-to-bottom button inside the chat messages area (absolute, smooth) */
+.chat-messages{ position: relative; }
+.chat-scroll-bottom{ position:absolute; right:10px; z-index:50; box-shadow:0 2px 8px rgba(0,0,0,.2); opacity:0; transform: translateY(8px); transition: opacity .18s ease, transform .18s ease; }
+.chat-scroll-bottom.is-visible{ opacity:1; transform: translateY(0); }
+
+/* Smooth message appearance */
+.chat-messages .chat-msg{ transition: opacity .2s ease, transform .2s ease; }
+.chat-messages .chat-msg.enter{ opacity:0; transform: translateY(6px); }
+/* Fade-out on remove */
+.chat-messages .chat-msg.removing{ opacity:0; transform: translateY(4px) scale(0.98); }
+@media (prefers-reduced-motion: reduce){
+  .chat-messages .chat-msg{ transition: none; }
+}
+
+/* Message bubbles */
+.chat-msg{
+  align-self: flex-end; /* default to right: others */
+  max-width: min(70%, 560px);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 6px 8px;
+  background: rgba(0,0,0,0.02);
+  box-shadow: none;
+  word-break: break-word;
+  overflow-wrap: anywhere; /* break very long words/urls */
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+.chat-msg.from-current-user{
+  align-self: flex-start; /* own on left */
+  border-color: var(--bs-primary);
+  background: var(--bs-primary-bg-subtle, rgba(13,110,253,0.08));
+}
+.dark-mode .chat-msg{ border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.04); }
+.dark-mode .chat-msg.from-current-user{ border-color: rgba(0, 31, 206, 0.6); background: rgba(1, 77, 192, 0.18); }
+.dark-mode .chat-msg.from-current-user [data-text]{ color:#fff; }
+.dark-mode .chat-messages small.text-muted { color: rgba(255,255,255,0.6) !important; }
+.chat-msg [data-text]{ white-space: pre-wrap; }
+.chat-msg a{ word-break: break-all; }
+.chat-msg.pending{ opacity: .8; }
+
+/* Bubble corner accents (like chat tails without the triangle) */
+.chat-msg{ border-top-left-radius: 14px; border-top-right-radius: 6px; border-bottom-right-radius: 14px; border-bottom-left-radius: 14px; }
+.chat-msg.from-current-user{ border-top-left-radius: 6px; border-top-right-radius: 14px; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; }
+
+/* Inline attachment thumbnails */
+.chat-attachments{ display:flex; flex-wrap:wrap; gap:6px; }
+.chat-attach-thumb{ width:116px; height:116px; object-fit:cover; border-radius:8px; display:block; border:1px solid var(--color-border); }
+.chat-attach-thumb-link{ display:inline-block; line-height:0; cursor: zoom-in; }
+.dark-mode .chat-attach-thumb{ border-color: rgba(255,255,255,0.18); }
+
+/* Lightbox */
+.chat-lightbox{ position:fixed; inset:0; z-index:1040; display:none; }
+.chat-lightbox.is-open{ display:block; }
+.chat-lightbox-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.7); }
+.chat-lightbox-content{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:24px; }
+.chat-lightbox-img{ max-width:92vw; max-height:88vh; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.4); background:#000; }
+.chat-lightbox-close{ position:absolute; top:14px; right:16px; background:rgba(0,0,0,.5); color:#fff; border:none; border-radius:16px; width:32px; height:32px; cursor:pointer; }
+.chat-lightbox-nav{ position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,.4); color:#fff; border:none; border-radius:18px; width:36px; height:36px; cursor:pointer; }
+.chat-lightbox-prev{ left:18px; }
+.chat-lightbox-next{ right:18px; }
+
+/* Reply UI */
+.chat-reply{ border-left:3px solid var(--bs-primary); padding-left:6px; margin:4px 0; opacity:.9; }
+#replyBar .text-truncate{ vertical-align: middle; max-width: 40vw; }
+
+/* Reply bar component above the form */
+.reply-bar{
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: rgba(0,0,0,.03);
+}
+.dark-mode .reply-bar{ border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.06); }
+.reply-icon{ font-size: 14px; color: var(--bs-primary); }
+.reply-excerpt{ max-width: 40vw; display: inline-block; vertical-align: middle; color: var(--color-text-light); }
+.dark-mode .reply-excerpt{ color: rgba(255,255,255,.7); }
+.reply-close{
+  border: none; background: transparent; color: var(--color-text-light);
+  width: 24px; height: 24px; border-radius: 12px; line-height: 22px; text-align: center; cursor: pointer;
+}
+.reply-close:hover{ background: rgba(0,0,0,.08); }
+.dark-mode .reply-close:hover{ background: rgba(255,255,255,.12); color:#fff; }
+
+/* Hover-only delete icon for own messages */
+.chat-msg{ position: relative; }
+.chat-msg::after{
+  content: '';
+  position: absolute; top: 0; bottom: 0; right: -40px; width: 72px;
+  /* Transparent hover bridge so :hover stays active when moving to the icon */
+  pointer-events: auto;
+}
+/* Left-side hover bridge for left-positioned icons (reply, delete on own) */
+.chat-msg::before{
+  content: '';
+  position: absolute; top: 0; bottom: 0; left: -40px; width: 72px;
+  pointer-events: auto;
+}
+.chat-delete-btn{
+  position:absolute; top:50%; right:-30px; z-index:2;
+  width:28px; height:28px; line-height:26px; text-align:center;
+  border:none; border-radius:50%; cursor:pointer;
+  background: rgba(0,0,0,.06); color:#333;
+  opacity:0; visibility:hidden; transform: translateY(-50%) scale(.9);
+  transition: opacity .2s ease .45s, transform .16s ease, background .15s ease, color .15s ease;
+}
+.chat-msg:hover .chat-delete-btn{ opacity:1; visibility:visible; transform: translateY(-50%) scale(1); transition-delay: 0s; }
+.chat-delete-btn:hover,
+.chat-delete-btn:focus{ background: rgba(0,0,0,.15); opacity:1; visibility:visible; transform: translateY(-50%) scale(1); outline:none; transition-delay: 0s; }
+.dark-mode .chat-delete-btn{ background: rgba(255,255,255,.12); color:#fff; }
+.dark-mode .chat-delete-btn:hover{ background: rgba(255,255,255,.22); }
+
+/* Hover-only reply icon for other users' messages */
+.chat-reply-btn{
+  position:absolute; top:50%; left:-30px; right:auto; z-index:2;
+  width:28px; height:28px; line-height:26px; text-align:center;
+  border:none; border-radius:50%; cursor:pointer;
+  background: rgba(0,0,0,.06); color:#333;
+  opacity:0; visibility:hidden; transform: translateY(-50%) scale(.9);
+  transition: opacity .2s ease .2s, transform .16s ease, background .15s ease, color .15s ease;
+}
+.chat-msg:hover .chat-reply-btn{ opacity:1; visibility:visible; transform: translateY(-50%) scale(1); transition-delay: 0s; }
+.chat-reply-btn:hover,
+.chat-reply-btn:focus{ background: rgba(0,0,0,.15); opacity:1; visibility:visible; transform: translateY(-50%) scale(1); outline:none; transition-delay: 0s; }
+.dark-mode .chat-reply-btn{ background: rgba(255,255,255,.12); color:#fff; }
+.dark-mode .chat-reply-btn:hover{ background: rgba(255,255,255,.22); }
+
+/* Avoid overlap: hide reply icon on own messages */
+.chat-msg.from-current-user .chat-reply-btn{ display: none; }

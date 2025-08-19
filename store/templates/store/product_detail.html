@@ -2,17 +2,25 @@
 {% load static image_extras %}
 
 {% block title %}{{ product.name }} - EcoMarket{% endblock %}
+{% block meta_description %}{{ product.name }} — {{ product.price }} PLN. {{ product.description|striptags|truncatewords:25 }}{% endblock %}
+{% block og_title %}{{ product.name }} — EcoMarket{% endblock %}
+{% block og_description %}{{ product.description|striptags|truncatewords:30 }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_image %}{% product_image product 'detail' %}{% endblock %}
+{% block twitter_title %}{{ product.name }} — EcoMarket{% endblock %}
+{% block twitter_description %}{{ product.description|striptags|truncatewords:30 }}{% endblock %}
+{% block twitter_image %}{% product_image product 'detail' %}{% endblock %}
 
 {% block content %}
 <div class="container mt-4" data-aos="fade-in">
     <div class="row">
         <div class="col-md-6 mb-4" data-aos="fade-right" data-aos-delay="100">
-            <img src="{% product_image product 'detail' %}" alt="{{ product.name }}" class="img-fluid rounded shadow-sm" style="max-height: 500px; object-fit: contain;">
+            <img src="{% product_image product 'detail' %}" alt="{{ product.name }}" class="img-fluid rounded shadow-sm product-detail-image">
         </div>
 
         <div class="col-md-6" data-aos="fade-left" data-aos-delay="200">
             <h2 class="mb-3">{{ product.name }}</h2>
-            <p class="display-5 fw-bold mb-3" style="color: #218838;">
+            <p class="display-5 fw-bold mb-3" style="color: var(--color-primary);">
                 {{ product.price }} PLN
             </p>
 
@@ -21,36 +29,27 @@
                 <p>{{ product.description|linebreaksbr }}</p>
             </div>
 
-            <div class="add-to-cart-form mb-4 p-3 bg-light border rounded">
-                {% if product.stock > 0 %}
-                    <div class="row g-2 align-items-center mb-3">
-                        <div class="col-auto">
-                            <label for="quantity-{{ product.id }}" class="col-form-label fw-medium">Ilość:</label>
-                        </div>
-                        <div class="col-auto">
-                            <input type="number" id="quantity-{{ product.id }}" name="quantity" value="1" min="1" max="{{ product.stock }}" class="form-control quantity-input-detail" style="width: 80px;">
-                        </div>
-                        <div class="col-auto">
-                            <button class="btn btn-primary add-to-cart-btn" data-product-id="{{ product.id }}" data-add-url="{% url 'store:cart_add' product_id=product.id %}">
-                                <i class="bi bi-cart-plus"></i> Dodaj do koszyka
-                            </button>
-                        </div>
+            <form method="post" action="{% url 'store:cart_add' product.id %}" class="add-to-cart-form">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="quantity" class="form-label">Ilość:</label>
+                    <div class="d-flex align-items-center">
+                        <input type="number" name="quantity" value="1" min="1" max="{{ product.stock }}" class="quantity-input-detail form-control me-2">
+                        <button type="button" data-product-id="{{ product.id }}" data-add-url="{% url 'store:cart_add' product.id %}" class="btn btn-primary add-to-cart-btn">
+                            <i class="bi bi-cart-plus"></i> Dodaj do koszyka
+                        </button>
                     </div>
-                    {% if product.stock > 5 %}
-                        <div class="stock-info stock-available mt-2">
-                            <i class="bi bi-check-circle-fill"></i> Na stanie: {{ product.stock }} szt.
-                        </div>
-                    {% elif product.stock > 0 %}
-                        <div class="stock-info stock-low mt-2">
-                            <i class="bi bi-exclamation-triangle-fill"></i> Ostatnie sztuki: {{ product.stock }} szt.
-                        </div>
-                    {% endif %}
-                {% else %}
-                    <div class="stock-info stock-out mt-2 mb-3">
-                        <i class="bi bi-x-circle-fill"></i> Brak produktu
+                </div>
+                {% if product.stock > 5 %}
+                    <div class="stock-info stock-available mt-2">
+                        <i class="bi bi-check-circle-fill"></i> Na stanie: {{ product.stock }} szt.
+                    </div>
+                {% elif product.stock > 0 %}
+                    <div class="stock-info stock-low mt-2">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Ostatnie sztuki: {{ product.stock }} szt.
                     </div>
                 {% endif %}
-            </div>
+            </form>
 
             <a href="{% url 'store:product_list' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Wróć do listy produktów

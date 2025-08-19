@@ -9,11 +9,18 @@ from channels.layers import get_channel_layer
 from .models import ChatRoom, Message, ChatInvite, MessageAttachment
 from .forms import ChatRoomForm, MessageForm
 
+# Chat attachments validation settings
+ALLOWED_MIME_PREFIXES = ['image/']
+ALLOWED_MIME_TYPES = ['application/pdf']
+MAX_FILE_BYTES = 10 * 1024 * 1024  # 10 MB per file
+MAX_TOTAL_BYTES = 40 * 1024 * 1024  # 40 MB per message
+
 
 @login_required
 def room_list(request):
     rooms = ChatRoom.objects.filter(Q(is_private=False) | Q(members=request.user)).distinct().order_by('-created_at')
-    return render(request, 'chat/room_list.html', {'rooms': rooms})
+    pending_invites = ChatInvite.objects.filter(invitee=request.user, status='pending').select_related('room', 'inviter')
+    return render(request, 'chat/room_list.html', {'rooms': rooms, 'pending_invites': pending_invites})
 
 
 @login_required
@@ -50,12 +57,23 @@ def messages_api(request, pk: int):
     qs = room.messages.filter(is_removed=False).prefetch_related('attachments').order_by('-id')[:50]
     if since_id and since_id.isdigit():
         qs = room.messages.filter(is_removed=False, id__gt=int(since_id)).prefetch_related('attachments').order_by('id')[:100]
+        iterable = qs
+    else:
+        # Initial load: reverse newest-first slice to oldest→newest
+        iterable = list(reversed(list(qs)))
     data = [
         {
             'id': m.id,
             'user': m.user.username,
             'text': m.text,
             'created_at': m.created_at.isoformat(),
+            'reply_to': (
+                {
+                    'id': m.reply_to_id,
+                    'user': getattr(m.reply_to.user, 'username', '') if m.reply_to_id else '',
+                    'text': (m.reply_to.text[:120] if m.reply_to and m.reply_to.text else ''),
+                } if m.reply_to_id else None
+            ),
             'attachments': [
                 {
                     'url': a.file.url,
@@ -65,7 +83,7 @@ def messages_api(request, pk: int):
             ],
             'can_delete': (m.user_id == request.user.id) or (room.owner_id == request.user.id),
         }
-        for m in qs
+    for m in iterable
     ]
     return JsonResponse({'messages': data})
 
@@ -77,34 +95,71 @@ def send_message(request, pk: int):
     if room.is_private and request.user not in room.members.all():
         return JsonResponse({'error': 'forbidden'}, status=403)
     form = MessageForm(request.POST)
+    reply_to_id = request.POST.get('reply_to')
+    files = request.FILES.getlist('attachments')
+    # Server-side validation for attachments
+    total_size = 0
+    invalid = []
+    for f in files:
+        ct = getattr(f, 'content_type', '') or ''
+        size = getattr(f, 'size', 0) or 0
+        if size > MAX_FILE_BYTES:
+            invalid.append(f"Plik '{f.name}' przekracza {MAX_FILE_BYTES // (1024*1024)} MB")
+        allowed = any(ct.startswith(p) for p in ALLOWED_MIME_PREFIXES) or ct in ALLOWED_MIME_TYPES
+        if not allowed:
+            invalid.append(f"Niedozwolony typ pliku dla '{f.name}'")
+        total_size += size
+    if total_size > MAX_TOTAL_BYTES:
+        invalid.append(f"Łączny rozmiar przekracza {MAX_TOTAL_BYTES // (1024*1024)} MB")
+    if invalid:
+        return JsonResponse({'ok': False, 'errors': invalid}, status=400)
     if form.is_valid():
         msg = form.save(commit=False)
         msg.room = room
         msg.user = request.user
+        if reply_to_id and str(reply_to_id).isdigit():
+            try:
+                from .models import Message as Msg
+                msg.reply_to = Msg.objects.filter(room=room).get(pk=int(reply_to_id))
+            except Msg.DoesNotExist:
+                pass
         msg.save()
-        # Save attachments if any
-        for f in request.FILES.getlist('attachments'):
-            MessageAttachment.objects.create(message=msg, file=f)
-        # Broadcast over WS
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"chat_{room.id}",
-            {
-                'type': 'chat.message',
-                'id': msg.id,
-                'user': msg.user.username,
-                'text': msg.text,
-                'created_at': msg.created_at.isoformat(),
-                'user_id': request.user.id,
-                'room_owner_id': room.owner_id,
-                'attachments': [
-                    {'url': a.file.url, 'name': a.file.name.split('/')[-1]}
-                    for a in msg.attachments.all()
-                ],
-            }
-        )
-        return JsonResponse({'ok': True, 'id': msg.id})
-    return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+    else:
+        # Allow image-only (or file-only) messages: create an empty-text message if files provided
+        if files:
+            msg = Message.objects.create(room=room, user=request.user, text='')
+        else:
+            return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+
+    # Save attachments if any (cap to first N to prevent abuse)
+    for f in files[:10]:
+        MessageAttachment.objects.create(message=msg, file=f)
+    # Broadcast over WS
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"chat_{room.id}",
+        {
+            'type': 'chat.message',
+            'id': msg.id,
+            'user': msg.user.username,
+            'text': msg.text,
+            'created_at': msg.created_at.isoformat(),
+            'user_id': request.user.id,
+            'room_owner_id': room.owner_id,
+            'attachments': [
+                {'url': a.file.url, 'name': a.file.name.split('/')[-1]}
+                for a in msg.attachments.all()
+            ],
+            'reply_to': (
+                {
+                    'id': msg.reply_to_id,
+                    'user': getattr(msg.reply_to.user, 'username', '') if msg.reply_to_id else '',
+                    'text': (msg.reply_to.text[:120] if msg.reply_to and msg.reply_to.text else ''),
+                } if msg.reply_to_id else None
+            ),
+        }
+    )
+    return JsonResponse({'ok': True, 'id': msg.id})
 
 
 @login_required
@@ -149,8 +204,12 @@ def send_invite(request, pk: int):
         invitee = get_object_or_404(User, username=username)
     else:
         return JsonResponse({'error': 'user_id or username required'}, status=400)
+    # Use only the unique fields in the lookup; set inviter via defaults to avoid duplicates
     inv, created = ChatInvite.objects.get_or_create(
-        room=room, inviter=request.user, invitee=invitee, status='pending'
+        room=room,
+        invitee=invitee,
+        status='pending',
+        defaults={'inviter': request.user},
     )
     return JsonResponse({'ok': True, 'created': created, 'invite_id': inv.id})
 
@@ -162,7 +221,10 @@ def accept_invite(request, invite_id: int):
     inv.status = 'accepted'
     inv.save(update_fields=['status'])
     inv.room.members.add(request.user)
-    return JsonResponse({'ok': True})
+    # If regular form post (not AJAX), redirect back to room list
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True})
+    return redirect('chat:room_list')
 
 
 @login_required
@@ -171,4 +233,6 @@ def decline_invite(request, invite_id: int):
     inv = get_object_or_404(ChatInvite, pk=invite_id, invitee=request.user)
     inv.status = 'declined'
     inv.save(update_fields=['status'])
-    return JsonResponse({'ok': True})
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True})
+    return redirect('chat:room_list')

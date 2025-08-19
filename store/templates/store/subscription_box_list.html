@@ -5,10 +5,19 @@
     {{ page_title|default:"Nasze Eko Boxy Subskrypcyjne" }} - EcoMarket
 {% endblock %}
 
+{% block meta_description %}
+    Wybierz Eko Box: świeże, ekologiczne produkty w subskrypcji z dostawą do domu.
+{% endblock %}
+{% block og_title %}{{ page_title|default:"Eko Boxy Subskrypcyjne" }} — EcoMarket{% endblock %}
+{% block og_description %}Nasze zestawy subskrypcyjne z warzywami, owocami i więcej.{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block twitter_title %}{{ page_title|default:"Eko Boxy Subskrypcyjne" }} — EcoMarket{% endblock %}
+{% block twitter_description %}Nasze zestawy subskrypcyjne z warzywami, owocami i więcej.{% endblock %}
+
 {% block content %}
 <div class="container mt-4 mb-5" data-aos="fade-in">
     <header class="text-center mb-5">
-        <h1 class="display-5 fw-bold">{{ page_title|default:"Nasze Eko Boxy Subskrypcyjne" }}</h1>
+        <h1 class="display-5 fw-bold text-reset">{{ page_title|default:"Nasze Eko Boxy Subskrypcyjne" }}</h1>
         <p class="lead text-muted col-lg-8 mx-auto">
             Wybierz idealny zestaw zdrowych, ekologicznych produktów dostarczanych regularnie pod Twoje drzwi.
         </p>
@@ -35,7 +44,7 @@
                         {% endif %}
                         <div class="card-body d-flex flex-column p-4">
                             <h4 class="card-title h5 fw-bold mb-2">
-                                <a href="{{ box.get_absolute_url }}" class="text-decoration-none text-dark stretched-link-style-issue">{{ box.name }}</a>
+                                <a href="{{ box.get_absolute_url }}" class="text-decoration-none text-reset stretched-link">{{ box.name }}</a>
                             </h4>
                             <p class="card-text text-muted small mb-3">{{ box.description|truncatewords:20 }}</p>
 
@@ -84,26 +93,7 @@
 </div>
 
 {# Нужно создать изображение placeholder_box.png в static/img/ #}
-{# CSS для .subscription-box-card и анимации выбора #}
-<style>
-    .subscription-box-card {
-        cursor: pointer;
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    }
-    .subscription-box-card:hover {
-        transform: translateY(-5px);
-        box-shadow: var(--shadow-lg) !important;
-    }
-    .subscription-box-card .form-check-input:checked + .form-check-label {
-        background-color: var(--color-primary) !important;
-        color: var(--color-surface) !important;
-        border-color: var(--color-primary) !important;
-        font-weight: bold;
-    }
-    .subscription-box-card .form-check-label {
-        transition: background-color 0.2s ease, color 0.2s ease;
-    }
-</style>
+{# Стили перенесены в static/css/custom_styles.css #}
 
 {% endblock %}
 

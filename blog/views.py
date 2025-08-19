@@ -1,9 +1,13 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.template.loader import render_to_string
 from django.views.generic import ListView, View # DetailView is not directly used, a custom View is.
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy # Not strictly needed here, but good for general use.
 from django.contrib import messages
-from .models import Post, Comment
+from .models import Post, Comment, CommentRating, BlogBan
 from .forms import CommentForm # Assuming CommentForm will be created later
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,11 +15,12 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated # Или кастомный permission для API-ключа
 from rest_framework.authentication import TokenAuthentication
 from .serializers import PostCreateSerializer
-from .models import Post # Уже импортирован
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.utils import timezone
+from datetime import timedelta
 from django.conf import settings
+from django.db.models import Avg, Count, Subquery, OuterRef, Value, IntegerField, Q
 import re
 
 User = get_user_model()
@@ -34,10 +39,10 @@ class CreatePostAPIView(APIView):
             except User.DoesNotExist:
                 # Логируем ошибку или возвращаем 500, если системный автор не найден
                 # logger.error(f"API Post Author '{author_username}' not found!")
-                return Response({"error": "API post author not configured correctly on the server."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"error": "Autor API posta nie jest poprawnie skonfigurowany na serwerze."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             except Exception as e:
                 # logger.error(f"Error getting API Post Author: {e}")
-                return Response({"error": f"Could not determine API post author: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"error": f"Nie można ustalić autora posta API: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             title = serializer.validated_data['title']
             # Remove leading markdown hashes from titles like "## Title"
@@ -81,12 +86,13 @@ class CreatePostAPIView(APIView):
                 )
             except Exception as e:
                 return Response(
-                    {"error": f"Failed to create post: {str(e)}"},
+                    {"error": f"Nie udało się utworzyć wpisu: {str(e)}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(cache_page(300), name='dispatch')
 class PostListView(ListView):
     model = Post
     template_name = 'blog/post_list.html'
@@ -98,14 +104,97 @@ class PostDetailView(View): # Inherit from View for custom GET and POST
 
     def get(self, request, slug, *args, **kwargs):
         post = get_object_or_404(Post, slug=slug, status='published')
-        comments = post.comments.filter(active=True).order_by('-created_at')
-        comment_form = CommentForm()
+        comments_qs = post.comments.filter(active=True)
+        comments_qs = comments_qs.annotate(
+            rating_avg=Avg('ratings__value'),
+            rating_count=Count('ratings')
+        )
+        if request.user.is_authenticated:
+            user_rating_sq = CommentRating.objects.filter(comment=OuterRef('pk'), user=request.user).values('value')[:1]
+            comments_qs = comments_qs.annotate(user_rating_value=Subquery(user_rating_sq, output_field=IntegerField()))
+        comments = comments_qs.order_by('-created_at')
+        comment_form = CommentForm(request=request)
         context = {
             'post': post,
             'comments': comments,
             'comment_form': comment_form,
         }
         return render(request, 'blog/post_detail.html', context)
+
+    def post(self, request, slug, *args, **kwargs):
+        post = get_object_or_404(Post, slug=slug, status='published')
+        is_ajax = (
+            request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+            request.headers.get('x-requested-with') == 'XMLHttpRequest' or
+            request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
+        )
+
+        # Basic IP detection
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR')
+
+        # Ban check
+        now = timezone.now()
+        ban_q = BlogBan.objects.filter(active=True).filter(
+            Q(user=request.user) | Q(ip_address=ip)
+        )
+        if ban_q.filter(Q(until__isnull=True) | Q(until__gt=now)).exists():
+            msg = 'Twoje konto lub IP jest zablokowane.'
+            return JsonResponse({'ok': False, 'error': msg}, status=403) if is_ajax else HttpResponseForbidden(msg)
+
+        if not request.user.is_authenticated:
+            if is_ajax:
+                return JsonResponse({'ok': False, 'error': 'Musisz być zalogowany, aby dodać komentarz.'}, status=401)
+            return redirect(reverse_lazy('login') + f"?next={request.path}")
+
+        # Honeypot: hidden field should stay empty
+        honeypot = (request.POST.get('website') or '').strip()  # name chosen to look legit
+        if honeypot:
+            # Silently drop or respond as success without creating
+            return JsonResponse({'ok': True, 'html': '', 'count': post.comments.filter(active=True).count()}) if is_ajax else redirect(post.get_absolute_url() + '#comments-section')
+
+        # Rate limit: max N comments per window per user or IP
+        WINDOW = timedelta(minutes=2)
+        MAX_COMMENTS = 3
+        since = now - WINDOW
+        recent_q = Comment.objects.filter(post=post, created_at__gte=since)
+        if request.user.is_authenticated:
+            recent_q = recent_q.filter(author=request.user)
+        elif ip:
+            recent_q = recent_q.filter(ip_address=ip)
+        if recent_q.count() >= MAX_COMMENTS:
+            msg = 'Za dużo komentarzy. Spróbuj za chwilę.'
+            return JsonResponse({'ok': False, 'error': msg}, status=429) if is_ajax else HttpResponseBadRequest(msg)
+
+        comment_form = CommentForm(data=request.POST, files=request.FILES, request=request)
+
+        if comment_form.is_valid():
+            new_comment = comment_form.save(commit=False)
+            new_comment.post = post
+            new_comment.author = request.user
+            new_comment.ip_address = ip
+            new_comment.save()
+
+            if is_ajax:
+                # For newly created comment, bootstrap aggregate fields for the template
+                new_comment.rating_avg = 0
+                new_comment.rating_count = 0
+                new_comment.user_rating_value = None
+                item_html = render_to_string('blog/_comment_item.html', {'comment': new_comment}, request=request)
+                count = post.comments.filter(active=True).count()
+                return JsonResponse({'ok': True, 'html': item_html, 'count': count})
+
+            return redirect(post.get_absolute_url() + '#comments-section')
+        else:
+            if is_ajax:
+                return JsonResponse({'ok': False, 'errors': comment_form.errors}, status=400)
+
+            comments = post.comments.filter(active=True).order_by('-created_at')
+            context = {
+                'post': post,
+                'comments': comments,
+                'comment_form': comment_form,
+            }
+            return render(request, 'blog/post_detail.html', context)
 
     # For POST, we can wrap the method with LoginRequiredMixin's dispatch or use function decorator
     # For simplicity, we'll assume the form/template handles login checks,
@@ -119,33 +208,7 @@ class PostDetailView(View): # Inherit from View for custom GET and POST
     # For this task, let's make the POST require login by checking request.user.is_authenticated.
     # If a more robust mixin approach is needed, the view can be split or LoginRequiredMixin applied to the class.
 
-    def post(self, request, slug, *args, **kwargs):
-        post = get_object_or_404(Post, slug=slug, status='published')
-        comments = post.comments.filter(active=True).order_by('-created_at')
-        comment_form = CommentForm(data=request.POST)
-
-        if not request.user.is_authenticated:
-            # Handle anonymous user trying to comment, e.g., redirect to login
-            # For now, let's assume CommentForm might handle this or a LoginRequiredMixin is used on the view.
-            # A simple way is to redirect to login.
-            # Or, for this specific structure, prevent further processing if user is not authenticated.
-            # This part of the logic depends on how strict the login requirement is for commenting.
-            # The task mentions request.user, so authentication is implied for comment authorship.
-            return redirect(reverse_lazy('login')) # Or your specific login URL name
-
-        if comment_form.is_valid():
-            new_comment = comment_form.save(commit=False)
-            new_comment.post = post
-            new_comment.author = request.user
-            new_comment.save()
-            return redirect(post.get_absolute_url())
-        else:
-            context = {
-                'post': post,
-                'comments': comments,
-                'comment_form': comment_form, # Pass the invalid form back to display errors
-            }
-            return render(request, 'blog/post_detail.html', context)
+    # (POST handling is implemented in the final PostDetailView class below)
 
 # If the entire PostDetailView should be login protected for POSTing comments,
 # the class definition could be: class PostDetailView(LoginRequiredMixin, View):
@@ -165,28 +228,7 @@ class PostDetailView(View): # Inherit from View for custom GET and POST
 # For class-based views, you can override `dispatch`.
 
 class LoginProtectedPostDetailView(LoginRequiredMixin, PostDetailView):
-    login_url = reverse_lazy('login') # Make sure you have a URL named 'login'
-
-    def post(self, request, slug, *args, **kwargs):
-        # Thanks to LoginRequiredMixin, request.user is guaranteed to be authenticated here.
-        post = get_object_or_404(Post, slug=slug, status='published')
-        comments = post.comments.filter(active=True).order_by('-created_at')
-        comment_form = CommentForm(data=request.POST)
-
-        if comment_form.is_valid():
-            new_comment = comment_form.save(commit=False)
-            new_comment.post = post
-            new_comment.author = request.user # Assured by LoginRequiredMixin
-            new_comment.save()
-            return redirect(post.get_absolute_url())
-        else:
-            # Rerender the page with the post, existing comments, and the form with errors
-            context = {
-                'post': post,
-                'comments': comments,
-                'comment_form': comment_form,
-            }
-            return render(request, 'blog/post_detail.html', context)
+    login_url = reverse_lazy('login')
 
 # The subtask asks for PostDetailView(View). I will stick to that and include the authentication check
 # within the post method as designed initially, rather than using LoginRequiredMixin on the class,
@@ -197,43 +239,43 @@ class LoginProtectedPostDetailView(LoginRequiredMixin, PostDetailView):
 # Final version for PostDetailView as per task description:
 # (The previous PostDetailView was mostly fine, just clarifying the LoginRequired part)
 
-class PostDetailView(View):
-    def get(self, request, slug, *args, **kwargs):
-        post = get_object_or_404(Post, slug=slug, status='published')
-        comments = post.comments.filter(active=True).order_by('-created_at')
-        comment_form = CommentForm()
-        context = {
-            'post': post,
-            'comments': comments,
-            'comment_form': comment_form,
-        }
-        return render(request, 'blog/post_detail.html', context)
+ 
 
-    def post(self, request, slug, *args, **kwargs):
-        post = get_object_or_404(Post, slug=slug, status='published')
 
-        if not request.user.is_authenticated:
-            messages.error(request, "Musisz być zalogowany, aby dodać komentarz.")
-            return redirect(reverse_lazy('login') + f"?next={request.path}")
+def rate_comment(request, comment_id: int):
+    if request.method != 'POST':
+        return HttpResponseBadRequest('Nieprawidłowe żądanie')
+    if not request.user.is_authenticated:
+        return JsonResponse({'ok': False, 'error': 'Musisz być zalogowany, aby oceniać.'}, status=401)
+    try:
+        comment = Comment.objects.select_related('author', 'post').get(pk=comment_id, active=True)
+    except Comment.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Komentarz nie istnieje.'}, status=404)
+    if comment.author_id == request.user.id:
+        return JsonResponse({'ok': False, 'error': 'Nie możesz oceniać własnego komentarza.'}, status=400)
 
-        # Передаем request.POST для текстовых данных и request.FILES для файлов
-        comment_form = CommentForm(data=request.POST, files=request.FILES) 
-
-        if comment_form.is_valid():
-            new_comment = comment_form.save(commit=False)
-            new_comment.post = post
-            new_comment.author = request.user
-            new_comment.save()
-            messages.success(request, "Twój komentarz został dodany!")
-            return redirect(post.get_absolute_url() + '#comments-section') # Перенаправляем к секции комментариев
+    # Read value from POST (supports form or JSON)
+    try:
+        if request.headers.get('Content-Type', '').startswith('application/json'):
+            import json
+            payload = json.loads(request.body or '{}')
+            value = int(payload.get('value'))
         else:
-            # Если форма невалидна, передаем ее обратно с ошибками
-            # Также нужно снова получить список комментариев для корректного отображения страницы
-            comments = post.comments.filter(active=True).order_by('-created_at')
-            messages.error(request, "Popraw błędy w formularzu komentarza.")
-            context = {
-                'post': post,
-                'comments': comments,
-                'comment_form': comment_form, # Форма с ошибками
-            }
-            return render(request, 'blog/post_detail.html', context)
+            value = int(request.POST.get('value'))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Brak lub niepoprawna wartość oceny.'}, status=400)
+
+    if value not in (1, 2, 3, 4, 5):
+        return JsonResponse({'ok': False, 'error': 'Ocena musi być w zakresie 1-5.'}, status=400)
+
+    # Create or update rating
+    obj, created = CommentRating.objects.update_or_create(
+        comment=comment, user=request.user,
+        defaults={'value': value}
+    )
+
+    # Compute aggregates
+    agg = comment.ratings.aggregate(avg=Avg('value'), cnt=Count('id'))
+    avg = agg['avg'] or 0
+    cnt = agg['cnt'] or 0
+    return JsonResponse({'ok': True, 'average': round(avg, 2), 'count': cnt, 'your_value': value})

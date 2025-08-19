@@ -29,19 +29,7 @@
     text-align: center;
 }
 
-.remove-from-cart-btn {
-    background-color: #e74c3c;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.remove-from-cart-btn:hover {
-    background-color: #c0392b;
-}
+/* Use Bootstrap styling for remove button; no overrides here to avoid conflicts */
 
 .cart-summary {
     text-align: right;

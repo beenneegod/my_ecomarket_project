@@ -25,7 +25,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
     def validate_title(self, value):
         # Можно добавить кастомную валидацию, если нужно
         if len(value) < 10:
-            raise serializers.ValidationError("Заголовок поста должен быть длиннее 10 символов.")
+            raise serializers.ValidationError("Tytuł wpisu musi mieć co najmniej 10 znaków.")
         return value
 
     # Мы не будем здесь переопределять create(), так как основная логика

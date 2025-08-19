@@ -1,183 +1,40 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block title %}Pokój — EcoMarket{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-  <h2>{{ room.name }}</h2>
-  {% if room.topic %}<div class="text-muted mb-3">Temat: {{ room.topic }}</div>{% endif %}
-  <div id="messages" class="border rounded p-3 mb-3" style="height: 360px; overflow-y: auto; background: #fafafa;"></div>
-  <form id="sendForm" method="post" action="{% url 'chat:send_message' room.id %}" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.text }}
-    <div class="mt-2 d-flex align-items-center gap-2">
-      <input type="file" name="attachments" id="attachments" multiple class="form-control d-none" aria-label="Załączniki" />
-      <label for="attachments" class="btn btn-outline-secondary">
-        Dodaj plik(i)
-      </label>
-      <span id="attachmentsInfo" class="text-muted small"></span>
-      <button class="btn btn-primary ms-auto">Wyślij</button>
-    </div>
-  </form>
-  <hr/>
-  <form id="inviteForm" class="d-flex gap-2" action="{% url 'chat:send_invite' room.id %}" method="post">
-    {% csrf_token %}
-    <input name="username" class="form-control" placeholder="@nazwa_użytkownika" style="max-width: 260px;" />
-    <button class="btn btn-outline-secondary">Zaproś</button>
-  </form>
+<div id="chat-root"
+		 class="container mt-4"
+		 data-room-id="{{ room.id }}"
+		 data-username="{{ request.user.username|escapejs }}"
+		 data-messages-api="{% url 'chat:messages_api' room.id %}">
+	<h2>{{ room.name }}</h2>
+	{% if room.topic %}<div class="text-muted mb-3">Temat: {{ room.topic }}</div>{% endif %}
+	<div id="messages" class="border rounded p-3 mb-3 chat-messages"></div>
+	<form id="sendForm" method="post" action="{% url 'chat:send_message' room.id %}" enctype="multipart/form-data">
+		{% csrf_token %}
+		{{ form.text }}
+		<div class="mt-2 d-flex align-items-center gap-2">
+			<input type="file" name="attachments" id="attachments" multiple accept="image/*,application/pdf" class="form-control d-none" aria-label="Załączniki" />
+			<label for="attachments" class="btn btn-outline-secondary">Dodaj plik(i)</label>
+			<span id="attachmentsInfo" class="text-muted small"></span>
+			<button class="btn btn-primary ms-auto">Wyślij</button>
+		</div>
+	</form>
+	<hr/>
+	<form id="inviteForm" class="d-flex gap-2" action="{% url 'chat:send_invite' room.id %}" method="post">
+		{% csrf_token %}
+		<input name="username" class="form-control chat-invite-input" placeholder="@nazwa_użytkownika" />
+		<button class="btn btn-outline-secondary">Zaproś</button>
+	</form>
 </div>
 {% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/chat.css' %}">
+{% endblock %}
+
 {% block extra_js %}
-<script>
-(function(){
-  const box = document.getElementById('messages');
-  const roomId = parseInt('{{ room.id }}', 10);
-  const scheme = (window.location.protocol === 'https:') ? 'wss' : 'ws';
-  const wsUrl = `${scheme}://${window.location.host}/ws/chat/${roomId}/`;
-  let socket;
-  let wsReady = false;
-  let pollTimer = null;
-  let lastId = null;
-  const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-  const attachmentsInput = document.getElementById('attachments');
-  const attachmentsInfo = document.getElementById('attachmentsInfo');
-
-  function ensurePolling(){
-    if (pollTimer) return; // already polling
-    async function load(){
-      const qs = lastId ? ('?since_id=' + lastId) : '';
-      try {
-        const resp = await fetch("{% url 'chat:messages_api' room.id %}" + qs);
-        if (!resp.ok) return;
-        const data = await resp.json();
-        if (data.messages && data.messages.length){
-          data.messages.forEach(renderMessage);
-        }
-      } catch(_){}
-    }
-    pollTimer = setInterval(load, 3000);
-    // initial load
-    (async ()=>{ await load(); })();
-  }
-
-  function renderMessage(m){
-    const el = document.createElement('div');
-    el.className = 'mb-2';
-    const time = new Date(m.created_at || Date.now()).toLocaleTimeString();
-  let attachments = '';
-    if (Array.isArray(m.attachments) && m.attachments.length){
-      attachments = '<div class="mt-1">' + m.attachments.map(a => `<a href="${a.url}" target="_blank">📎 ${a.name}</a>`).join(' ') + '</div>';
-    }
-    let delBtn = '';
-    if (m.can_delete && m.id){
-      delBtn = `<button class="btn btn-sm btn-link text-danger" data-del="${m.id}">Usuń</button>`;
-    }
-  el.innerHTML = `<div class="d-flex align-items-center gap-2"><strong>${m.user}</strong> <small class="text-muted">${time}</small>${delBtn}</div><div data-text="${m.id || ''}">${m.text}</div>${attachments}`;
-  if (m.id) el.dataset.id = String(m.id);
-    box.appendChild(el);
-    box.scrollTop = box.scrollHeight;
-    if (m.id) lastId = m.id;
-  }
-
-  function connectWS(){
-    try {
-      socket = new WebSocket(wsUrl);
-    } catch(err){
-      ensurePolling();
-      return;
-    }
-    socket.onopen = () => { wsReady = true; };
-    socket.onclose = () => { wsReady = false; ensurePolling(); };
-    socket.onerror = () => { wsReady = false; ensurePolling(); };
-    socket.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.type === 'history' && Array.isArray(data.messages)){
-          data.messages.forEach(renderMessage);
-        } else if (data.type === 'message'){
-          renderMessage(data);
-        } else if (data.type === 'message_removed'){
-          const toRemove = box.querySelector(`[data-id="${data.id}"]`);
-          if (toRemove){
-            const textEl = toRemove.querySelector('[data-text]');
-            if (textEl) textEl.textContent = '[wiadomość usunięta]';
-          }
-        }
-      } catch(err) { /* ignore */ }
-    };
-  }
-  connectWS();
-
-  const form = document.getElementById('sendForm');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const input = form.querySelector('textarea, input[name="text"]');
-    const text = (input && input.value || '').trim();
-    if (!text) return;
-    const hasFiles = (attachmentsInput.files && attachmentsInput.files.length > 0);
-    // If there are files, always use HTTP so attachments are included
-    if (!hasFiles && wsReady && socket && socket.readyState === 1){
-      socket.send(JSON.stringify({ action: 'send', text }));
-      form.reset();
-      attachmentsInfo.textContent = '';
-      attachmentsInput.value = '';
-      return;
-    }
-    // HTTP POST (with files if any) + trigger polling update
-    try {
-      const fd = new FormData(form);
-      const resp = await fetch(form.action, { method: 'POST', body: fd, headers: { 'X-CSRFToken': csrftoken } });
-      if (resp.ok){
-        form.reset();
-        attachmentsInfo.textContent = '';
-        attachmentsInput.value = '';
-        ensurePolling();
-      }
-    } catch(_){/* ignore */}
-  });
-
-  // Delete click
-  box.addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-del]');
-    if (!btn) return;
-    const id = btn.getAttribute('data-del');
-    try{
-      const resp = await fetch(`/chat/api/messages/${id}/delete/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } });
-      if (resp.ok){
-        // remove all and reload recent
-        box.innerHTML = '';
-        lastId = null;
-        ensurePolling();
-      }
-    } catch(_){}
-  });
-
-  // Invite by username
-  const inviteForm = document.getElementById('inviteForm');
-  inviteForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fd = new FormData(inviteForm);
-    try{
-      const resp = await fetch(inviteForm.action, { method: 'POST', body: fd, headers: { 'X-CSRFToken': csrftoken } });
-      if (resp.ok){
-        inviteForm.reset();
-        alert('Zaproszenie wysłane');
-      }
-    } catch(_){}
-  });
-
-  // Update selected files info (PL)
-  attachmentsInput.addEventListener('change', () => {
-    const count = attachmentsInput.files?.length || 0;
-    if (!count) { attachmentsInfo.textContent = ''; return; }
-    if (count === 1) {
-      attachmentsInfo.textContent = `Wybrano 1 plik: ${attachmentsInput.files[0].name}`;
-    } else {
-      attachmentsInfo.textContent = `Wybrano ${count} pliki`;
-    }
-  });
-  form.addEventListener('reset', () => {
-    attachmentsInfo.textContent = '';
-    attachmentsInput.value = '';
-  });
-})();
-</script>
+<script src="{% static 'js/chat_room.js' %}"></script>
 {% endblock %}

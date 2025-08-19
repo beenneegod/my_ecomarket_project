@@ -21,5 +21,28 @@
   {% else %}
     <div class="alert alert-info">Brak pokoi. Utwórz pierwszy!</div>
   {% endif %}
+
+  {% if pending_invites %}
+    <hr/>
+    <h5>Zaproszenia</h5>
+    <ul class="list-group mb-3">
+    {% for inv in pending_invites %}
+      <li class="list-group-item d-flex align-items-center gap-2">
+        <div>
+          <div><strong>{{ inv.room.name }}</strong></div>
+          <div class="text-muted small">Zaprosił: {{ inv.inviter.username }}</div>
+        </div>
+        <form method="post" action="{% url 'chat:accept_invite' inv.id %}" class="ms-auto">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-primary">Akceptuj</button>
+        </form>
+        <form method="post" action="{% url 'chat:decline_invite' inv.id %}">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-outline-secondary">Odrzuć</button>
+        </form>
+      </li>
+    {% endfor %}
+    </ul>
+  {% endif %}
 </div>
 {% endblock %}

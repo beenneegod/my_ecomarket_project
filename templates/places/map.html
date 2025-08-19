@@ -39,181 +39,25 @@
     </div>
   </div>
 
-  <div id="map" style="height: 540px; border-radius: 8px; overflow: hidden; border: 1px solid #e5e5e5;"></div>
+  <div id="map" class="leaflet-map"
+       data-places-api="{% url 'places:places_api' %}"
+       data-place-detail-api="{% url 'places:place_detail_api' 0 %}"
+       data-add-review-url="{% url 'places:add_review' 0 %}"
+       data-vote-review-up="{% url 'places:vote_review' 0 'up' %}"
+       data-vote-review-down="{% url 'places:vote_review' 0 'down' %}"></div>
   <div class="text-muted small mt-2">Dane miejsc częściowo pochodzą z OpenStreetMap i są dostępne na licencji ODbL.</div>
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_css %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="{% static 'css/places.css' %}">
+{% endblock %}
+
+{% block extra_js %}
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script>
-    (function() {
-      const map = L.map('map').setView([52.2297, 21.0122], 6); // Польша
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
-
-  const markers = [];
-  let radiusCircle = null;
-
-      function clearMarkers() {
-        markers.forEach(m => map.removeLayer(m));
-        markers.length = 0;
-        if (radiusCircle) { map.removeLayer(radiusCircle); radiusCircle = null; }
-      }
-
-      function fitToMarkers() {
-        if (markers.length === 0) return;
-        const group = L.featureGroup(markers);
-        map.fitBounds(group.getBounds().pad(0.15));
-      }
-
-  async function loadPlaces(params) {
-        const url = new URL('{% url "places:places_api" %}', window.location.origin);
-        if (params.city) url.searchParams.set('city', params.city);
-        (params.categories || []).forEach(cat => url.searchParams.append('category', cat));
-        if (params.center_lat && params.center_lng && params.radius_km) {
-          url.searchParams.set('center_lat', params.center_lat);
-          url.searchParams.set('center_lng', params.center_lng);
-          url.searchParams.set('radius_km', params.radius_km);
-        }
-        const resp = await fetch(url.toString());
-        const data = await resp.json();
-        clearMarkers();
-        data.results.forEach(p => {
-          const marker = L.marker([p.lat, p.lng]).addTo(map);
-          const title = p.name + (p.city ? `, ${p.city}` : '');
-          const addr = p.address ? `<div><small>${p.address}</small></div>` : '';
-          const rating = p.reviews_count ? `<div class="mt-1"><span class="badge bg-success">${p.average_rating} / 5</span> <small>(${p.reviews_count} opinii)</small></div>` : '<div class="mt-1 text-muted"><small>Brak ocen</small></div>';
-          const detailsBtn = `<button class="btn btn-sm btn-outline-primary mt-2" data-place-id="${p.id}">Pokaż opinie</button>`;
-          marker.bindPopup(`<strong>${title}</strong>${addr}${rating}<div class="popup-actions">${detailsBtn}</div>`);
-      marker.on('popupopen', () => {
-            const btn = document.querySelector('.leaflet-popup .popup-actions button[data-place-id="' + p.id + '"]');
-            if (btn) {
-              btn.addEventListener('click', async () => {
-        const detUrl = `{% url "places:place_detail_api" 0 %}`.replace('/0/', `/${p.id}/`);
-                const r = await fetch(detUrl);
-                const d = await r.json();
-                const reviewsHtml = d.reviews.length ? d.reviews.map(rv => {
-                  const upUrl = `{% url 'places:vote_review' 0 'up' %}`.replace('/0/', `/${rv.id}/`);
-                  const downUrl = `{% url 'places:vote_review' 0 'down' %}`.replace('/0/', `/${rv.id}/`);
-                  return `<div class="border-top pt-2 mt-2"><strong>${rv.user}</strong> — ${rv.rating}/5<br><small class="text-muted">${new Date(rv.created_at).toLocaleString()}</small><div>${rv.comment || ''}</div><div class="mt-1"><a class="btn btn-xs btn-outline-success" href="${upUrl}" style="padding:2px 6px;">Pomocny (${rv.helpful})</a> <a class="btn btn-xs btn-outline-secondary" href="${downUrl}" style="padding:2px 6px;">Niepomocny (${rv.not_helpful})</a></div></div>`;
-                }).join('') : '<div class="mt-2 text-muted">Brak komentarzy</div>';
-        const content = `<strong>${title}</strong>${addr}<div class="mt-1"><span class="badge bg-success">${d.average_rating} / 5</span> <small>(${d.reviews_count} opinii)</small></div>` + reviewsHtml + `<div class="mt-2"><a class="btn btn-sm btn-success" href="{% url 'places:add_review' 0 %}`.replace('/0/', `/${p.id}/`) + `">Dodaj opinię</a></div>`;
-                marker.getPopup().setContent(content).update();
-              }, { once: true });
-            }
-          });
-          markers.push(marker);
-        });
-        fitToMarkers();
-      }
-
-      function gatherParams() {
-        const city = document.getElementById('citySelect').value || '';
-        const categories = Array.from(document.querySelectorAll('.category-input:checked')).map(el => el.value);
-        return { city, categories };
-      }
-
-      function applyParamsToControls(params) {
-        if (params.city) {
-          const sel = document.getElementById('citySelect');
-          const opt = Array.from(sel.options).find(o => o.value === params.city);
-          if (opt) sel.value = params.city;
-        }
-        if (params.categories && params.categories.length) {
-          params.categories.forEach(val => {
-            const cb = document.getElementById(`cat-${val}`);
-            if (cb) cb.checked = true;
-          });
-        }
-        if (params.radius_km) {
-          document.getElementById('radiusInput').value = params.radius_km;
-        }
-      }
-
-      function updateUrl(params) {
-        const url = new URL(window.location.href);
-        url.search = '';
-        if (params.city) url.searchParams.set('city', params.city);
-        (params.categories || []).forEach(cat => url.searchParams.append('category', cat));
-        if (params.center_lat && params.center_lng && params.radius_km) {
-          url.searchParams.set('center_lat', params.center_lat);
-          url.searchParams.set('center_lng', params.center_lng);
-          url.searchParams.set('radius_km', params.radius_km);
-        }
-        history.replaceState(null, '', url.toString());
-      }
-
-      document.getElementById('citySelect').addEventListener('change', () => {
-        const p = gatherParams();
-        updateUrl(p);
-        loadPlaces(p);
-      });
-      document.querySelectorAll('.category-input').forEach(el => {
-        el.addEventListener('change', () => {
-          const p = gatherParams();
-          updateUrl(p);
-          loadPlaces(p);
-        });
-      });
-
-      document.getElementById('locateBtn').addEventListener('click', () => {
-        if (!navigator.geolocation) {
-          alert('Geolokalizacja nie jest obsługiwana przez Twoją przeglądarkę.');
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const { latitude, longitude } = pos.coords;
-            const radius_km = parseFloat(document.getElementById('radiusInput').value) || 10;
-            const base = gatherParams();
-            map.setView([latitude, longitude], 12);
-            if (radiusCircle) { map.removeLayer(radiusCircle); }
-            radiusCircle = L.circle([latitude, longitude], {
-              radius: radius_km * 1000,
-              color: '#198754',
-              weight: 1,
-              fillColor: '#198754',
-              fillOpacity: 0.08,
-            }).addTo(map);
-            const p = { ...base, center_lat: latitude, center_lng: longitude, radius_km };
-            updateUrl(p);
-            loadPlaces(p);
-          },
-          (err) => {
-            console.warn('Błąd geolokalizacji', err);
-            alert('Nie udało się ustalić lokalizacji.');
-          },
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-        );
-      });
-
-      // Инициализация из URL
-      const initUrl = new URL(window.location.href);
-      const init = {
-        city: initUrl.searchParams.get('city') || '',
-        categories: initUrl.searchParams.getAll('category'),
-        center_lat: initUrl.searchParams.get('center_lat') || null,
-        center_lng: initUrl.searchParams.get('center_lng') || null,
-        radius_km: initUrl.searchParams.get('radius_km') || null,
-      };
-      applyParamsToControls(init);
-      if (init.center_lat && init.center_lng && init.radius_km) {
-        if (radiusCircle) { map.removeLayer(radiusCircle); }
-        radiusCircle = L.circle([parseFloat(init.center_lat), parseFloat(init.center_lng)], {
-          radius: parseFloat(init.radius_km) * 1000,
-          color: '#198754',
-          weight: 1,
-          fillColor: '#198754',
-          fillOpacity: 0.08,
-        }).addTo(map);
-        map.setView([parseFloat(init.center_lat), parseFloat(init.center_lng)], 12);
-      }
-      updateUrl(init);
-      loadPlaces(init);
-    })();
-  </script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="{% static 'js/places_map.js' %}?v=20250818-2"></script>
 {% endblock %}

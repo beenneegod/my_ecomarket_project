@@ -35,7 +35,7 @@
                                 </a>
                             </td>
                             <td>
-                                <a href="{% url 'store:product_detail' product.slug %}" class="text-decoration-none text-dark">{{ product.name }}</a>
+                                <a href="{% url 'store:product_detail' product.slug %}" class="text-decoration-none text-reset">{{ product.name }}</a>
                             </td>
                             <td>
                                 <div class="input-group input-group-sm" style="max-width: 130px;"> {# input-group для объединения поля и кнопок (если будете добавлять кнопки +/-) #}
@@ -72,7 +72,7 @@
                                 Kupon:
                                 <span>
                                     <strong>{{ cart.coupon.code }}</strong> ({{ cart.coupon.discount }}%)
-                                    <form method="post" action="{% url 'store:remove_coupon' %}" style="display:inline;">
+                                    <form method="post" action="{% url 'store:remove_coupon' %}" class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-link btn-sm text-danger p-0 ms-2" title="Usuń kupon"><i class="bi bi-x-circle"></i> Usuń</button>
                                     </form>
@@ -131,23 +131,7 @@
             </div>
         </div>
 
-        <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="confirmDeleteModalLabel">Potwierdź usunięcie</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        Czy na pewno chcesz usunąć ten produkt z koszyka?
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Usuń</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    {# Bootstrap modal removed; SweetAlert2 handles confirmation #}
 
     {% else %}
         <div class="alert alert-info" role="alert"> {# Используем alert Bootstrap #}

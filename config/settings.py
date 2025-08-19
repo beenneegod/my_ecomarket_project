@@ -57,6 +57,7 @@ if 'healthcheck.railway.app' not in ALLOWED_HOSTS:
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
+    'django.contrib.sitemaps',
     'import_export',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -76,11 +77,13 @@ INSTALLED_APPS = [
     'places.apps.PlacesConfig',
     'chat.apps.ChatConfig',
     'channels',
+    'csp',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # place right after SecurityMiddleware (per WhiteNoise docs)
+    'csp.middleware.CSPMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -394,3 +397,64 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# --- Content Security Policy (CSP) ---
+# Разрешаем наши статики/медиа, а также используемые CDN: Bootstrap, AOS, Bootstrap Icons, SweetAlert2, Google Fonts
+# В DEV допускаем 'unsafe-inline' для стилей/скриптов из шаблонов, в PROD желательно перейти на nonce/sha.
+CSP_DEFAULT_SRC = ("'self'",)
+# Скрипты: наши + используемые CDN; в DEBUG добавляем 'unsafe-inline' для инлайновых фрагментов.
+CSP_SCRIPT_SRC = (
+    "'self'",
+    'https://cdn.jsdelivr.net',
+    'https://unpkg.com',
+    'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+)
+
+# Стили: наши + CDN; в DEBUG допускаем инлайн-стили.
+CSP_STYLE_SRC = (
+    "'self'",
+    'https://cdn.jsdelivr.net',
+    'https://fonts.googleapis.com',
+    'https://unpkg.com',
+)
+
+CSP_FONT_SRC = (
+    "'self'",
+    'https://fonts.gstatic.com',
+    'https://cdn.jsdelivr.net',
+    'data:',
+)
+
+# Изображения: свои, data/blob, и (по необходимости) внешние домены.
+CSP_IMG_SRC = (
+    "'self'",
+    'data:',
+    'blob:',
+    'https://*.tile.openstreetmap.org',
+    'https://unpkg.com',
+)
+AWS_IMG_SOURCES = []
+try:
+    if not DEBUG:
+        if 'AWS_S3_CUSTOM_DOMAIN' in globals() and AWS_S3_CUSTOM_DOMAIN:
+            AWS_IMG_SOURCES.append(f'https://{AWS_S3_CUSTOM_DOMAIN}')
+        if 'AWS_S3_ENDPOINT_URL' in globals() and AWS_S3_ENDPOINT_URL:
+            AWS_IMG_SOURCES.append(AWS_S3_ENDPOINT_URL)
+except Exception:
+    pass
+if AWS_IMG_SOURCES:
+    CSP_IMG_SRC = CSP_IMG_SRC + tuple(AWS_IMG_SOURCES)
+
+# Разрешаем WebSocket-соединения к своему хосту
+CSP_CONNECT_SRC = (
+    "'self'",
+    'ws:',
+    'wss:',
+)
+CSP_OBJECT_SRC = ("'none'",)
+CSP_FRAME_ANCESTORS = ("'none'",)
+CSP_BASE_URI = ("'self'",)
+
+# No inline scripts required now; all JS is external. Keep nonces off.
+if 'CSP_NONCE_IN_CONTEXT' in globals():
+    del globals()['CSP_NONCE_IN_CONTEXT']

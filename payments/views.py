@@ -46,7 +46,7 @@ def checkout_and_payment(request):
     """
     cart = Cart(request)
     if len(cart) == 0:
-        messages.error(request, "Ваша корзина пуста.")
+        messages.error(request, "Twój koszyk jest pusty.")
         return redirect('store:product_list')
 
     if request.method == 'POST':
@@ -135,7 +135,7 @@ def checkout_and_payment(request):
                 if total_pln < Decimal('2.00'):
                     messages.error(
                         request,
-                        f"Минимальная сумма заказа для оплаты составляет 2.00 PLN. Ваша текущая сумма: {total_pln} PLN.",
+                        f"Minimalna kwota zamówienia do płatności to 2,00 PLN. Twoja bieżąca suma: {total_pln} PLN.",
                     )
                     return render(request, 'payments/checkout.html', {'cart': cart, 'form': form})
 
@@ -143,16 +143,16 @@ def checkout_and_payment(request):
                 return redirect(session.url, code=303)
             except stripe.error.StripeError as e:
                 logger.error("Stripe error creating checkout session: %s", e)
-                messages.error(request, f"Ошибка платежной системы: {e}. Попробуйте снова.")
+                messages.error(request, f"Błąd systemu płatności: {e}. Spróbuj ponownie.")
                 return render(request, 'payments/checkout.html', {'cart': cart, 'form': form})
             except Exception as e:
                 logger.exception("Unexpected error creating checkout session: %s", e)
                 messages.error(
-                    request, "Произошла непредвиденная ошибка при создании платежной сессии."
+                    request, "Wystąpił nieoczekiwany błąd podczas tworzenia sesji płatności."
                 )
                 return render(request, 'payments/checkout.html', {'cart': cart, 'form': form})
         else:
-            messages.error(request, "Пожалуйста, исправьте ошибки в форме адреса.")
+            messages.error(request, "Proszę poprawić błędy w formularzu adresowym.")
     else:
         initial_data = {}
         if request.user.is_authenticated:

@@ -41,7 +41,7 @@ class FootprintCalculatorForm(forms.Form):
                     choices = [(key, label) for key, label in factor.form_field_options.items()]
                     # Добавляем пустой выбор, если опции не обязательны
                     # (можно сделать required=True, если выбор всегда нужен)
-                    choices.insert(0, ('', '---------')) 
+                    choices.insert(0, ('', 'Wybierz')) 
                     self.fields[field_name_base] = forms.ChoiceField(
                         label=factor.form_question_text,
                         help_text=factor.form_help_text,
