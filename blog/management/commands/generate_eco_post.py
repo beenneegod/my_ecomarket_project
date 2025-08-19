@@ -37,15 +37,22 @@ def load_prompt_template(topic_prompt_str: str, topic_slug_for_hashtag_str: str)
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             prompt_template = f.read()
-        return prompt_template.format(
-            topic_prompt=topic_prompt_str,
-            topic_slug_for_hashtag=topic_slug_for_hashtag_str
+
+        # Uwaga: NIE używaj .format() na całym szablonie, bo zawiera on klamry JSON.
+        # Wykonujemy celowe podstawienia tylko naszych placeholderów.
+        formatted = (
+            prompt_template
+            .replace('{topic_prompt}', topic_prompt_str)
+            .replace('{topic_slug_for_hashtag}', topic_slug_for_hashtag_str)
         )
+
+        # Opcjonalnie ostrzeż, jeśli placeholdery nie zostały znalezione
+        if '{topic_prompt}' not in prompt_template or '{topic_slug_for_hashtag}' not in prompt_template:
+            logger.warning('Szablon podpowiedzi nie zawiera jednego z oczekiwanych placeholderów: {topic_prompt} lub {topic_slug_for_hashtag}.')
+
+        return formatted
     except FileNotFoundError:
         logger.error(f"Nie znaleziono pliku szablonu podpowiedzi: {file_path}")
-        return None
-    except KeyError as e:
-        logger.error(f"Klucz formatowania nie został znaleziony w szablonie podpowiedzi: {e}. Upewnij się, że {{topic_prompt}} i {{topic_slug_for_hashtag}} są obecne.")
         return None
     except Exception as e:
         logger.error(f"Nie udało się załadować lub sformatować szablonu podpowiedzi: {e}")
