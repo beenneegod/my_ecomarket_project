@@ -23,7 +23,7 @@ User = get_user_model()
 ENV_GEMINI_API_KEY = "GEMINI_API_KEY_FOR_BLOG"
 
 # Nazwa użytkownika Django do przypisywania postów generowanych przez AI
-AI_AUTHOR_USERNAME = 'api_content_bot' # Upewnij się, że ten użytkownik istnieje w bazie danych
+AI_AUTHOR_USERNAME = 'Ecomarket'  # Убедись, что такой пользователь существует в базе
 
 # Nazwy modeli Gemini
 PRIMARY_GEMINI_MODEL = 'gemini-1.5-flash-latest' # Główny model do użycia
