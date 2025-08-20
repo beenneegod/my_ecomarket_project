@@ -12,11 +12,12 @@ from urllib.request import urlopen
 class CategoryResource(resources.ModelResource):
     class Meta:
         model = Category
-        fields = ('id', 'name', 'slug') # Укажите поля для импорта/экспорта
-        # exclude = ('некие_поля_для_исключения',)
-        import_id_fields = ('id',) # По какому полю искать существующие записи для обновления (можно 'slug' или 'name')
-        skip_unchanged = True # Пропускать строки, которые не изменились
-        report_skipped = True # Сообщать о пропущенных строках
+    fields = ('id', 'name', 'slug') # Укажите поля для импорта/экспорта
+    # exclude = ('некие_поля_для_исключения',)
+    # Используем slug как уникальный ключ при импорте, чтобы не требовать ID из БД
+    import_id_fields = ('slug',)
+    skip_unchanged = True # Пропускать строки, которые не изменились
+    report_skipped = True # Сообщать о пропущенных строках
 
 class ProductResource(resources.ModelResource):
     category = fields.Field(

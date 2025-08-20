@@ -7,7 +7,7 @@ from .admin_resources import CategoryResource, ProductResource
 from django.utils.safestring import mark_safe
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(ImportExportModelAdmin):
     resource_class = CategoryResource
     list_display = ('name', 'slug')
     # Автоматически заполнять поле 'slug' на основе значения поля 'name'
