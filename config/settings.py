@@ -364,6 +364,13 @@ AVERAGE_ANNUAL_CO2_FOOTPRINT_PL_KG = 5600
 LOGS_DIR = BASE_DIR / 'logs'
 os.makedirs(LOGS_DIR, exist_ok=True)
 
+# Папка для локальных импортов изображений (помимо MEDIA_ROOT). Можно переопределить через .env IMPORT_LOCAL_DIR
+IMPORT_LOCAL_DIR = os.getenv('IMPORT_LOCAL_DIR', str(BASE_DIR / 'import_temp'))
+try:
+    os.makedirs(IMPORT_LOCAL_DIR, exist_ok=True)
+except Exception as e:
+    logger.warning("Could not create IMPORT_LOCAL_DIR (%s): %s", IMPORT_LOCAL_DIR, e)
+
 # CSRF_TRUSTED_ORIGINS из окружения (через запятую)
 csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 if csrf_trusted:

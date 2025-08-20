@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
 from .forms import FootprintCalculatorForm
-from .models import EmissionFactor, UserFootprintSession, ReductionTip, ActivityCategory
+from .models import EmissionFactor, UserFootprintSession, ReductionTip, ActivityCategory, Region
 from decimal import Decimal, ROUND_HALF_UP
 import json
 import logging
@@ -335,6 +335,22 @@ def calculate_footprint_view(request):
             user_inputs_for_session_db = {}
             # active_factors_map is already defined above, no need to redefine if it's static for the request
 
+            # Запомним профиль
+            selected_region = None
+            profile_region_id = form.cleaned_data.get('profile_region')
+            if profile_region_id:
+                try:
+                    selected_region = Region.objects.get(id=int(profile_region_id))
+                except Exception:
+                    selected_region = None
+            # Fallback to default region if not explicitly selected
+            if selected_region is None:
+                try:
+                    selected_region = Region.objects.filter(is_default=True).first()
+                except Exception:
+                    selected_region = None
+            household_members = form.cleaned_data.get('profile_household_members')
+
             for field_name_form, value_form in form.cleaned_data.items():
                 if field_name_form.startswith('factor_input_') and not field_name_form.endswith('_period') and value_form is not None:
                     try:
@@ -354,16 +370,21 @@ def calculate_footprint_view(request):
                                 annual_multiplier = Decimal(str(period_details['annual_multiplier']))
                                 raw_input_unit_label = period_details.get('label', chosen_period_key)
                         
-                        calculated_annual_co2_for_input = (current_value * annual_multiplier * factor_instance.co2_kg_per_unit).quantize(Decimal('0.01'), ROUND_HALF_UP)
+                        # Поддержка региональной интенсивности сети
+                        co2_per_unit = factor_instance.co2_kg_per_unit
+                        if getattr(factor_instance, 'use_region_grid_intensity', False) and selected_region:
+                            co2_per_unit = selected_region.grid_intensity_kg_per_kwh
+
+                        calculated_annual_co2_for_input = (current_value * annual_multiplier * co2_per_unit).quantize(Decimal('0.01'), ROUND_HALF_UP)
                         user_inputs_for_session_db[str(factor_id)] = {
                             "raw_value": float(current_value),
                             "input_unit_label": raw_input_unit_label,
                             "chosen_period_key_if_any": chosen_period_key,
                             "annual_multiplier_used": float(annual_multiplier),
-                            "factor_co2_kg_per_unit": float(factor_instance.co2_kg_per_unit),
+                            "factor_co2_kg_per_unit": float(co2_per_unit),
                             "calculated_annual_co2_for_this_input": float(calculated_annual_co2_for_input)
                         }
-                        emission_for_factor_annual = current_value * annual_multiplier * factor_instance.co2_kg_per_unit
+                        emission_for_factor_annual = current_value * annual_multiplier * co2_per_unit
                         total_co2_emissions_kg_annual += emission_for_factor_annual
                         category_slug = factor_instance.activity_category.slug
                         category_breakdown_kg_annual_calc[category_slug] = \
@@ -388,6 +409,17 @@ def calculate_footprint_view(request):
                     if val_quantized > 0:
                          category_breakdown_for_display[category_map.get(cat_slug, cat_slug)] = val_quantized
                 
+                # Добавим профиль в inputs_data для истории
+                if selected_region:
+                    user_inputs_for_session_db["_profile_region"] = {
+                        "id": selected_region.id,
+                        "code": selected_region.code,
+                        "name": selected_region.name,
+                        "grid_intensity_kg_per_kwh": float(selected_region.grid_intensity_kg_per_kwh)
+                    }
+                if household_members:
+                    user_inputs_for_session_db["_profile_household_members"] = int(household_members)
+
                 session_record = UserFootprintSession.objects.create(
                     user=request.user if request.user.is_authenticated else None,
                     session_key=request.session.session_key if not request.user.is_authenticated else None,

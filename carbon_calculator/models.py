@@ -5,6 +5,24 @@ from store.models import Product # Убедитесь, что модель Produ
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 
+
+class Region(models.Model):
+    code = models.CharField(max_length=10, unique=True, verbose_name="Kod kraju/regionu")
+    name = models.CharField(max_length=100, unique=True, verbose_name="Nazwa regionu/kraju")
+    grid_intensity_kg_per_kwh = models.DecimalField(
+        max_digits=8, decimal_places=4,
+        verbose_name="Intensywność sieci (kg CO2/kWh)"
+    )
+    is_default = models.BooleanField(default=False, verbose_name="Domyślny region")
+
+    class Meta:
+        verbose_name = "Region"
+        verbose_name_plural = "Regiony"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
 class ActivityCategory(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Nazwa kategorii")
     slug = models.SlugField(max_length=110, unique=True, blank=True, verbose_name="Slug (do URL)")
@@ -76,6 +94,11 @@ class EmissionFactor(models.Model):
 
     is_active = models.BooleanField(default=True, verbose_name="Aktywny (używać w kalkulatorze)")
     order = models.PositiveIntegerField(default=0, verbose_name="Kolejność pytania w kategorii")
+    # Jeśli True, zamiast co2_kg_per_unit użyj intensywności sieci regionu (dla prądu)
+    use_region_grid_intensity = models.BooleanField(
+        default=False,
+        verbose_name="Użyj intensywności sieci regionu (zamiast co2/kg na jednostkę)"
+    )
 
     class Meta:
         verbose_name = "Współczynnik emisji"

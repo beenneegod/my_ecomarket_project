@@ -115,6 +115,22 @@
                     </div>
                 {% endif %}
 
+                <section class="calculator-form-section shadow-sm">
+                    <h4><i class="bi bi-geo-alt me-2"></i>Twój profil</h4>
+                    <div class="row g-3">
+                        {% if form.profile_region %}
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.profile_region.id_for_label }}">{{ form.profile_region.label }}</label>
+                            {{ form.profile_region }}
+                        </div>
+                        {% endif %}
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.profile_household_members.id_for_label }}">{{ form.profile_household_members.label }}</label>
+                            {{ form.profile_household_members }}
+                        </div>
+                    </div>
+                </section>
+
                 {% for category, field_definitions_list in form.grouped_factors.items %}
                     <section class="calculator-form-section shadow-sm">
                         <h4>

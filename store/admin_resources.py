@@ -1,9 +1,12 @@
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget, CharWidget # Добавляем CharWidget
 from .models import Product, Category
-#from django.core.files.base import ContentFile # Для работы с файлами
-#import os
-#from django.conf import settings
+from django.core.files.base import File
+from django.conf import settings
+import os
+import io
+from urllib.parse import urlparse
+from urllib.request import urlopen
 
 
 class CategoryResource(resources.ModelResource):
@@ -60,23 +63,15 @@ class ProductResource(resources.ModelResource):
         или обновления экземпляра модели. 'row' - это словарь.
         kwargs может содержать 'file_name', 'user' и др.
         """
-        image_path_from_csv = row.get('image') # Получаем значение из колонки 'image'
+        image_path_from_csv = row.get('image')  # Значение из колонки 'image' (может быть относительный путь или URL)
 
-        if image_path_from_csv:
-            # Django ImageField может принимать относительный путь (относительно MEDIA_ROOT),
-            # если файл уже существует по этому пути.
-            # Убедимся, что это просто строка пути, которую Django сможет обработать.
-            # Ничего специально делать не нужно, если Django настроен правильно
-            # и файлы лежат в MEDIA_ROOT/import_temp/your_image.jpg,
-            # а в CSV указан "import_temp/your_image.jpg".
-            # Django сам скопирует файл при сохранении объекта Product в
-            # его upload_to директорию.
-            # Просто оставляем значение image_path_from_csv в row['image'].
-            pass
-        else:
+        if not image_path_from_csv:
             # Если путь не указан, можно установить None или пустую строку,
             # в зависимости от того, как ImageField обрабатывает это
             row['image'] = None # Или ''
+        else:
+            # Нормализуем строку
+            row['image'] = str(image_path_from_csv).strip()
 
         # Убедимся, что price и stock это корректные числа, если они приходят как строки
         # (хотя import-export обычно справляется с конвертацией, если поля Decimal/Integer)
@@ -88,3 +83,67 @@ class ProductResource(resources.ModelResource):
         
         if 'stock' in row and row['stock'] == '': # Если сток пустой, делаем его 0
             row['stock'] = 0
+
+    def after_save_instance(self, instance, using_transactions, dry_run):
+        """
+        После сохранения товара: если у него указано поле image в виде
+        - относительного локального пути (например, import_temp/plik.jpg) и физически файл есть в MEDIA_ROOT,
+        - или http(s) URL,
+        то открываем источник и сохраняем через ImageField.save(), чтобы файл попал в хранилище
+        (в продакшене — в S3, в деве — в локальную папку upload_to).
+        """
+        if dry_run:
+            return
+
+        img_name = getattr(instance.image, 'name', None)
+        if not img_name:
+            return
+
+        # Если уже сохранено под upload_to (products/YYYY/MM/DD/...), ничего не делаем
+        if img_name.startswith('products/'):
+            return
+
+        source = img_name
+        # 1) Попытка локального файла под MEDIA_ROOT
+        local_path = os.path.join(getattr(settings, 'MEDIA_ROOT', ''), source) if getattr(settings, 'MEDIA_ROOT', None) else None
+        try_local = os.path.exists(local_path) if local_path else False
+
+        # 1b) Альтернатива: отдельная папка импорта IMPORT_LOCAL_DIR (например, BASE_DIR/import_temp)
+        if not try_local:
+            import_root = getattr(settings, 'IMPORT_LOCAL_DIR', None)
+            if import_root:
+                alt_local_path = os.path.join(import_root, source.replace('import_temp'+os.sep, '').replace('import_temp/', ''))
+                if os.path.exists(alt_local_path):
+                    local_path = alt_local_path
+                    try_local = True
+
+        file_bytes = None
+        filename = os.path.basename(source)
+
+        if try_local:
+            # Читаем локальный файл и сохраняем в хранилище под upload_to
+            with open(local_path, 'rb') as f:
+                file_bytes = f.read()
+        else:
+            # 2) Если это URL — скачиваем
+            parsed = urlparse(source)
+            if parsed.scheme in ('http', 'https'):
+                try:
+                    with urlopen(source) as resp:
+                        file_bytes = resp.read()
+                    # Попробуем взять имя файла из URL
+                    filename = os.path.basename(parsed.path) or filename or 'image.jpg'
+                except Exception:
+                    file_bytes = None
+
+        if file_bytes:
+            # Сохраняем в ImageField — это спровоцирует запись в S3/локальное хранилище с учетом upload_to
+            # Используем in-memory bytes
+            file_obj = io.BytesIO(file_bytes)
+            instance.image.save(filename, File(file_obj), save=True)
+            # Если источник был локальным файлом и он находится в import_temp — можно удалить после загрузки
+            if try_local:
+                try:
+                    os.remove(local_path)
+                except Exception:
+                    pass

@@ -1,22 +1,41 @@
 # carbon_calculator/forms.py
 from django import forms
-from .models import EmissionFactor, ActivityCategory
+from .models import EmissionFactor, ActivityCategory, Region
 from decimal import Decimal
 
 class FootprintCalculatorForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # Группируем активные факторы по категориям и сортируем
+        # Шаг 1: Профиль
+        regions = Region.objects.all().order_by('name')
+        region_choices = [(str(r.id), f"{r.name} ({r.grid_intensity_kg_per_kwh} kg/kWh)") for r in regions]
+        default_region = Region.objects.filter(is_default=True).first()
+        if region_choices:
+            self.fields['profile_region'] = forms.ChoiceField(
+                label="Twój region/kraj (dla prądu)",
+                choices=[('', 'Wybierz region')] + region_choices,
+                required=False,
+                initial=str(default_region.id) if default_region else '',
+                widget=forms.Select(attrs={'class': 'form-select form-select-sm'})
+            )
+        self.fields['profile_household_members'] = forms.IntegerField(
+            label="Liczba osób w gospodarstwie domowym",
+            required=False,
+            min_value=1,
+            widget=forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'np. 3'})
+        )
+
+        # Группируем поля по секциям
         self.grouped_factors = {}
+        self.profile_section = ['profile_region', 'profile_household_members']
         categories = ActivityCategory.objects.filter(factors__is_active=True).distinct().order_by('order', 'name')
 
         for category in categories:
             factors_in_category = EmissionFactor.objects.filter(
-                activity_category=category, 
+                activity_category=category,
                 is_active=True
             ).order_by('order', 'name')
-            
+
             if not factors_in_category.exists():
                 continue
 
@@ -24,7 +43,7 @@ class FootprintCalculatorForm(forms.Form):
 
             for factor in factors_in_category:
                 field_name_base = f'factor_input_{factor.id}'
-                
+
                 # Основное поле для ввода значения
                 if factor.form_field_type == 'number':
                     self.fields[field_name_base] = forms.DecimalField(
@@ -40,8 +59,8 @@ class FootprintCalculatorForm(forms.Form):
                 elif factor.form_field_type == 'select' and factor.form_field_options:
                     choices = [(key, label) for key, label in factor.form_field_options.items()]
                     # Добавляем пустой выбор, если опции не обязательны
-                    # (можно сделать required=True, если выбор всегда нужен)
-                    choices.insert(0, ('', 'Wybierz')) 
+                    # (можно сделать required=True, jeśli выбор zawsze нужен)
+                    choices.insert(0, ('', 'Wybierz'))
                     self.fields[field_name_base] = forms.ChoiceField(
                         label=factor.form_question_text,
                         help_text=factor.form_help_text,
@@ -49,34 +68,32 @@ class FootprintCalculatorForm(forms.Form):
                         required=False,
                         widget=forms.Select(attrs={'class': 'form-select form-select-sm'})
                     )
-                # Добавьте другие типы полей (radio, checkbox), если необходимо
-
-                # Дополнительное поле для выбора периодичности, если определено
+                # Дополнительное поле для выбора периодичности, jeśli определено
                 if factor.periodicity_options_for_form:
                     period_choices = [
-                        (key, details.get('label', key)) 
+                        (key, details.get('label', key))
                         for key, details in factor.periodicity_options_for_form.items()
                     ]
                     # Можно добавить значение по умолчанию или сделать обязательным
                     period_choices.insert(0, ('', 'Wybierz okres'))
                     self.fields[f'{field_name_base}_period'] = forms.ChoiceField(
-                        label=f"Częstotliwość dla '{factor.name}'", # Lub bardziej przyjazny label
+                        label=f"Częstotliwość dla '{factor.name}'",  # Lub bardziej przyjazny label
                         choices=period_choices,
-                        required=False, # Зависит от того, всегда ли нужна периодичность
+                        required=False,  # Зависит от того, всегда ли нужна периодичность
                         widget=forms.Select(attrs={'class': 'form-select form-select-sm mt-1'})
                     )
-                
+
                 # Сохраняем сам фактор для удобства в шаблоне
                 self.fields[field_name_base].factor_instance = factor
                 if f'{field_name_base}_period' in self.fields:
-                     self.fields[f'{field_name_base}_period'].factor_instance = factor # Связываем и с полем периода
-                
+                    self.fields[f'{field_name_base}_period'].factor_instance = factor  # Связываем и с полем периода
+
                 self.grouped_factors[category].append({
                     'main_field': self.fields[field_name_base],
                     'main_field_name': field_name_base,
                     'period_field': self.fields.get(f'{field_name_base}_period'),
                     'period_field_name': f'{field_name_base}_period' if f'{field_name_base}_period' in self.fields else None,
-                    'factor': factor # Для прямого доступа к атрибутам фактора в шаблоне
+                    'factor': factor  # Для прямого доступа к атрибутам фактора в шаблоне
                 })
     
     def clean(self):

@@ -76,3 +76,5 @@ env/
 ENV/
 .env
 *.pyc
+data/
+import_temp/
