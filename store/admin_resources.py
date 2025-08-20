@@ -25,11 +25,11 @@ class ProductResource(resources.ModelResource):
         attribute='category',
         widget=ForeignKeyWidget(Category, 'name')
     )
-    # Для поля image будем использовать CharWidget, чтобы прочитать путь как строку
-    image_path = fields.Field(
-        column_name='image', # Название колонки в CSV
-        attribute='image',   # Атрибут модели Product
-        widget=CharWidget()  # Читаем как строку
+    # Для поля image используем CharWidget, чтобы прочитать путь/URL как строку
+    image = fields.Field(
+        column_name='image',  # Название колонки в CSV
+        attribute='image',    # Атрибут модели Product
+        widget=CharWidget()   # Читаем как строку
     )
 
     class Meta:
@@ -65,6 +65,10 @@ class ProductResource(resources.ModelResource):
         или обновления экземпляра модели. 'row' - это словарь.
         kwargs может содержать 'file_name', 'user' и др.
         """
+        # Нормализуем категорию (поиск идёт по точному имени)
+        if 'category_name' in row and row['category_name'] is not None:
+            row['category_name'] = str(row['category_name']).strip()
+
         image_path_from_csv = row.get('image')  # Значение из колонки 'image' (может быть относительный путь или URL)
 
         if not image_path_from_csv:
@@ -86,7 +90,7 @@ class ProductResource(resources.ModelResource):
         if 'stock' in row and row['stock'] == '': # Если сток пустой, делаем его 0
             row['stock'] = 0
 
-    def after_save_instance(self, instance, using_transactions, dry_run):
+    def after_save_instance(self, instance, using_transactions, dry_run, **kwargs):
         """
         После сохранения товара: если у него указано поле image в виде
         - относительного локального пути (например, import_temp/plik.jpg) и физически файл есть в MEDIA_ROOT,
