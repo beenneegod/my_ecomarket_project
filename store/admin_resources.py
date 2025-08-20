@@ -1,5 +1,5 @@
 from import_export import resources, fields
-from import_export.widgets import ForeignKeyWidget, CharWidget # Добавляем CharWidget
+from import_export.widgets import ForeignKeyWidget, CharWidget  # Добавляем CharWidget
 from .models import Product, Category
 from django.core.files.base import File
 from django.conf import settings
@@ -12,12 +12,12 @@ from urllib.request import urlopen
 class CategoryResource(resources.ModelResource):
     class Meta:
         model = Category
-    fields = ('id', 'name', 'slug') # Укажите поля для импорта/экспорта
-    # exclude = ('некие_поля_для_исключения',)
-    # Используем slug как уникальный ключ при импорте, чтобы не требовать ID из БД
-    import_id_fields = ('slug',)
-    skip_unchanged = True # Пропускать строки, которые не изменились
-    report_skipped = True # Сообщать о пропущенных строках
+        fields = ('id', 'name', 'slug')  # Укажите поля для импорта/экспорта
+        # exclude = ('некие_поля_для_исключения',)
+        # Используем slug как уникальный ключ при импорте, чтобы не требовать ID из БД
+        import_id_fields = ('slug',)
+        skip_unchanged = True  # Пропускать строки, которые не изменились
+        report_skipped = True  # Сообщать о пропущенных строках
 
 class ProductResource(resources.ModelResource):
     category = fields.Field(
@@ -37,7 +37,8 @@ class ProductResource(resources.ModelResource):
         # Убедимся, что поле 'image' есть в fields, чтобы оно читалось из CSV
         fields = ('id', 'name', 'slug', 'category', 'description', 'price', 'stock', 'available', 'image')
         export_order = fields
-        import_id_fields = ('id',)
+        # Совпадение по slug позволяет импортировать без ID и выполнять апсерты по слагу
+        import_id_fields = ('slug',)
         skip_unchanged = True
         report_skipped = True
         # Мы не хотим, чтобы import-export пытался сам создать FileField из строки пути напрямую,
