@@ -29,7 +29,10 @@ class ProductAdmin(ImportExportModelAdmin):
     @admin.display(description='Obrazek') # Или "Изображение" / "Image"
     def thumbnail_preview(self, obj):
         if obj.image:
-            return mark_safe(f'<img src="{obj.image.url}" style="max-height: 50px; max-width: 50px;" />')
+            return mark_safe(
+                f'<img src="{obj.image.url}" width="40" height="40" loading="lazy" '
+                f'style="width:40px;height:40px;object-fit:cover;border-radius:4px;" />'
+            )
         return "-"
     @admin.display(description='Miniatura')
 
@@ -37,7 +40,10 @@ class ProductAdmin(ImportExportModelAdmin):
     @admin.display(description='Aktualny obrazek') # Для страницы редактирования
     def thumbnail_display(self, obj):
         if obj.image:
-            return mark_safe(f'<img src="{obj.image.url}" style="max-height: 200px; max-width: 200px;" />')
+            return mark_safe(
+                f'<img src="{obj.image.url}" width="120" height="120" loading="lazy" '
+                f'style="width:120px;height:120px;object-fit:contain;border:1px solid #e5e7eb;border-radius:6px;" />'
+            )
         return "Brak obrazka"
 class OrderItemInline(admin.TabularInline):
     """
