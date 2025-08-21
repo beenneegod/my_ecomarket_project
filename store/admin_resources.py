@@ -2,6 +2,7 @@ from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget, CharWidget  # Добавляем CharWidget
 from .models import Product, Category
 from django.core.files.base import File
+from django.core.files.storage import default_storage, FileSystemStorage
 from django.conf import settings
 import os
 import io
@@ -119,9 +120,18 @@ class ProductResource(resources.ModelResource):
         if not img_name:
             return
 
-        # Если уже сохранено под upload_to (products/YYYY/MM/DD/...), ничего не делаем
+        # Определяем тип хранилища (локальное или S3). В деве нужно иметь файл локально,
+        # поэтому простая привязка ключа без загрузки приведёт к пустым превью.
+        using_local_fs = isinstance(default_storage, FileSystemStorage) or getattr(settings, 'DEBUG', False)
+
+        # Если имя уже под upload_to (products/...) и файл реально существует в текущем хранилище — выходим
         if img_name.startswith('products/'):
-            return
+            try:
+                if default_storage.exists(img_name):
+                    return
+            except Exception:
+                # Если проверка не удалась, не выходим — попробуем обработать ниже
+                pass
 
         source = img_name
         # 1) Попытка локального файла под MEDIA_ROOT
@@ -152,21 +162,23 @@ class ProductResource(resources.ModelResource):
                 full = source
                 rel = None
                 try:
-                    # Если URL под MEDIA_URL — извлекаем относительный путь
-                    if media_url and full.startswith(media_url):
-                        rel = full[len(media_url):]
-                    # Или если путь содержит /media/ — берём часть после неё
-                    elif '/media/' in parsed.path:
-                        rel = parsed.path.split('/media/', 1)[1]
-                    if rel:
-                        # Устанавливаем имя без повторной загрузки — путь сохранится как есть (включая дату)
-                        instance.image.name = rel
-                        instance.save(update_fields=['image'])
-                        return
+                    # Если продакшен/S3: можем безопасно привязать существующий ключ без загрузки
+                    if not using_local_fs:
+                        # Если URL под MEDIA_URL — извлекаем относительный путь
+                        if media_url and full.startswith(media_url):
+                            rel = full[len(media_url):]
+                        # Или если путь содержит /media/ — берём часть после неё
+                        elif '/media/' in parsed.path:
+                            rel = parsed.path.split('/media/', 1)[1]
+                        if rel:
+                            # Привязываем ключ (сохраняем дату/путь из CSV) и выходим
+                            instance.image.name = rel
+                            instance.save(update_fields=['image'])
+                            return
                 except Exception:
                     rel = None
 
-                # Если не удалось привязать — скачиваем и сохраняем (попадёт под актуальную дату upload_to)
+                # Дев (локальное хранилище) или привязка невозможна — скачиваем и сохраняем
                 try:
                     with urlopen(source) as resp:
                         file_bytes = resp.read()
