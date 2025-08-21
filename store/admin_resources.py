@@ -7,6 +7,8 @@ import os
 import io
 from urllib.parse import urlparse
 from urllib.request import urlopen
+import unicodedata
+from django.utils.text import slugify
 
 
 class CategoryResource(resources.ModelResource):
@@ -21,9 +23,9 @@ class CategoryResource(resources.ModelResource):
 
 class ProductResource(resources.ModelResource):
     category = fields.Field(
-        column_name='category_name',
+        column_name='category_slug',
         attribute='category',
-        widget=ForeignKeyWidget(Category, 'name')
+        widget=ForeignKeyWidget(Category, 'slug')
     )
     # Для поля image используем CharWidget, чтобы прочитать путь/URL как строку
     image = fields.Field(
@@ -65,9 +67,15 @@ class ProductResource(resources.ModelResource):
         или обновления экземпляра модели. 'row' - это словарь.
         kwargs может содержать 'file_name', 'user' и др.
         """
-        # Нормализуем категорию (поиск идёт по точному имени)
-        if 'category_name' in row and row['category_name'] is not None:
-            row['category_name'] = str(row['category_name']).strip()
+        # Нормализуем категорию: предпочитаем category_slug; если есть только name — вычисляем slug
+        cat_slug = row.get('category_slug')
+        cat_name = row.get('category_name')
+        if cat_slug is not None and str(cat_slug).strip() != '':
+            norm_slug = slugify(unicodedata.normalize('NFKC', str(cat_slug)).strip())
+            row['category_slug'] = norm_slug
+        elif cat_name is not None and str(cat_name).strip() != '':
+            norm_name = unicodedata.normalize('NFKC', str(cat_name)).strip()
+            row['category_slug'] = slugify(norm_name)
 
         image_path_from_csv = row.get('image')  # Значение из колонки 'image' (может быть относительный путь или URL)
 
