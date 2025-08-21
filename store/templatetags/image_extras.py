@@ -1,6 +1,7 @@
 from django import template
 from django.templatetags.static import static
 from store.utils.images import get_or_generate_variant
+from django.conf import settings
 
 register = template.Library()
 
@@ -13,6 +14,10 @@ def product_image(product, key='card'):
     """
     # Try product image
     if getattr(product, 'image', None):
+        if getattr(settings, 'IMAGE_VARIANTS_ENABLED', True) is False:
+            # Serve original directly
+            if hasattr(product.image, 'url'):
+                return product.image.url
         url = get_or_generate_variant(product.image, key)
         if url:
             return url

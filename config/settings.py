@@ -262,6 +262,14 @@ else: # Настройки для РАЗРАБОТКИ (локальное хр�
     MEDIA_ROOT = BASE_DIR / 'media'
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
+# Where to store generated image variants
+# 'variants_tree' (default) -> products/variants/<key>/...
+# 'sibling' -> next to original file (no extra variants/ folders)
+IMAGE_VARIANT_STORAGE = os.getenv('IMAGE_VARIANT_STORAGE', 'sibling' if not DEBUG else 'variants_tree')
+# Master switch: disable image variant generation entirely (serve originals).
+# In production we default to disabling unless explicitly enabled.
+IMAGE_VARIANTS_ENABLED = os.getenv('IMAGE_VARIANTS_ENABLED', 'False' if not DEBUG else 'True').lower() in ('true','1','t','yes')
+
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'

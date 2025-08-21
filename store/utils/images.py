@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.conf import settings
 import hashlib
 from PIL import Image
 import logging
@@ -23,9 +24,26 @@ VARIANTS = {
 
 
 def _variant_path(original_name: str, key: str) -> str:
-    base, _ = os.path.splitext(original_name)
-    digest = hashlib.md5(original_name.encode('utf-8')).hexdigest()[:8]
-    return f"products/variants/{key}/{os.path.basename(base)}-{digest}.webp"
+        """
+        Build destination path for a variant based on configuration.
+        Modes:
+            - variants_tree (default): media/products/variants/<key>/<basename>-<hash>.webp
+            - sibling: alongside original: media/<dir>/<basename>-<key>-<hash>.webp
+        """
+        # Stable digest from the original name path to avoid collisions
+        digest = hashlib.md5(original_name.encode('utf-8')).hexdigest()[:8]
+
+        mode = getattr(settings, 'IMAGE_VARIANT_STORAGE', 'variants_tree')
+        base_name, _ = os.path.splitext(os.path.basename(original_name))
+
+        if mode == 'sibling':
+                # Place next to original (no extra folders like products/variants)
+                dir_name = os.path.dirname(original_name)
+                filename = f"{base_name}-{key}-{digest}.webp"
+                return f"{dir_name}/{filename}" if dir_name else filename
+
+        # Default: separate variants tree
+        return f"products/variants/{key}/{base_name}-{digest}.webp"
 
 
 def _resize(image: Image.Image, target: Variant) -> Image.Image:
@@ -56,6 +74,9 @@ def get_or_generate_variant(image_field, key: str) -> Optional[str]:
     """
     if not image_field:
         return None
+    # Global kill-switch to avoid creating any variants (serve originals only)
+    if getattr(settings, 'IMAGE_VARIANTS_ENABLED', True) is False:
+        return getattr(image_field, 'url', None)
     var = VARIANTS.get(key)
     if not var:
         return getattr(image_field, 'url', None)
