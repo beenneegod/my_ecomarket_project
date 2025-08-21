@@ -457,6 +457,15 @@ try:
             AWS_IMG_SOURCES.append(f'https://{AWS_S3_CUSTOM_DOMAIN}')
         if 'AWS_S3_ENDPOINT_URL' in globals() and AWS_S3_ENDPOINT_URL:
             AWS_IMG_SOURCES.append(AWS_S3_ENDPOINT_URL)
+        # If using the default AWS S3 domain (no custom domain/endpoint), allow it explicitly in CSP
+        if (
+            'AWS_STORAGE_BUCKET_NAME' in globals() and AWS_STORAGE_BUCKET_NAME
+            and 'AWS_S3_REGION_NAME' in globals() and AWS_S3_REGION_NAME
+            and not AWS_IMG_SOURCES
+        ):
+            AWS_IMG_SOURCES.append(
+                f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
+            )
 except Exception:
     pass
 if AWS_IMG_SOURCES:

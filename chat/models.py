@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from store.models import get_product_image_storage_instance
 
 
 class ChatRoom(models.Model):
@@ -38,7 +39,11 @@ class Message(models.Model):
 
 class MessageAttachment(models.Model):
     message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='attachments', verbose_name='Wiadomość')
-    file = models.FileField(upload_to='chat_attachments/%Y/%m/', verbose_name='Plik')
+    file = models.FileField(
+        upload_to='chat_attachments/%Y/%m/',
+        storage=get_product_image_storage_instance(),
+        verbose_name='Plik'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
