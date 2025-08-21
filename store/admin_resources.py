@@ -67,72 +67,35 @@ class ProductResource(resources.ModelResource):
         или обновления экземпляра модели. 'row' - это словарь.
         kwargs может содержать 'file_name', 'user' и др.
         """
-        # Поддержка альтернативных заголовков CSV: Slug/SLUG -> slug
-        if not row.get('slug'):
-            for alt in ('Slug', 'SLUG'):
-                if row.get(alt):
-                    row['slug'] = str(row.get(alt)).strip()
-                    break
-        # Если slug по-прежнему пуст, попробуем сгенерировать из name
-        if (not row.get('slug')) and row.get('name'):
-            try:
-                row['slug'] = slugify(str(row['name']).strip())
-            except Exception:
-                pass
-
-        # Если товар уже существует (по slug) и у него уже есть image,
-        # сохраняем текущее имя файла, чтобы не перезаписывать картинку при ре-импорте
-        try:
-            slug_val = str(row.get('slug') or '').strip()
-            if slug_val:
-                existing = Product.objects.filter(slug=slug_val).only('image').first()
-                if existing and getattr(existing, 'image', None) and getattr(existing.image, 'name', ''):
-                    row['image'] = existing.image.name
-        except Exception:
-            pass
         # Нормализуем категорию: предпочитаем category_slug; если есть только name — вычисляем slug
-        # Также принимаем старые заголовки: category/Category; пробуем найти по имени в БД
-        raw_cat = row.get('category_slug') or row.get('category') or row.get('Category')
+        cat_slug = row.get('category_slug')
         cat_name = row.get('category_name')
-        if raw_cat is not None and str(raw_cat).strip() != '':
-            raw_cat_str = unicodedata.normalize('NFKC', str(raw_cat)).strip()
-            # Сначала попробуем найти категорию по имени (без учета регистра)
-            try:
-                match = Category.objects.filter(name__iexact=raw_cat_str).only('slug').first()
-                if match:
-                    row['category_slug'] = match.slug
-                else:
-                    # Иначе берем slugify от введенного значения
-                    row['category_slug'] = slugify(raw_cat_str)
-            except Exception:
-                row['category_slug'] = slugify(raw_cat_str)
+        if cat_slug is not None and str(cat_slug).strip() != '':
+            norm_slug = slugify(unicodedata.normalize('NFKC', str(cat_slug)).strip())
+            row['category_slug'] = norm_slug
         elif cat_name is not None and str(cat_name).strip() != '':
             norm_name = unicodedata.normalize('NFKC', str(cat_name)).strip()
-            # Попробуем найти по имени; если нет — slugify
-            try:
-                match = Category.objects.filter(name__iexact=norm_name).only('slug').first()
-                row['category_slug'] = match.slug if match else slugify(norm_name)
-            except Exception:
-                row['category_slug'] = slugify(norm_name)
-        
-        # Нормализуем поле image
+            row['category_slug'] = slugify(norm_name)
+
         image_path_from_csv = row.get('image')  # Значение из колонки 'image' (может быть относительный путь или URL)
+
         if not image_path_from_csv:
             # Если путь не указан, можно установить None или пустую строку,
             # в зависимости от того, как ImageField обрабатывает это
-            row['image'] = None  # Или ''
+            row['image'] = None # Или ''
         else:
             # Нормализуем строку
             row['image'] = str(image_path_from_csv).strip()
 
-        # Приводим price/stock к ожидаемому формату
+        # Убедимся, что price и stock это корректные числа, если они приходят как строки
+        # (хотя import-export обычно справляется с конвертацией, если поля Decimal/Integer)
         if 'price' in row and row['price']:
             try:
-                row['price'] = str(row['price']).replace(',', '.')  # Заменяем запятую на точку для Decimal
-            except Exception:
-                pass  # Оставляем как есть, если конвертация не удалась
-
-        if 'stock' in row and row['stock'] == '':  # Если сток пустой, делаем его 0
+                row['price'] = str(row['price']).replace(',', '.') # Заменяем запятую на точку для Decimal
+            except:
+                pass # Оставляем как есть, если конвертация не удалась, import-export выдаст ошибку позже
+        
+        if 'stock' in row and row['stock'] == '': # Если сток пустой, делаем его 0
             row['stock'] = 0
 
     def after_save_instance(self, instance, *args, **kwargs):
