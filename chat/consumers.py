@@ -138,6 +138,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def _get_recent_messages(self, room_id: int, user_id: int, limit: int = 30):
         qs = (
             Message.objects.filter(room_id=room_id, is_removed=False)
+            .prefetch_related('attachments')
             .order_by('-id')[:limit]
         )
         # Reverse slice so we emit oldest→newest for initial history
@@ -149,7 +150,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'text': m.text,
                 'created_at': m.created_at.isoformat(),
                 'can_delete': (m.user_id == user_id) or (m.room.owner_id == user_id),
-                'attachments': [],
+                'attachments': [
+                    {
+                        'url': a.file.url,
+                        'name': (a.file.name.rsplit('/', 1)[-1] if a.file and a.file.name else ''),
+                    }
+                    for a in m.attachments.all()
+                ],
                 'reply_to': (
                     {
                         'id': m.reply_to_id,
