@@ -6,13 +6,11 @@
 providers = ['python']
 
 [phases.setup]
-# Keep existing detected packages and add gettext
-nixPkgs = ['...', 'gettext']
+# Keep existing detected packages and add needed libs
+nixPkgs = ['...', 'gettext', 'libwebp', 'libjpeg', 'zlib', 'pkg-config']
 
 [phases.build]
 cmds = ['chmod +x entrypoint.sh']
 
 [start]
 cmd = 'bash entrypoint.sh'
-[phases.setup]
-nixPkgs = ["...", "libwebp", "libjpeg", "zlib", "pkg-config"]
