@@ -425,6 +425,7 @@ CSP_SCRIPT_SRC = (
     'https://cdn.jsdelivr.net',
     'https://unpkg.com',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+    "'unsafe-eval'",
 )
 
 # Стили: наши + CDN; в DEBUG допускаем инлайн-стили.
