@@ -28,9 +28,11 @@
                             <td>
                                 <a href="{% url 'store:product_detail' product.slug %}">
                                     {% if product.image %}
-                                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-thumbnail" style="max-height: 75px; max-width: 75px; object-fit: contain;">
+                                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-thumbnail"
+                                             width="40" height="40" style="width:40px;height:40px;object-fit:contain;">
                                     {% else %}
-                                        <img src="{% static 'img/no_image.png' %}" alt="Brak obrazu" class="img-thumbnail" style="max-height: 75px; max-width: 75px; object-fit: contain;">
+                                        <img src="{% static 'img/no_image.png' %}" alt="Brak obrazu" class="img-thumbnail"
+                                             width="40" height="40" style="width:40px;height:40px;object-fit:contain;">
                                     {% endif %}
                                 </a>
                             </td>
