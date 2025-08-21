@@ -67,6 +67,19 @@ class ProductResource(resources.ModelResource):
         или обновления экземпляра модели. 'row' - это словарь.
         kwargs может содержать 'file_name', 'user' и др.
         """
+        # Поддержка альтернативных заголовков CSV: Slug/SLUG -> slug
+        if not row.get('slug'):
+            for alt in ('Slug', 'SLUG'):
+                if row.get(alt):
+                    row['slug'] = str(row.get(alt)).strip()
+                    break
+        # Если slug по-прежнему пуст, попробуем сгенерировать из name
+        if (not row.get('slug')) and row.get('name'):
+            try:
+                row['slug'] = slugify(str(row['name']).strip())
+            except Exception:
+                pass
+
         # Если товар уже существует (по slug) и у него уже есть image,
         # сохраняем текущее имя файла, чтобы не перезаписывать картинку при ре-импорте
         try:
@@ -78,14 +91,29 @@ class ProductResource(resources.ModelResource):
         except Exception:
             pass
         # Нормализуем категорию: предпочитаем category_slug; если есть только name — вычисляем slug
-        cat_slug = row.get('category_slug')
+        # Также принимаем старые заголовки: category/Category; пробуем найти по имени в БД
+        raw_cat = row.get('category_slug') or row.get('category') or row.get('Category')
         cat_name = row.get('category_name')
-        if cat_slug is not None and str(cat_slug).strip() != '':
-            norm_slug = slugify(unicodedata.normalize('NFKC', str(cat_slug)).strip())
-            row['category_slug'] = norm_slug
+        if raw_cat is not None and str(raw_cat).strip() != '':
+            raw_cat_str = unicodedata.normalize('NFKC', str(raw_cat)).strip()
+            # Сначала попробуем найти категорию по имени (без учета регистра)
+            try:
+                match = Category.objects.filter(name__iexact=raw_cat_str).only('slug').first()
+                if match:
+                    row['category_slug'] = match.slug
+                else:
+                    # Иначе берем slugify от введенного значения
+                    row['category_slug'] = slugify(raw_cat_str)
+            except Exception:
+                row['category_slug'] = slugify(raw_cat_str)
         elif cat_name is not None and str(cat_name).strip() != '':
             norm_name = unicodedata.normalize('NFKC', str(cat_name)).strip()
-            row['category_slug'] = slugify(norm_name)
+            # Попробуем найти по имени; если нет — slugify
+            try:
+                match = Category.objects.filter(name__iexact=norm_name).only('slug').first()
+                row['category_slug'] = match.slug if match else slugify(norm_name)
+            except Exception:
+                row['category_slug'] = slugify(norm_name)
         
         # Нормализуем поле image
         image_path_from_csv = row.get('image')  # Значение из колонки 'image' (может быть относительный путь или URL)
