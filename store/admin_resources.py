@@ -145,13 +145,31 @@ class ProductResource(resources.ModelResource):
             with open(local_path, 'rb') as f:
                 file_bytes = f.read()
         else:
-            # 2) Если это URL — скачиваем
+            # 2) Если это URL — сначала попробуем привязать существующий ключ в бакете, чтобы не перезагружать файл
             parsed = urlparse(source)
             if parsed.scheme in ('http', 'https'):
+                media_url = getattr(settings, 'MEDIA_URL', '') or ''
+                full = source
+                rel = None
+                try:
+                    # Если URL под MEDIA_URL — извлекаем относительный путь
+                    if media_url and full.startswith(media_url):
+                        rel = full[len(media_url):]
+                    # Или если путь содержит /media/ — берём часть после неё
+                    elif '/media/' in parsed.path:
+                        rel = parsed.path.split('/media/', 1)[1]
+                    if rel:
+                        # Устанавливаем имя без повторной загрузки — путь сохранится как есть (включая дату)
+                        instance.image.name = rel
+                        instance.save(update_fields=['image'])
+                        return
+                except Exception:
+                    rel = None
+
+                # Если не удалось привязать — скачиваем и сохраняем (попадёт под актуальную дату upload_to)
                 try:
                     with urlopen(source) as resp:
                         file_bytes = resp.read()
-                    # Попробуем взять имя файла из URL
                     filename = os.path.basename(parsed.path) or filename or 'image.jpg'
                 except Exception:
                     file_bytes = None
