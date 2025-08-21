@@ -16,6 +16,18 @@ class Cart:
             cart_data = self.session[settings.CART_SESSION_ID] = {}
         self.cart = cart_data
 
+        # Sanitize existing cart entries: keep only JSON-serializable fields
+        # Allowed keys in each item: 'quantity' (int), 'price' (str)
+        changed = False
+        for pid, data in list(self.cart.items()):
+            if isinstance(data, dict):
+                keys_to_remove = [k for k in list(data.keys()) if k not in ('quantity', 'price')]
+                for k in keys_to_remove:
+                    data.pop(k, None)
+                    changed = True
+        if changed:
+            self.save()
+
         # Coupon handling
         self.coupon = None
         coupon_id = self.session.get('coupon_id')
@@ -87,14 +99,24 @@ class Cart:
             if not product_instance.slug: # ПРОВЕРКА ПРЯМО ЗДЕСЬ
                 logger.error(f"CART_CRITICAL_DEBUG: Product ID {product_instance.id} ('{product_instance.name}') has an empty or NULL slug ('{product_instance.slug}') right after fetching from DB!")
             
-            item_data = cart.get(product_id_str) # Используем .get() для безопасности, хотя ID должен быть
-            if item_data is None:
+            raw = cart.get(product_id_str) # Используем .get() для безопасности, хотя ID должен быть
+            if raw is None:
                 logger.warning(f"CART_DEBUG: Product ID {product_id_str} found in DB but not in cart session copy. Skipping.")
                 continue
 
-            item_data['product_obj'] = product_instance 
-            item_data['total_price'] = Decimal(item_data['price']) * item_data['quantity']
-            products_in_cart.append(item_data)
+            # Do NOT mutate session-stored dicts; build a separate item dict for template
+            try:
+                price_dec = Decimal(raw['price'])
+            except Exception:
+                # Fallback: coerce to Decimal safely
+                price_dec = Decimal(str(raw.get('price', '0')))
+            item_for_template = {
+                'product_obj': product_instance,
+                'quantity': raw.get('quantity', 0),
+                'price': price_dec,
+                'total_price': price_dec * raw.get('quantity', 0),
+            }
+            products_in_cart.append(item_for_template)
 
         current_product_ids_in_db = [str(p.id) for p in products]
         ids_removed_from_session = []
