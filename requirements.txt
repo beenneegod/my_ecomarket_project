@@ -86,8 +86,5 @@ websockets==15.0.1
 whitenoise==6.9.0
 channels==4.1.0
 daphne==4.1.2
-
 channels-redis==4.2.0
-
-# Security headers
 django-csp==3.8
