@@ -7,7 +7,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 import hashlib
 from PIL import Image
-
+import logging
 
 @dataclass(frozen=True)
 class Variant:
@@ -74,6 +74,7 @@ def get_or_generate_variant(image_field, key: str) -> Optional[str]:
             content = ContentFile(buf.getvalue())
             default_storage.save(dst_name, content)
             return default_storage.url(dst_name)
-    except Exception:
+    except Exception as e:
+        logging.error(f"Could not generate image variant for {src_name}. Error: {e}", exc_info=True)
         # Fallback to original URL
         return getattr(image_field, 'url', None)
