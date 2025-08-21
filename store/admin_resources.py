@@ -2,7 +2,6 @@ from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget, CharWidget  # Добавляем CharWidget
 from .models import Product, Category
 from django.core.files.base import File
-from django.core.files.storage import default_storage, FileSystemStorage
 from django.conf import settings
 import os
 import io
@@ -120,18 +119,9 @@ class ProductResource(resources.ModelResource):
         if not img_name:
             return
 
-        # Определяем тип хранилища (локальное или S3). В деве нужно иметь файл локально,
-        # поэтому простая привязка ключа без загрузки приведёт к пустым превью.
-        using_local_fs = isinstance(default_storage, FileSystemStorage) or getattr(settings, 'DEBUG', False)
-
-        # Если имя уже под upload_to (products/...) и файл реально существует в текущем хранилище — выходим
+        # Если уже сохранено под upload_to (products/YYYY/MM/DD/...), ничего не делаем
         if img_name.startswith('products/'):
-            try:
-                if default_storage.exists(img_name):
-                    return
-            except Exception:
-                # Если проверка не удалась, не выходим — попробуем обработать ниже
-                pass
+            return
 
         source = img_name
         # 1) Попытка локального файла под MEDIA_ROOT
@@ -155,36 +145,33 @@ class ProductResource(resources.ModelResource):
             with open(local_path, 'rb') as f:
                 file_bytes = f.read()
         else:
-            # 2) Если это URL — сначала попробуем привязать существующий ключ в бакете, чтобы не перезагружать файл
+            # 2) Если это URL — скачиваем
             parsed = urlparse(source)
             if parsed.scheme in ('http', 'https'):
-                media_url = getattr(settings, 'MEDIA_URL', '') or ''
-                full = source
-                rel = None
-                try:
-                    # Если продакшен/S3: можем безопасно привязать существующий ключ без загрузки
-                    if not using_local_fs:
-                        # Если URL под MEDIA_URL — извлекаем относительный путь
-                        if media_url and full.startswith(media_url):
-                            rel = full[len(media_url):]
-                        # Или если путь содержит /media/ — берём часть после неё
-                        elif '/media/' in parsed.path:
-                            rel = parsed.path.split('/media/', 1)[1]
-                        if rel:
-                            # Привязываем ключ (сохраняем дату/путь из CSV) и выходим
-                            instance.image.name = rel
-                            instance.save(update_fields=['image'])
-                            return
-                except Exception:
-                    rel = None
-
-                # Дев (локальное хранилище) или привязка невозможна — скачиваем и сохраняем
                 try:
                     with urlopen(source) as resp:
                         file_bytes = resp.read()
+                    # Попробуем взять имя файла из URL
                     filename = os.path.basename(parsed.path) or filename or 'image.jpg'
                 except Exception:
                     file_bytes = None
+                    # Если не удалось скачать, но это ссылка на наш статикин/бакет,
+                    # попробуем извлечь относительный путь и записать его напрямую
+                    media_url = getattr(settings, 'MEDIA_URL', '') or ''
+                    full = source
+                    rel = None
+                    try:
+                        if media_url and full.startswith(media_url):
+                            rel = full[len(media_url):]
+                        elif '/media/' in parsed.path:
+                            rel = parsed.path.split('/media/', 1)[1]
+                        # Если нашли относительный путь — назначим его как имя файла в хранилище
+                        if rel:
+                            instance.image.name = rel
+                            instance.save(update_fields=['image'])
+                            return
+                    except Exception:
+                        pass
 
         if file_bytes:
             # Сохраняем в ImageField — это спровоцирует запись в S3/локальное хранилище с учетом upload_to

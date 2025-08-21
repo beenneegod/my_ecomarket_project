@@ -5,7 +5,6 @@ from typing import Optional, Tuple
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
-from django.conf import settings
 import hashlib
 from PIL import Image
 
@@ -57,9 +56,6 @@ def get_or_generate_variant(image_field, key: str) -> Optional[str]:
     """
     if not image_field:
         return None
-    # Optionally disable variants via settings to avoid 403s when bucket policy disallows writing/reading variants
-    if not getattr(settings, 'FEATURE_IMAGE_VARIANTS', True):
-        return getattr(image_field, 'url', None)
     var = VARIANTS.get(key)
     if not var:
         return getattr(image_field, 'url', None)
@@ -76,11 +72,6 @@ def get_or_generate_variant(image_field, key: str) -> Optional[str]:
             buf = io.BytesIO()
             out.save(buf, format='WEBP', quality=80, method=6)
             content = ContentFile(buf.getvalue())
-            try:
-                # Hint storage to set proper MIME type
-                content.content_type = 'image/webp'
-            except Exception:
-                pass
             default_storage.save(dst_name, content)
             return default_storage.url(dst_name)
     except Exception:

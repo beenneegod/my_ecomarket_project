@@ -82,8 +82,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # place right after SecurityMiddleware (per WhiteNoise docs)
     'csp.middleware.CSPMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -229,16 +229,9 @@ if not DEBUG: # Настройки для ПРОДАКШЕНА (использу
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400', # Кеширование на 1 день
     }
-    # Optional: enable S3 server-side encryption if required by org policies
-    AWS_S3_SSE = os.getenv('AWS_S3_SSE')  # e.g., 'AES256' or 'aws:kms'
-    AWS_S3_SSE_KMS_KEY_ID = os.getenv('AWS_S3_SSE_KMS_KEY_ID')
-    if AWS_S3_SSE:
-        AWS_S3_OBJECT_PARAMETERS['ServerSideEncryption'] = AWS_S3_SSE
-        if AWS_S3_SSE.lower() == 'aws:kms' and AWS_S3_SSE_KMS_KEY_ID:
-            AWS_S3_OBJECT_PARAMETERS['SSEKMSKeyId'] = AWS_S3_SSE_KMS_KEY_ID
     AWS_LOCATION = 'media' # Файлы будут в s3://<bucket_name>/media/
-    AWS_DEFAULT_ACL = 'public-read'
-    AWS_QUERYSTRING_AUTH = False
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False      # public, unsigned URLs
     AWS_S3_FILE_OVERWRITE = False
 
     # Формирование MEDIA_URL
@@ -279,9 +272,6 @@ X_FRAME_OPTIONS = 'DENY'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CART_SESSION_ID = 'cart'
-
-# Feature flags
-FEATURE_IMAGE_VARIANTS = os.getenv('FEATURE_IMAGE_VARIANTS', 'true').lower() == 'true'
 
 # Channels: use Redis in production when REDIS_URL is provided, else in-memory for dev
 REDIS_URL = os.getenv('REDIS_URL')
@@ -425,7 +415,6 @@ CSP_SCRIPT_SRC = (
     'https://cdn.jsdelivr.net',
     'https://unpkg.com',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11',
-    "'unsafe-eval'",
 )
 
 # Стили: наши + CDN; в DEBUG допускаем инлайн-стили.
@@ -462,24 +451,6 @@ except Exception:
     pass
 if AWS_IMG_SOURCES:
     CSP_IMG_SRC = CSP_IMG_SRC + tuple(AWS_IMG_SOURCES)
-
-# Also include MEDIA_URL host and common S3 bucket hosts in CSP for images
-try:
-    from urllib.parse import urlparse
-    _media = globals().get('MEDIA_URL')
-    if _media:
-        _pu = urlparse(_media)
-        if _pu.scheme in ('http', 'https') and _pu.netloc:
-            CSP_IMG_SRC = CSP_IMG_SRC + (f"{_pu.scheme}://{_pu.netloc}",)
-    _bucket = globals().get('AWS_STORAGE_BUCKET_NAME')
-    _region = globals().get('AWS_S3_REGION_NAME')
-    if _bucket:
-        # Regionless legacy endpoint and regioned endpoint
-        CSP_IMG_SRC = CSP_IMG_SRC + (f"https://{_bucket}.s3.amazonaws.com",)
-        if _region:
-            CSP_IMG_SRC = CSP_IMG_SRC + (f"https://{_bucket}.s3.{_region}.amazonaws.com",)
-except Exception:
-    pass
 
 # Разрешаем WebSocket-соединения к своему хосту
 CSP_CONNECT_SRC = (
