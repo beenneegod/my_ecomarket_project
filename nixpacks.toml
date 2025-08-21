@@ -1,2 +1,18 @@
+# Nixpacks config for Railway
+# - Installs gettext (msgfmt) so `compilemessages` works on deploy
+# - Ensures entrypoint is executable
+# - Starts the app via entrypoint.sh
+
+providers = ['python']
+
+[phases.setup]
+# Keep existing detected packages and add gettext
+nixPkgs = ['...', 'gettext']
+
+[phases.build]
+cmds = ['chmod +x entrypoint.sh']
+
+[start]
+cmd = 'bash entrypoint.sh'
 [phases.setup]
 nixPkgs = ["...", "libwebp", "libjpeg", "zlib", "pkg-config"]

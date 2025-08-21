@@ -20,6 +20,11 @@ from django.test.utils import override_settings
 from django.core import mail
 from django.conf import settings
 
+# Safety: do not run on production by accident
+if not settings.DEBUG and not os.environ.get("ALLOW_E2E_IN_PROD"):
+    print("Refusing to run e2e_password_reset on production. Set ALLOW_E2E_IN_PROD=1 to override.")
+    sys.exit(3)
+
 
 def main():
     User = get_user_model()
