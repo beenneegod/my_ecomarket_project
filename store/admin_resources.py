@@ -1,7 +1,7 @@
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget, CharWidget  # Добавляем CharWidget
 from .models import Product, Category
-from django.core.files.base import File
+from django.core.files.base import File, ContentFile
 from django.conf import settings
 import os
 import io
@@ -67,6 +67,16 @@ class ProductResource(resources.ModelResource):
         или обновления экземпляра модели. 'row' - это словарь.
         kwargs может содержать 'file_name', 'user' и др.
         """
+        # Если товар уже существует (по slug) и у него уже есть image,
+        # сохраняем текущее имя файла, чтобы не перезаписывать картинку при ре-импорте
+        try:
+            slug_val = str(row.get('slug') or '').strip()
+            if slug_val:
+                existing = Product.objects.filter(slug=slug_val).only('image').first()
+                if existing and getattr(existing, 'image', None) and getattr(existing.image, 'name', ''):
+                    row['image'] = existing.image.name
+        except Exception:
+            pass
         # Нормализуем категорию: предпочитаем category_slug; если есть только name — вычисляем slug
         cat_slug = row.get('category_slug')
         cat_name = row.get('category_name')
@@ -76,26 +86,25 @@ class ProductResource(resources.ModelResource):
         elif cat_name is not None and str(cat_name).strip() != '':
             norm_name = unicodedata.normalize('NFKC', str(cat_name)).strip()
             row['category_slug'] = slugify(norm_name)
-
+        
+        # Нормализуем поле image
         image_path_from_csv = row.get('image')  # Значение из колонки 'image' (может быть относительный путь или URL)
-
         if not image_path_from_csv:
             # Если путь не указан, можно установить None или пустую строку,
             # в зависимости от того, как ImageField обрабатывает это
-            row['image'] = None # Или ''
+            row['image'] = None  # Или ''
         else:
             # Нормализуем строку
             row['image'] = str(image_path_from_csv).strip()
 
-        # Убедимся, что price и stock это корректные числа, если они приходят как строки
-        # (хотя import-export обычно справляется с конвертацией, если поля Decimal/Integer)
+        # Приводим price/stock к ожидаемому формату
         if 'price' in row and row['price']:
             try:
-                row['price'] = str(row['price']).replace(',', '.') # Заменяем запятую на точку для Decimal
-            except:
-                pass # Оставляем как есть, если конвертация не удалась, import-export выдаст ошибку позже
-        
-        if 'stock' in row and row['stock'] == '': # Если сток пустой, делаем его 0
+                row['price'] = str(row['price']).replace(',', '.')  # Заменяем запятую на точку для Decimal
+            except Exception:
+                pass  # Оставляем как есть, если конвертация не удалась
+
+        if 'stock' in row and row['stock'] == '':  # Если сток пустой, делаем его 0
             row['stock'] = 0
 
     def after_save_instance(self, instance, *args, **kwargs):
@@ -174,10 +183,29 @@ class ProductResource(resources.ModelResource):
                         pass
 
         if file_bytes:
-            # Сохраняем в ImageField — это спровоцирует запись в S3/локальное хранилище с учетом upload_to
-            # Используем in-memory bytes
-            file_obj = io.BytesIO(file_bytes)
-            instance.image.save(filename, File(file_obj), save=True)
+            # Если источник URL содержит /media/, сохраняем под исходным ключом (избежать новой датированной папки)
+            target_rel = None
+            try:
+                if 'parsed' in locals() and parsed and parsed.scheme in ('http', 'https'):
+                    media_url = getattr(settings, 'MEDIA_URL', '') or ''
+                    full = source
+                    if media_url and full.startswith(media_url):
+                        target_rel = full[len(media_url):]
+                    elif parsed and '/media/' in parsed.path:
+                        target_rel = parsed.path.split('/media/', 1)[1]
+            except Exception:
+                target_rel = None
+
+            if target_rel:
+                content = ContentFile(file_bytes)
+                # Пишем напрямую в storage по целевому ключу и назначаем имя файла
+                instance.image.storage.save(target_rel, content)
+                instance.image.name = target_rel
+                instance.save(update_fields=['image'])
+            else:
+                # Обычный путь: пусть upload_to решит структуру директорий
+                file_obj = io.BytesIO(file_bytes)
+                instance.image.save(filename, File(file_obj), save=True)
             # Если источник был локальным файлом и он находится в import_temp — можно удалить после загрузки
             if try_local:
                 try:
