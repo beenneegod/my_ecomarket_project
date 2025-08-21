@@ -229,6 +229,13 @@ if not DEBUG: # Настройки для ПРОДАКШЕНА (использу
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400', # Кеширование на 1 день
     }
+    # Optional: enable S3 server-side encryption if required by org policies
+    AWS_S3_SSE = os.getenv('AWS_S3_SSE')  # e.g., 'AES256' or 'aws:kms'
+    AWS_S3_SSE_KMS_KEY_ID = os.getenv('AWS_S3_SSE_KMS_KEY_ID')
+    if AWS_S3_SSE:
+        AWS_S3_OBJECT_PARAMETERS['ServerSideEncryption'] = AWS_S3_SSE
+        if AWS_S3_SSE.lower() == 'aws:kms' and AWS_S3_SSE_KMS_KEY_ID:
+            AWS_S3_OBJECT_PARAMETERS['SSEKMSKeyId'] = AWS_S3_SSE_KMS_KEY_ID
     AWS_LOCATION = 'media' # Файлы будут в s3://<bucket_name>/media/
     AWS_DEFAULT_ACL = 'public-read'
     AWS_QUERYSTRING_AUTH = False
