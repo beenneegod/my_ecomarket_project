@@ -1,6 +1,7 @@
 from django import template
 from django.templatetags.static import static
 from store.utils.images import get_or_generate_variant
+from django.utils.html import escape
 
 register = template.Library()
 
@@ -16,6 +17,9 @@ def product_image(product, key='card'):
         url = get_or_generate_variant(product.image, key)
         if url:
             return url
+        # Fallback to original image URL if variant failed to generate
+        if getattr(product.image, 'url', None):
+            return product.image.url
     # Try category default image from static per category slug
     if getattr(product, 'category', None) and getattr(product.category, 'slug', None):
         candidate = f"img/categories/{product.category.slug}.webp"

@@ -230,8 +230,8 @@ if not DEBUG: # Настройки для ПРОДАКШЕНА (использу
         'CacheControl': 'max-age=86400', # Кеширование на 1 день
     }
     AWS_LOCATION = 'media' # Файлы будут в s3://<bucket_name>/media/
-    AWS_DEFAULT_ACL = None
-    AWS_QUERYSTRING_AUTH = False      # public, unsigned URLs
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_QUERYSTRING_AUTH = False
     AWS_S3_FILE_OVERWRITE = False
 
     # Формирование MEDIA_URL
@@ -272,6 +272,9 @@ X_FRAME_OPTIONS = 'DENY'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CART_SESSION_ID = 'cart'
+
+# Feature flags
+FEATURE_IMAGE_VARIANTS = os.getenv('FEATURE_IMAGE_VARIANTS', 'true').lower() == 'true'
 
 # Channels: use Redis in production when REDIS_URL is provided, else in-memory for dev
 REDIS_URL = os.getenv('REDIS_URL')
