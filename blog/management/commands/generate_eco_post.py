@@ -5,7 +5,8 @@ import random
 import re
 import json # Upewnij się, że json jest zaimportowany
 import traceback
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+from django.core.management import call_command
 from django.utils import timezone
 from django.utils.text import slugify
 from django.contrib.auth import get_user_model
@@ -23,6 +24,7 @@ User = get_user_model()
 ENV_GEMINI_API_KEY = "GEMINI_API_KEY_FOR_BLOG"
 
 # Nazwa użytkownika Django do przypisywania postów generowanych przez AI
+# Domyślna nazwa użytkownika-robota; można nadpisać przez env API_POST_AUTHOR_USERNAME
 AI_AUTHOR_USERNAME = 'Ecomarket'  # Убедись, что такой пользователь существует в базе
 
 # Nazwy modeli Gemini
@@ -225,19 +227,32 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.NOTICE(f"--- {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}: Rozpoczęcie generowania eko-postu ---"))
 
+        # Upewnij się, że migracje są zastosowane (bezpieczne, idempotentne)
+        try:
+            call_command('migrate', '--noinput')
+            self.stdout.write(self.style.SUCCESS("Migracje bazy danych zastosowane (lub już aktualne)."))
+        except Exception as e:
+            # Nie przerywaj, ale zaloguj — jeśli web usługa uruchamia migracje, to i tak będzie OK
+            self.stdout.write(self.style.WARNING(f"Nie udało się uruchomić migracji przed generowaniem posta: {e}"))
+
         gemini_key = self.get_gemini_api_key() # Twoja metoda get_gemini_api_key już używa self.stdout
         if not gemini_key:
-        # Komunikat o błędzie jest już wyświetlany w get_gemini_api_key
-            return
+            # Komunikat o błędzie jest już wyświetlany w get_gemini_api_key
+            raise CommandError("Brak klucza Gemini API.")
+
+        # Pozwól nadpisać autora przez zmienną środowiskową
+        author_username = os.getenv('API_POST_AUTHOR_USERNAME', AI_AUTHOR_USERNAME)
 
         try:
-            author = User.objects.get(username=AI_AUTHOR_USERNAME)
+            author = User.objects.get(username=author_username)
             self.stdout.write(self.style.SUCCESS(f"Autor '{author.username}' dla postów znaleziony."))
         except User.DoesNotExist:
-            self.stdout.write(self.style.ERROR(
-                f"BŁĄD KRYTYCZNY: Użytkownik-autor '{AI_AUTHOR_USERNAME}' nie został znaleziony w bazie danych. Proszę utworzyć tego użytkownika."
-            ))
-            return
+            msg = (
+                f"BŁĄD KRYTYCZNY: Użytkownik-autor '{author_username}' nie został znaleziony w bazie danych. "
+                "Proszę utworzyć tego użytkownika lub ustawić API_POST_AUTHOR_USERNAME."
+            )
+            self.stdout.write(self.style.ERROR(msg))
+            raise CommandError(msg)
 
         # Używamy tematów z zewnętrznego pliku
         chosen_topic_prompt = random.choice(POLISH_ECO_TOPICS)
@@ -246,10 +261,12 @@ class Command(BaseCommand):
         ai_content_data = generate_content_with_gemini(chosen_topic_prompt, gemini_key)
 
         if not ai_content_data:
-            self.stdout.write(self.style.ERROR(
-                "Nie udało się wygenerować prawidłowej treści (tytuł/treść) przy użyciu API Gemini. Zobacz szczegóły w logach powyżej."
-            ))
-            return
+            msg = (
+                "Nie udało się wygenerować prawidłowej treści (tytuł/treść) przy użyciu API Gemini. "
+                "Zobacz szczegóły w logach powyżej."
+            )
+            self.stdout.write(self.style.ERROR(msg))
+            raise CommandError(msg)
 
         title = ai_content_data["title"]
         body = ai_content_data["body"]
@@ -305,6 +322,7 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Błąd podczas tworzenia postu w bazie danych: {e}"))
             self.stdout.write(self.style.ERROR(traceback.format_exc()))
+            raise CommandError(str(e))
         
         self.stdout.write(self.style.SUCCESS(f"--- {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}: Generowanie eko-postu zakończone ---"))
 

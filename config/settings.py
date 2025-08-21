@@ -230,7 +230,7 @@ if not DEBUG: # Настройки для ПРОДАКШЕНА (использу
         'CacheControl': 'max-age=86400', # Кеширование на 1 день
     }
     AWS_LOCATION = 'media' # Файлы будут в s3://<bucket_name>/media/
-    # In buckets with Object Ownership: Bucket owner enforced, ACLs are disabled.
+    # In buckets with Object Ownerslsehip: Bucket owner enforced, ACLs are disabled.
     # django-storages recommends setting AWS_DEFAULT_ACL=None to avoid ACL errors.
     AWS_DEFAULT_ACL = None
     AWS_QUERYSTRING_AUTH = False      # public, unsigned URLs
