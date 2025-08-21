@@ -24,7 +24,7 @@ class Challenge(models.Model):
     start_date = models.DateTimeField(verbose_name="Data rozpoczęcia")
     end_date = models.DateTimeField(verbose_name="Data zakończenia")
     
-    image = models.ImageField(upload_to='challenges_images/', null=True, blank=True, verbose_name="Образек wyzwania")
+    image = models.ImageField(upload_to='challenges_images/', null=True, blank=True, verbose_name="Obrazek wyzwania")
     
     badge_name_reward = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nazwa odznaki za wyzwanie")
     badge_icon_class_reward = models.CharField(max_length=50, blank=True, null=True, verbose_name="CSS klasa ikony odznaki")

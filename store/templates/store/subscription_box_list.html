@@ -1,25 +1,25 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}
     {{ page_title|default:"Nasze Eko Boxy Subskrypcyjne" }} - EcoMarket
 {% endblock %}
 
 {% block meta_description %}
-    Wybierz Eko Box: świeże, ekologiczne produkty w subskrypcji z dostawą do domu.
+    {% trans "Wybierz Eko Box: świeże, ekologiczne produkty w subskrypcji z dostawą do domu." %}
 {% endblock %}
 {% block og_title %}{{ page_title|default:"Eko Boxy Subskrypcyjne" }} — EcoMarket{% endblock %}
-{% block og_description %}Nasze zestawy subskrypcyjne z warzywami, owocami i więcej.{% endblock %}
+{% block og_description %}{% trans "Nasze zestawy subskrypcyjne z warzywami, owocami i więcej." %}{% endblock %}
 {% block og_type %}website{% endblock %}
 {% block twitter_title %}{{ page_title|default:"Eko Boxy Subskrypcyjne" }} — EcoMarket{% endblock %}
-{% block twitter_description %}Nasze zestawy subskrypcyjne z warzywami, owocami i więcej.{% endblock %}
+{% block twitter_description %}{% trans "Nasze zestawy subskrypcyjne z warzywami, owocami i więcej." %}{% endblock %}
 
 {% block content %}
 <div class="container mt-4 mb-5" data-aos="fade-in">
     <header class="text-center mb-5">
-        <h1 class="display-5 fw-bold text-reset">{{ page_title|default:"Nasze Eko Boxy Subskrypcyjne" }}</h1>
+    <h1 class="display-5 fw-bold text-reset">{{ page_title|default:"Nasze Eko Boxy Subskrypcyjne" }}</h1>
         <p class="lead text-muted col-lg-8 mx-auto">
-            Wybierz idealny zestaw zdrowych, ekologicznych produktów dostarczanych regularnie pod Twoje drzwi.
+            {% trans "Wybierz idealny zestaw zdrowych, ekologicznych produktów dostarczanych regularnie pod Twoje drzwi." %}
         </p>
     </header>
 
@@ -40,7 +40,7 @@
                         {% if box.image %}
                             <img src="{{ box.image.url }}" class="card-img-top" alt="{{ box.name }}" style="height: 220px; object-fit: cover;">
                         {% else %}
-                            <img src="{% static 'img/placeholder_box.png' %}" class="card-img-top" alt="Domyślny obrazek boxa" style="height: 220px; object-fit: cover; background-color: #f0f0f0;">
+                            <img src="{% static 'img/placeholder_box.png' %}" class="card-img-top" alt="{% trans 'Domyślny obrazek boxa' %}" style="height: 220px; object-fit: cover; background-color: #f0f0f0;">
                         {% endif %}
                         <div class="card-body d-flex flex-column p-4">
                             <h4 class="card-title h5 fw-bold mb-2">
@@ -56,12 +56,12 @@
                             {# Радиокнопка для выбора этого бокса #}
                             <div class="form-check mt-auto pt-3 border-top">
                                 {% if box.id in user_active_subscription_box_ids %}
-                                    <span class="badge bg-success p-2 w-100"><i class="bi bi-check-circle-fill"></i> Już subskrybujesz</span>
-                                    <a href="{% url 'store:order_history' %}" class="btn btn-outline-info btn-sm w-100 mt-2">Zarządzaj</a>
+                                    <span class="badge bg-success p-2 w-100"><i class="bi bi-check-circle-fill"></i> {% trans "Już subskrybujesz" %}</span>
+                                    <a href="{% url 'store:order_history' %}" class="btn btn-outline-info btn-sm w-100 mt-2">{% trans "Zarządzaj" %}</a>
                                 {% else %}
                                     <input class="form-check-input visually-hidden" type="radio" name="{{ form.box_type.html_name }}" value="{{ box.id }}" id="box-{{ box.id }}" {% if form.box_type.value == box.id|stringformat:"s" %}checked{% endif %} required>
                                     <label class="form-check-label btn btn-outline-success w-100" for="box-{{ box.id }}">
-                                        Wybieram ten box
+                                        {% trans "Wybieram ten box" %}
                                     </label>
                                 {% endif %}
                             </div>
@@ -81,13 +81,13 @@
 
             <div class="text-center mt-5">
                 <button type="submit" class="btn btn-primary btn-lg px-5">
-                    <i class="bi bi-arrow-right-circle-fill me-2"></i> Przejdź dalej
+                    <i class="bi bi-arrow-right-circle-fill me-2"></i> {% trans "Przejdź dalej" %}
                 </button>
             </div>
         </form>
     {% else %}
         <div class="alert alert-info text-center" role="alert">
-            Obecnie nie mamy dostępnych żadnych Eko Boxów subskrypcyjnych. Zajrzyj później!
+            {% trans "Obecnie nie mamy dostępnych żadnych Eko Boxów subskrypcyjnych. Zajrzyj później!" %}
         </div>
     {% endif %}
 </div>

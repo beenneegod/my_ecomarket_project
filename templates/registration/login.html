@@ -1,13 +1,14 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Logowanie - EcoMarket{% endblock %}
+{% block title %}{% trans "Logowanie - EcoMarket" %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6 col-xl-5">
         <div class="card shadow-sm">
             <div class="card-body p-4 p-md-5">
-                <h2 class="card-title text-center mb-4">Logowanie</h2>
+                <h2 class="card-title text-center mb-4">{% trans "Logowanie" %}</h2>
 
                 {% if form.errors %}
                     <div class="alert alert-danger" role="alert">
@@ -16,7 +17,7 @@
                                 {{ error }}
                             {% endfor %}
                         {% else %}
-                            Nazwa użytkownika lub hasło jest nieprawidłowe. Proszę spróbować ponownie.
+                            {% trans "Nazwa użytkownika lub hasło jest nieprawidłowe. Proszę spróbować ponownie." %}
                         {% endif %}
                     </div>
                 {% endif %}
@@ -24,11 +25,11 @@
                 {% if next %}
                     {% if user.is_authenticated %}
                         <div class="alert alert-warning" role="alert">
-                            Twoje konto nie ma dostępu do tej strony. Aby kontynuować, zaloguj się na konto z odpowiednimi uprawnieniami.
+                            {% trans "Twoje konto nie ma dostępu do tej strony. Aby kontynuować, zaloguj się na konto z odpowiednimi uprawnieniami." %}
                         </div>
                     {% else %}
                         <div class="alert alert-info" role="alert">
-                            Proszę się zalogować, aby zobaczyć tę stronę.
+                            {% trans "Proszę się zalogować, aby zobaczyć tę stronę." %}
                         </div>
                     {% endif %}
                 {% endif %}
@@ -47,7 +48,7 @@
                                 {% for error in form.username.errors %} {{ error }} {% endfor %}
                             </div>
                         {% else %}
-                            <div class="invalid-feedback">Proszę podać nazwę użytkownika.</div>
+                            <div class="invalid-feedback">{% trans "Proszę podać nazwę użytkownika." %}</div>
                         {% endif %}
                         {% if form.username.help_text %}
                             <small class="form-text text-muted d-block">{{ form.username.help_text|safe }}</small> {# d-block dla help_text #}
@@ -62,7 +63,7 @@
                                 {% for error in form.password.errors %} {{ error }} {% endfor %}
                             </div>
                         {% else %}
-                            <div class="invalid-feedback">Proszę podać hasło.</div>
+                            <div class="invalid-feedback">{% trans "Proszę podać hasło." %}</div>
                         {% endif %}
                         {% if form.password.help_text %}
                             <small class="form-text text-muted d-block">{{ form.password.help_text|safe }}</small>
@@ -72,13 +73,13 @@
                     <input type="hidden" name="next" value="{{ next|default:'/' }}">
 
                     <div class="d-grid gap-2 mt-3">
-                        <button type="submit" class="btn btn-primary btn-lg">Zaloguj się</button>
+                        <button type="submit" class="btn btn-primary btn-lg">{% trans "Zaloguj się" %}</button>
                     </div>
 
                     <p class="mt-3 text-center mx-auto">
-                        Nie masz konta? <a href="{% url 'register' %}">Zarejestruj się</a>
+                        {% trans "Nie masz konta?" %} <a href="{% url 'register' %}">{% trans "Zarejestruj się" %}</a>
                         <br>
-                        <a href="{% url 'password_reset' %}">Zapomniałeś hasła?</a>
+                        <a href="{% url 'password_reset' %}">{% trans "Zapomniałeś hasła?" %}</a>
                     </p>
                 </form>
             </div>

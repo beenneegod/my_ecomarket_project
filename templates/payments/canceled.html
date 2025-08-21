@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Płatność anulowana{% endblock %}
+{% block title %}{% trans "Płatność anulowana" %}{% endblock %}
 
 {% block content %}
-    <h2>Płatność została anulowana</h2>
-    <p>Anulowałeś proces płatności.</p>
-    <p>Twoje zamówienie nie zostało zrealizowane. Koszyk został zachowany, możesz spróbować zapłacić ponownie.</p>
+    <h2>{% trans "Płatność została anulowana" %}</h2>
+    <p>{% trans "Anulowałeś proces płatności." %}</p>
+    <p>{% trans "Twoje zamówienie nie zostało zrealizowane. Koszyk został zachowany, możesz spróbować zapłacić ponownie." %}</p>
     <p>
-    <a href="{% url 'store:cart_detail' %}">Wróć do koszyka</a> lub
-    <a href="{% url 'store:product_list' %}">kontynuuj zakupy</a>.
+    <a href="{% url 'store:cart_detail' %}">{% trans "Wróć do koszyka" %}</a> {% trans "lub" %}
+    <a href="{% url 'store:product_list' %}">{% trans "kontynuuj zakupy" %}</a>.
     </p>
 {% endblock %}

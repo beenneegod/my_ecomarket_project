@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static image_extras %}
+{% load static image_extras i18n %}
 
 {% block title %}{{ product.name }} - EcoMarket{% endblock %}
 {% block meta_description %}{{ product.name }} — {{ product.price }} PLN. {{ product.description|striptags|truncatewords:25 }}{% endblock %}
@@ -25,34 +25,34 @@
             </p>
 
             <div class="product-description mb-4">
-                <h4>Opis:</h4>
+                <h4>{% trans "Opis:" %}</h4>
                 <p>{{ product.description|linebreaksbr }}</p>
             </div>
 
             <form method="post" action="{% url 'store:cart_add' product.id %}" class="add-to-cart-form">
                 {% csrf_token %}
                 <div class="mb-3">
-                    <label for="quantity" class="form-label">Ilość:</label>
+                    <label for="quantity" class="form-label">{% trans "Ilość:" %}</label>
                     <div class="d-flex align-items-center">
                         <input type="number" name="quantity" value="1" min="1" max="{{ product.stock }}" class="quantity-input-detail form-control me-2">
                         <button type="button" data-product-id="{{ product.id }}" data-add-url="{% url 'store:cart_add' product.id %}" class="btn btn-primary add-to-cart-btn">
-                            <i class="bi bi-cart-plus"></i> Dodaj do koszyka
+                            <i class="bi bi-cart-plus"></i> {% trans "Dodaj do koszyka" %}
                         </button>
                     </div>
                 </div>
                 {% if product.stock > 5 %}
                     <div class="stock-info stock-available mt-2">
-                        <i class="bi bi-check-circle-fill"></i> Na stanie: {{ product.stock }} szt.
+                        <i class="bi bi-check-circle-fill"></i> {% trans "Na stanie:" %} {{ product.stock }} {% trans "szt." %}
                     </div>
                 {% elif product.stock > 0 %}
                     <div class="stock-info stock-low mt-2">
-                        <i class="bi bi-exclamation-triangle-fill"></i> Ostatnie sztuki: {{ product.stock }} szt.
+                        <i class="bi bi-exclamation-triangle-fill"></i> {% trans "Ostatnie sztuki:" %} {{ product.stock }} {% trans "szt." %}
                     </div>
                 {% endif %}
             </form>
 
             <a href="{% url 'store:product_list' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Wróć do listy produktów
+                <i class="bi bi-arrow-left"></i> {% trans "Wróć do listy produktów" %}
             </a>
         </div>
     </div>
@@ -61,7 +61,7 @@
     <hr class="my-5 hr-eco">
     <div class="row">
         <div class="col">
-            <h3 class="text-center mb-4">Może Cię również zainteresować:</h3>
+            <h3 class="text-center mb-4">{% trans "Może Cię również zainteresować:" %}</h3>
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
                 {% for related_product in related_products %}
                     <div class="col">

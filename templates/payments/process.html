@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Przekierowanie do płatności...{% endblock %}
+{% block title %}{% trans "Przekierowanie do płatności..." %}{% endblock %}
 
 {% block content %}
-    <h2>Przekierowanie na stronę płatności...</h2>
-    <p>Proszę czekać, przygotowujemy bezpieczną sesję płatności.</p>
-    {% endblock %}
+    <h2>{% trans "Przekierowanie na stronę płatności..." %}</h2>
+    <p>{% trans "Proszę czekać, przygotowujemy bezpieczną sesję płatności." %}</p>
+{% endblock %}

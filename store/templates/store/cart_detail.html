@@ -11,14 +11,14 @@
     {% if cart %}
         <div class="table-responsive mb-4"> {# table-responsive для адаптивности таблицы #}
             <table class="table table-hover align-middle"> {# Классы Bootstrap для таблицы #}
-                <thead class="table-light"> {# Светлый фон для заголовков таблицы #}
+        <thead class="table-light"> {# Светлый фон для заголовков таблицы #}
                     <tr>
-                        <th scope="col" style="width: 10%;">Zdjęcie</th>
-                        <th scope="col" style="width: 30%;">Produkt</th>
-                        <th scope="col" style="width: 20%;">Ilość</th>
-                        <th scope="col" style="width: 15%; text-align: right;">Cena za szt.</th>
-                        <th scope="col" style="width: 15%; text-align: right;">Wartość ogólna</th>
-                        <th scope="col" style="width: 10%; text-align: center;">Usunąć</th>
+            <th scope="col" style="width: 10%;">{% trans "Zdjęcie" %}</th>
+            <th scope="col" style="width: 30%;">{% trans "Produkt" %}</th>
+            <th scope="col" style="width: 20%;">{% trans "Ilość" %}</th>
+            <th scope="col" style="width: 15%; text-align: right;">{% trans "Cena za szt." %}</th>
+            <th scope="col" style="width: 15%; text-align: right;">{% trans "Wartość ogólna" %}</th>
+            <th scope="col" style="width: 10%; text-align: center;">{% trans "Usuń" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -61,32 +61,32 @@
 
         <div class="row justify-content-end">
             <div class="col-md-6 col-lg-4">
-                <div class="card">
+        <div class="card">
                     <div class="card-body">
-                        <h4 class="card-title">Podsumowanie zamówienia</h4>
+            <h4 class="card-title">{% trans "Podsumowanie zamówienia" %}</h4>
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                Pełna cena:
+                {% trans "Pełna cena:" %}
                                 <span id="cart-full-price">{{ cart.get_total_price }} PLN</span>
                             </li>
                             {% if cart.coupon %}
                             <li class="list-group-item d-flex justify-content-between align-items-center text-success">
-                                Kupon:
+                {% trans "Kupon:" %}
                                 <span>
                                     <strong>{{ cart.coupon.code }}</strong> ({{ cart.coupon.discount }}%)
                                     <form method="post" action="{% url 'store:remove_coupon' %}" class="d-inline">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-link btn-sm text-danger p-0 ms-2" title="Usuń kupon"><i class="bi bi-x-circle"></i> Usuń</button>
+                    <button type="submit" class="btn btn-link btn-sm text-danger p-0 ms-2" title="{% trans "Usuń kupon" %}"><i class="bi bi-x-circle"></i> {% trans "Usuń" %}</button>
                                     </form>
                                 </span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                Zniżka:
+                {% trans "Zniżka:" %}
                                 <span id="cart-discount-amount">-{{ cart.get_discount_amount }} PLN</span>
                             </li>
                             {% endif %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                Do zapłaty:
+                {% trans "Do zapłaty:" %}
                                 <strong id="cart-total-price" {% if cart.coupon %}class="text-success"{% endif %}>{{ cart.get_total_price_after_discount }} PLN</strong>
                             </li>
                         </ul>
@@ -95,7 +95,7 @@
                         {% if user.is_authenticated and user_coupon_choice_form and available_user_coupons %}
                         <form method="post" action="{% url 'store:coupon_apply' %}" class="mt-3 mb-3 border-top pt-3">
                             {% csrf_token %}
-                            <h5 class="mb-3">{% trans "Wybierz swój kupon:" %}</h5>
+                <h5 class="mb-3">{% trans "Wybierz swój kupon:" %}</h5>
                             {{ user_coupon_choice_form.user_coupon.label_tag }}
                             <div class="list-group coupon-choice-list mb-3">
                                 {% for choice in user_coupon_choice_form.user_coupon %}
@@ -106,7 +106,7 @@
                                 {% endfor %}
                             </div>
                             <input type="hidden" name="source_form" value="user_choice"> {# Идентификатор формы #}
-                            <button class="btn btn-outline-success w-100" type="submit">{% trans "Zastosuj wybrany kupon" %}</button>
+                <button class="btn btn-outline-success w-100" type="submit">{% trans "Zastosuj wybrany kupon" %}</button>
                         </form>
                         {% endif %}
 
@@ -122,10 +122,10 @@
 
                         <div class="d-grid gap-2 mt-4">
                             <a href="{% url 'payments:checkout' %}" class="btn btn-success btn-lg">
-                                <i class="bi bi-credit-card"></i> Przejdź do kasy
+                                <i class="bi bi-credit-card"></i> {% trans "Przejdź do kasy" %}
                             </a>
                             <a href="{% url 'store:product_list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left-circle"></i> Kontynuuj zakupy
+                                <i class="bi bi-arrow-left-circle"></i> {% trans "Kontynuuj zakupy" %}
                             </a>
                         </div>
                     </div>
@@ -137,9 +137,9 @@
 
     {% else %}
         <div class="alert alert-info" role="alert"> {# Используем alert Bootstrap #}
-            Twój koszyk jest pusty. Dodaj produkty, aby rozpocząć zakupy.
+            {% trans "Twój koszyk jest pusty. Dodaj produkty, aby rozpocząć zakupy." %}
         </div>
-        <p><a href="{% url 'store:product_list' %}" class="btn btn-primary"><i class="bi bi-cart-plus"></i> Rozpocznij zakupy</a></p>
+        <p><a href="{% url 'store:product_list' %}" class="btn btn-primary"><i class="bi bi-cart-plus"></i> {% trans "Rozpocznij zakupy" %}</a></p>
     {% endif %}
 
     {# Подключаем JS для корзины (если еще не подключен глобально в base.html или нужен специфичный) #}

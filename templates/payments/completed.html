@@ -1,15 +1,16 @@
 {% extends "base.html" %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Opłata przeszła domyślnie{% endblock %}
+{% block title %}{% trans "Płatność zakończona pomyślnie" %}{% endblock %}
 
 {% block content %}
-    <h2>Dziękujemy za zakupy!</h2>
-    <p>Opłata przeszła domyślnie</p>
-    <p>Potwierdzenie zamówienia i jego szczególy nie za długo pojawią się na towim koncie oraz będą wysłane mailem.</p>
+    <h2>{% trans "Dziękujemy za zakupy!" %}</h2>
+    <p>{% trans "Płatność zakończona pomyślnie." %}</p>
+    <p>{% trans "Potwierdzenie zamówienia i jego szczegóły wkrótce pojawią się na Twoim koncie oraz zostaną wysłane e‑mailem." %}</p>
 
-    <p><a href="{% url 'store:product_list' %}">Do sklepu</a></p>
+    <p><a href="{% url 'store:product_list' %}">{% trans "Do sklepu" %}</a></p>
     {% if user.is_authenticated %}
-     <p><a href="{% url 'store:order_history' %}">Historia zamówień</a></p>
+     <p><a href="{% url 'store:order_history' %}">{% trans "Historia zamówień" %}</a></p>
     {% endif %}
 {% endblock %}

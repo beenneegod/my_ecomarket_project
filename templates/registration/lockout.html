@@ -1,22 +1,23 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Konto zablokowane - EcoMarket{% endblock %}
+{% block title %}{% trans "Konto zablokowane - EcoMarket" %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
         <div class="card shadow-sm">
             <div class="card-body p-4 p-md-5 text-center">
-                <h2 class="card-title text-danger mb-3">Dostęp zablokowany</h2>
+                <h2 class="card-title text-danger mb-3">{% trans "Dostęp zablokowany" %}</h2>
                 {% if cooloff_time_str %}
-                    <p>Twoje konto lub adres IP zostały tymczasowo zablokowane z powodu zbyt wielu nieudanych prób logowania.</p>
-                    <p>Spróbuj ponownie za <strong>{{ cooloff_time_str }}</strong>.</p>
+                    <p>{% trans "Twoje konto lub adres IP zostały tymczasowo zablokowane z powodu zbyt wielu nieudanych prób logowania." %}</p>
+                    <p>{% blocktrans %}Spróbuj ponownie za <strong>{{ cooloff_time_str }}</strong>.{% endblocktrans %}</p>
                 {% else %}
-                    <p>Twoje konto lub adres IP zostały zablokowane z powodu zbyt wielu nieudanych prób logowania.</p>
-                    <p>Skontaktuj się z administratorem, jeśli uważasz, że to błąd.</p>
+                    <p>{% trans "Twoje konto lub adres IP zostały zablokowane z powodu zbyt wielu nieudanych prób logowania." %}</p>
+                    <p>{% trans "Skontaktuj się z administratorem, jeśli uważasz, że to błąd." %}</p>
                 {% endif %}
                 <hr class="my-4">
-                <a href="{% url 'homepage' %}" class="btn btn-primary">Wróć na stronę główną</a>
+                <a href="{% url 'homepage' %}" class="btn btn-primary">{% trans "Wróć na stronę główną" %}</a>
             </div>
         </div>
     </div>

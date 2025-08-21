@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}Realizacja zamówienia - EcoMarket{% endblock %} 
+{% block title %}{% trans "Realizacja zamówienia" %} - EcoMarket{% endblock %} 
 
 {% block content %}
 <div class="row g-5">
      <div class="col-md-5 col-lg-4 order-md-last">
         <h4 class="d-flex justify-content-between align-items-center mb-3">
-            <span class="text-primary">Twoje Zamówienie</span> 
+            <span class="text-primary">{% trans "Twoje Zamówienie" %}</span> 
             <span class="badge bg-primary rounded-pill">{{ cart|length }}</span>
         </h4>
         <ul class="list-group mb-3">
@@ -15,27 +15,27 @@
                 <li class="list-group-item d-flex justify-content-between lh-sm">
                     <div>
                         <h6 class="my-0">{{ item.product_obj.name }}</h6>
-                        <small class="text-body-secondary">Ilość: {{ item.quantity }}</small> 
+                        <small class="text-body-secondary">{% trans "Ilość:" %} {{ item.quantity }}</small> 
                     </div>
                     <span class="text-body-secondary">{{ item.total_price }} PLN</span>
                 </li>
             {% endfor %}
             <li class="list-group-item d-flex justify-content-between">
-                <span>Pełna cena (PLN)</span>
+                <span>{% trans "Pełna cena (PLN)" %}</span>
                 <span>{{ cart.get_total_price }} PLN</span>
             </li>
             {% if cart.coupon %}
             <li class="list-group-item d-flex justify-content-between text-success">
-                <span>Zniżka ({{ cart.coupon.code }})</span>
+                <span>{% blocktrans %}Zniżka ({{ cart.coupon.code }}){% endblocktrans %}</span>
                 <span>-{{ cart.get_discount_amount }} PLN</span>
             </li>
             <li class="list-group-item d-flex justify-content-between">
-                <span>Do zapłaty (PLN)</span>
+                <span>{% trans "Do zapłaty (PLN)" %}</span>
                 <strong class="text-success">{{ cart.get_total_price_after_discount }} PLN</strong>
             </li>
             {% else %}
             <li class="list-group-item d-flex justify-content-between">
-                <span>Do zapłaty (PLN)</span>
+                <span>{% trans "Do zapłaty (PLN)" %}</span>
                 <strong>{{ cart.get_total_price }} PLN</strong>
             </li>
             {% endif %}
@@ -43,7 +43,7 @@
     </div>
 
     <div class="col-md-7 col-lg-8">
-        <h4 class="mb-3">Adres dostawy</h4> 
+    <h4 class="mb-3">{% trans "Adres dostawy" %}</h4> 
         <form method="post" class="needs-validation" novalidate>
             {% csrf_token %}
             <div class="row g-3">
@@ -55,7 +55,7 @@
                             {% for error in form.first_name.errors %} {{ error }} {% endfor %}
                         </div>
                     {% else %}
-                        <div class="invalid-feedback">Proszę podać swoje imię.</div>
+                        <div class="invalid-feedback">{% trans "Proszę podać swoje imię." %}</div>
                     {% endif %}
                 </div>
 
@@ -67,22 +67,20 @@
                             {% for error in form.last_name.errors %} {{ error }} {% endfor %}
                         </div>
                     {% else %}
-                        <div class="invalid-feedback">Proszę podać swoje nazwisko.</div>
+                        <div class="invalid-feedback">{% trans "Proszę podać swoje nazwisko." %}</div>
                     {% endif %}
                 </div>
 
                 <div class="col-12">
                     <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
                     {{ form.email }}
-                    <div class="invalid-feedback">
-                        Proszę podać poprawny adres email.
-                    </div>
+                    <div class="invalid-feedback">{% trans "Proszę podać poprawny adres email." %}</div>
                 </div>
 
                 <div class="col-12">
                     <label for="{{ form.address_line_1.id_for_label }}" class="form-label">{{ form.address_line_1.label }}</label>
                     {{ form.address_line_1 }}
-                    <div class="form-text">Proszę podać pełny adres, w tym ulicę i numer domu/mieszkania.</div>
+                    <div class="form-text">{% trans "Proszę podać pełny adres, w tym ulicę i numer domu/mieszkania." %}</div>
                     {% if form.address_line_1.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.address_line_1.errors %} {{ error }} {% endfor %}
@@ -91,9 +89,9 @@
                 </div>
 
                 <div class="col-12">
-                    <label for="{{ form.address_line_2.id_for_label }}" class="form-label">{{ form.address_line_2.label }} <span class="text-body-secondary">(Opcjonalnie)</span></label> 
+                    <label for="{{ form.address_line_2.id_for_label }}" class="form-label">{{ form.address_line_2.label }} <span class="text-body-secondary">({% trans "Opcjonalnie" %})</span></label> 
                     {{ form.address_line_2 }}
-                    <div class="form-text">Możesz podać dodatkowe informacje o adresie, np. kod dostępu do budynku.</div>
+                    <div class="form-text">{% trans "Możesz podać dodatkowe informacje o adresie, np. kod dostępu do budynku." %}</div>
                     {% if form.address_line_2.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.address_line_2.errors %} {{ error }} {% endfor %}
@@ -110,7 +108,7 @@
                             {% for error in form.postal_code.errors %} {{ error }} {% endfor %}
                         </div>
                     {% else %}
-                        <div class="invalid-feedback">Proszę podać kod pocztowy.</div>
+                        <div class="invalid-feedback">{% trans "Proszę podać kod pocztowy." %}</div>
                     {% endif %}
                 </div>
 
@@ -122,7 +120,7 @@
                             {% for error in form.city.errors %} {{ error }} {% endfor %}
                         </div>
                     {% else %}
-                        <div class="invalid-feedback">Proszę podać miasto.</div>
+                        <div class="invalid-feedback">{% trans "Proszę podać miasto." %}</div>
                     {% endif %}
                 </div>
 
@@ -134,7 +132,7 @@
                             {% for error in form.country.errors %} {{ error }} {% endfor %}
                         </div>
                     {% else %}
-                        <div class="invalid-feedback">Proszę wybrać kraj.</div>
+                        <div class="invalid-feedback">{% trans "Proszę wybrać kraj." %}</div>
                     {% endif %}
                 </div>
             </div>
@@ -150,7 +148,7 @@
             <hr class="my-4">
 
             <button class="w-100 btn btn-primary btn-lg" type="submit">
-                <i class="bi bi-credit-card-2-front"></i> Przejdź do płatności 
+                <i class="bi bi-credit-card-2-front"></i> {% trans "Przejdź do płatności" %}
             </button>
         </form>
     </div>

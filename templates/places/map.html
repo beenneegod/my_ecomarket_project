@@ -1,24 +1,25 @@
 {% extends "base.html" %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Eko‑miejsca — EcoMarket{% endblock %}
+{% block title %}{% trans "Eko‑miejsca — EcoMarket" %}{% endblock %}
 
 {% block content %}
 <div class="container mt-4 mb-4">
   <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
-  <h2 class="mb-0">Eko‑miejsca</h2>
+  <h2 class="mb-0">{% trans "Eko‑miejsca" %}</h2>
   <div class="ms-auto d-flex align-items-center gap-3 flex-wrap">
       <div class="d-flex align-items-center gap-2">
-        <label for="citySelect" class="form-label mb-0">Miasto:</label>
+        <label for="citySelect" class="form-label mb-0">{% trans "Miasto:" %}</label>
         <select id="citySelect" class="form-select" style="min-width: 220px;">
-          <option value="">Wszystkie miasta</option>
+          <option value="">{% trans "Wszystkie miasta" %}</option>
           {% for c in cities %}
             <option value="{{ c }}">{{ c }}</option>
           {% endfor %}
         </select>
       </div>
       <div class="d-flex align-items-center gap-2">
-        <span class="text-muted">Kategorie:</span>
+        <span class="text-muted">{% trans "Kategorie:" %}</span>
         <div class="d-flex align-items-center gap-3 flex-wrap">
           {% for val,label in categories %}
             <div class="form-check form-check-inline">
@@ -29,12 +30,12 @@
         </div>
       </div>
       <div class="d-flex align-items-center gap-2">
-        <button id="locateBtn" class="btn btn-outline-primary">Moja lokalizacja</button>
-        <label class="form-label mb-0" for="radiusInput">Promień (km):</label>
+        <button id="locateBtn" class="btn btn-outline-primary">{% trans "Moja lokalizacja" %}</button>
+        <label class="form-label mb-0" for="radiusInput">{% trans "Promień (km):" %}</label>
         <input id="radiusInput" class="form-control" type="number" min="1" max="200" step="1" value="10" style="width: 90px;">
       </div>
       <div>
-        <a href="{% url 'places:add_place' %}" class="btn btn-success">Dodaj miejsce</a>
+        <a href="{% url 'places:add_place' %}" class="btn btn-success">{% trans "Dodaj miejsce" %}</a>
       </div>
     </div>
   </div>
@@ -45,7 +46,7 @@
        data-add-review-url="{% url 'places:add_review' 0 %}"
        data-vote-review-up="{% url 'places:vote_review' 0 'up' %}"
        data-vote-review-down="{% url 'places:vote_review' 0 'down' %}"></div>
-  <div class="text-muted small mt-2">Dane miejsc częściowo pochodzą z OpenStreetMap i są dostępne na licencji ODbL.</div>
+  <div class="text-muted small mt-2">{% trans "Dane miejsc częściowo pochodzą z OpenStreetMap i są dostępne na licencji ODbL." %}</div>
 </div>
 {% endblock %}
 

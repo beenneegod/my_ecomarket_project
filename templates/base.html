@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static i18n %}<!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE|default:"pl" }}">
 <head>
     <meta charset="UTF-8">
@@ -33,7 +33,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <a href="#main-content" class="skip-link">Przejdź do treści</a>
+    <a href="#main-content" class="skip-link">{% trans "Przejdź do treści" %}</a>
     <header>
     <nav class="navbar navbar-expand-lg navbar-light" aria-label="Główna nawigacja">
             <div class="container">
@@ -44,41 +44,41 @@
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %}active{% endif %}" href="{% url 'store:product_list' %}"{% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %} aria-current="page"{% endif %}><i class="bi bi-basket3-fill me-1"></i> Produkty</a>
+                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %}active{% endif %}" href="{% url 'store:product_list' %}"{% if request.resolver_match.view_name == 'store:product_list' or request.resolver_match.view_name == 'store:product_list_by_category' %} aria-current="page"{% endif %}><i class="bi bi-basket3-fill me-1"></i> {% trans "Produkty" %}</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center gap-1 ws-nowrap {% if request.resolver_match.view_name == 'store:subscription_box_list' %}active{% endif %}" href="{% url 'store:subscription_box_list' %}"{% if request.resolver_match.view_name == 'store:subscription_box_list' %} aria-current="page"{% endif %}><i class="bi bi-box-seam-fill me-1"></i> Eko-Boxy</a>
+                            <a class="nav-link d-flex align-items-center gap-1 ws-nowrap {% if request.resolver_match.view_name == 'store:subscription_box_list' %}active{% endif %}" href="{% url 'store:subscription_box_list' %}"{% if request.resolver_match.view_name == 'store:subscription_box_list' %} aria-current="page"{% endif %}><i class="bi bi-box-seam-fill me-1"></i> {% trans "Eko-Boxy" %}</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center gap-1 ws-nowrap {% if request.resolver_match.app_name == 'carbon_calculator' %}active{% endif %}" href="{% url 'carbon_calculator:calculate_page' %}"{% if request.resolver_match.app_name == 'carbon_calculator' %} aria-current="page"{% endif %}><i class="bi bi-calculator-fill me-1"></i> Eko-Kalkulator</a>
+                            <a class="nav-link d-flex align-items-center gap-1 ws-nowrap {% if request.resolver_match.app_name == 'carbon_calculator' %}active{% endif %}" href="{% url 'carbon_calculator:calculate_page' %}"{% if request.resolver_match.app_name == 'carbon_calculator' %} aria-current="page"{% endif %}><i class="bi bi-calculator-fill me-1"></i> {% trans "Eko-Kalkulator" %}</a>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle {% if request.resolver_match.app_name == 'challenges' %}active{% endif %}" href="#" id="navbarChallengesDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="bi bi-trophy me-1"></i> Eko-Wyzwania
+                                <i class="bi bi-trophy me-1"></i> {% trans "Eko-Wyzwania" %}
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarChallengesDropdown" role="menu">
-                                <li><a class="dropdown-item" role="menuitem" href="{% url 'challenges:challenge_list' %}"><i class="bi bi-list-task me-1"></i> Lista wyzwań</a></li>
-                                <li><a class="dropdown-item" role="menuitem" href="{% url 'challenges:my_progress' %}"><i class="bi bi-person-badge me-1"></i> Mój postęp</a></li>
-                                <li><a class="dropdown-item" role="menuitem" href="{% url 'challenges:leaderboard' %}"><i class="bi bi-bar-chart-line-fill me-1"></i> Tablica liderów</a></li>
+                                <li><a class="dropdown-item" role="menuitem" href="{% url 'challenges:challenge_list' %}"><i class="bi bi-list-task me-1"></i> {% trans "Lista wyzwań" %}</a></li>
+                                <li><a class="dropdown-item" role="menuitem" href="{% url 'challenges:my_progress' %}"><i class="bi bi-person-badge me-1"></i> {% trans "Mój postęp" %}</a></li>
+                                <li><a class="dropdown-item" role="menuitem" href="{% url 'challenges:leaderboard' %}"><i class="bi bi-bar-chart-line-fill me-1"></i> {% trans "Tablica liderów" %}</a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle {% if request.resolver_match.app_name == 'blog' or request.resolver_match.app_name == 'chat' %}active{% endif %}" href="#" id="navbarBlogChatDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="bi bi-journal-text me-1"></i> Blog/Chat
+                                <i class="bi bi-journal-text me-1"></i> {% trans "Blog/Chat" %}
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="navbarBlogChatDropdown" role="menu">
-                                <li><a class="dropdown-item" role="menuitem" href="{% url 'blog:post_list' %}"><i class="bi bi-journal-text me-1"></i> Blog</a></li>
-                                <li><a class="dropdown-item" role="menuitem" href="{% url 'chat:room_list' %}"><i class="bi bi-chat-dots me-1"></i> Chat</a></li>
+                                <li><a class="dropdown-item" role="menuitem" href="{% url 'blog:post_list' %}"><i class="bi bi-journal-text me-1"></i> {% trans "Blog" %}</a></li>
+                                <li><a class="dropdown-item" role="menuitem" href="{% url 'chat:room_list' %}"><i class="bi bi-chat-dots me-1"></i> {% trans "Chat" %}</a></li>
                             </ul>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.app_name == 'places' %}active{% endif %}" style="white-space: nowrap;" href="{% url 'places:map' %}"{% if request.resolver_match.app_name == 'places' %} aria-current="page"{% endif %}><i class="bi bi-geo-alt-fill me-1"></i> Eko‑Miejsca</a>
+                            <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.app_name == 'places' %}active{% endif %}" style="white-space: nowrap;" href="{% url 'places:map' %}"{% if request.resolver_match.app_name == 'places' %} aria-current="page"{% endif %}><i class="bi bi-geo-alt-fill me-1"></i> {% trans "Eko‑Miejsca" %}</a>
                         </li>
                     </ul>
                     <form method="get" action="{% url 'store:product_list' %}" class="d-flex align-items-center flex-grow-1 me-3 search-form-narrow">
-                        <label for="navbarSearch" class="visually-hidden">Szukaj</label>
-                        <input id="navbarSearch" class="form-control me-2 flex-grow-1" type="search" name="query" placeholder="Wyszukaj..." aria-label="Szukaj" value="{{ request.GET.query }}" style="min-width: 0;">
-                        <button class="btn btn-outline-success" type="submit">Szukaj</button>
+                        <label for="navbarSearch" class="visually-hidden">{% trans "Szukaj" %}</label>
+                        <input id="navbarSearch" class="form-control me-2 flex-grow-1" type="search" name="query" placeholder="{% trans "Wyszukaj..." %}" aria-label="{% trans "Szukaj" %}" value="{{ request.GET.query }}" style="min-width: 0;">
+                        <button class="btn btn-outline-success" type="submit">{% trans "Szukaj" %}</button>
                     </form>
 
                     <ul class="navbar-nav">
@@ -90,7 +90,7 @@
                          <li class="nav-item">
                             <a class="nav-link d-flex align-items-center gap-1 ws-nowrap" href="{% url 'store:cart_detail' %}" id="cart-link">
                                 <i class="bi bi-cart3 me-1"></i>
-                                <span>Koszyk</span>
+                                <span>{% trans "Koszyk" %}</span>
                                 <span class="badge bg-success rounded-pill ms-1" id="cart-count" aria-live="polite" aria-atomic="true">{{ cart|length }}</span>
                             </a>
                         </li>
@@ -102,28 +102,28 @@
                                     {% else %}
                                         <i class="bi bi-person-circle fs-5 me-2"></i>
                                     {% endif %}
-                                    Cześć, {{ user.username }}!
+                                    {% trans "Cześć," %} {{ user.username }}!
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown" role="menu">
-                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'store:profile_update' %}">Edytuj profil</a></li>
-                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'password_change' %}">Zmień hasło</a></li>
-                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'store:order_history' %}">Moje zamówienia</a></li>
-                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'carbon_calculator:footprint_history' %}">Moje emisje CO2</a></li>
+                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'store:profile_update' %}">{% trans "Edytuj profil" %}</a></li>
+                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'password_change' %}">{% trans "Zmień hasło" %}</a></li>
+                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'store:order_history' %}">{% trans "Moje zamówienia" %}</a></li>
+                                    <li><a class="dropdown-item" role="menuitem" href="{% url 'carbon_calculator:footprint_history' %}">{% trans "Moje emisje CO2" %}</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <form id="logout-form" action="{% url 'logout' %}" method="post" class="d-none">
                                             {% csrf_token %}
                                         </form>
-                                        <a class="dropdown-item logout-button-bs" role="menuitem" href="#">Wyloguj się</a>
+                                        <a class="dropdown-item logout-button-bs" role="menuitem" href="#">{% trans "Wyloguj się" %}</a>
                                     </li>
                                 </ul>
                             </li>
                         {% else %}
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'login' %}">Logowanie</a>
+                                <a class="nav-link" href="{% url 'login' %}">{% trans "Logowanie" %}</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-nowrap" href="{% url 'register' %}">Załóż&nbsp;konto</a>
+                                <a class="nav-link text-nowrap" href="{% url 'register' %}">{% trans "Załóż konto" %}</a>
                             </li>
                         {% endif %}
                     </ul>
@@ -150,7 +150,7 @@
 
     <footer class="py-3 mt-auto bg-light">
         <div class="container text-center">
-            <p class="mb-0">&copy; {% now "Y" %} EcoMarket. Wszelkie prawa zastrzeżone.</p>
+            <p class="mb-0">&copy; {% now "Y" %} EcoMarket. {% trans "Wszelkie prawa zastrzeżone." %}</p>
         </div>
     </footer>
 

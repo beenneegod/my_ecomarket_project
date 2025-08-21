@@ -1,4 +1,4 @@
-{% load static image_extras %}
+{% load static image_extras i18n %}
 <div class="card shadow-sm h-100 product-card d-flex flex-column position-relative" data-aos="fade-up">
     <a href="{% url 'store:product_detail' product.slug %}">
     <img src="{% product_image product 'card' %}" class="card-img-top" alt="{{ product.name }}" loading="lazy">
@@ -14,7 +14,7 @@
             {% csrf_token %}
             <input type="hidden" name="quantity" value="1">
             <button type="button" data-product-id="{{ product.id }}" data-add-url="{% url 'store:cart_add' product.id %}" class="btn btn-sm btn-primary add-to-cart-btn">
-                <i class="bi bi-cart-plus"></i> Dodaj
+                <i class="bi bi-cart-plus"></i> {% trans "Dodaj" %}
             </button>
         </form>
     </div>

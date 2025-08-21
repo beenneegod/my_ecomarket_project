@@ -1,34 +1,34 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}
-    {% if current_category %}{{ current_category.name }}{% else %}Towary{% endif %} - EcoMarket
+    {% if current_category %}{{ current_category.name }}{% else %}{% trans "Towary" %}{% endif %} - EcoMarket
 {% endblock %}
 
 {% block meta_description %}
-    {% if current_category %}Produkty w kategorii {{ current_category.name }} — ekologiczne i świeże.{% else %}Przeglądaj nasze ekologiczne produkty: warzywa, owoce i więcej.{% endif %}
+    {% if current_category %}{% blocktrans %}Produkty w kategorii {{ current_category.name }} — ekologiczne i świeże.{% endblocktrans %}{% else %}{% trans "Przeglądaj nasze ekologiczne produkty: warzywa, owoce i więcej." %}{% endif %}
 {% endblock %}
 {% block og_title %}
-    {% if query %}Wyniki wyszukiwania: "{{ query }}" — EcoMarket{% elif current_category %}{{ current_category.name }} — EcoMarket{% else %}Nasze produkty — EcoMarket{% endif %}
+    {% if query %}{% blocktrans %}Wyniki wyszukiwania: "{{ query }}" — EcoMarket{% endblocktrans %}{% elif current_category %}{{ current_category.name }} — EcoMarket{% else %}{% trans "Nasze produkty — EcoMarket" %}{% endif %}
 {% endblock %}
 {% block og_description %}
-    {% if query %}Wyniki dla zapytania "{{ query }}".{% elif current_category %}Produkty w kategorii {{ current_category.name }}.{% else %}Odkryj naszą ofertę ekologicznych produktów.{% endif %}
+    {% if query %}{% blocktrans %}Wyniki dla zapytania "{{ query }}".{% endblocktrans %}{% elif current_category %}{% blocktrans %}Produkty w kategorii {{ current_category.name }}.{% endblocktrans %}{% else %}{% trans "Odkryj naszą ofertę ekologicznych produktów." %}{% endif %}
 {% endblock %}
 {% block og_type %}website{% endblock %}
 {% block twitter_title %}
-    {% if query %}Wyniki wyszukiwania: "{{ query }}" — EcoMarket{% elif current_category %}{{ current_category.name }} — EcoMarket{% else %}Nasze produkty — EcoMarket{% endif %}
+    {% if query %}{% blocktrans %}Wyniki wyszukiwania: "{{ query }}" — EcoMarket{% endblocktrans %}{% elif current_category %}{{ current_category.name }} — EcoMarket{% else %}{% trans "Nasze produkty — EcoMarket" %}{% endif %}
 {% endblock %}
 {% block twitter_description %}
-    {% if query %}Wyniki dla zapytania "{{ query }}".{% elif current_category %}Produkty w kategorii {{ current_category.name }}.{% else %}Odkryj naszą ofertę ekologicznych produktów.{% endif %}
+    {% if query %}{% blocktrans %}Wyniki dla zapytania "{{ query }}".{% endblocktrans %}{% elif current_category %}{% blocktrans %}Produkty w kategorii {{ current_category.name }}.{% endblocktrans %}{% else %}{% trans "Odkryj naszą ofertę ekologicznych produktów." %}{% endif %}
 {% endblock %}
 
 {% block content %}
     <div class="row"> {# Используем Bootstrap row для двух колонок #}
         {# --- Боковая панель с категориями --- #}
         <aside class="col-lg-3 col-md-4 mb-4"> {# Bootstrap классы для ширины колонок #}
-            <div class="list-group">
+        <div class="list-group">
                 <a href="{% url 'store:product_list' %}" class="list-group-item list-group-item-action {% if not current_category %}active{% endif %}">
-                    Wszystkie produkty
+            {% trans "Wszystkie produkty" %}
                 </a>
                 {% for c in categories %}
                     <a href="{{ c.get_absolute_url }}" class="list-group-item list-group-item-action {% if current_category.slug == c.slug %}active{% endif %}">
@@ -40,13 +40,13 @@
 
         {# --- Основной блок со списком товаров --- #}
         <section class="col-lg-9 col-md-8">
-            <h2>
+        <h2>
                 {% if query %}
-                    Rezultat wyszukiwania: "{{ query }}"
+            {% blocktrans %}Rezultat wyszukiwania: "{{ query }}"{% endblocktrans %}
                 {% elif current_category %}
                     {{ current_category.name }}
                 {% else %}
-                    Nasze produkty
+            {% trans "Nasze produkty" %}
                 {% endif %}
             </h2>
 
@@ -58,9 +58,9 @@
                 {% empty %}
                     <div class="col">
                         {% if query %}
-                            <p>Za twoim zapytaniem "{{ query }}" nic nie znaleziono.</p>
+                            <p>{% blocktrans %}Za twoim zapytaniem "{{ query }}" nic nie znaleziono.{% endblocktrans %}</p>
                         {% else %}
-                            <p>W tej kategorii brak towarów.</p>
+                            <p>{% trans "W tej kategorii brak towarów." %}</p>
                         {% endif %}
                     </div>
                 {% endfor %}

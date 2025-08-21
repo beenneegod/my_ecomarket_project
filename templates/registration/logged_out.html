@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Wylogowano{% endblock %}
+{% block title %}{% trans "Wylogowano" %}{% endblock %}
 
 {% block content %}
-    <h2>Zostałeś wylogowany</h2>
-    <p>Wylogowano Cię z konta.</p>
-    <p><a href="{% url 'login' %}">Zaloguj się ponownie</a></p>
+    <h2>{% trans "Zostałeś wylogowany" %}</h2>
+    <p>{% trans "Wylogowano Cię z konta." %}</p>
+    <p><a href="{% url 'login' %}">{% trans "Zaloguj się ponownie" %}</a></p>
 {% endblock %}

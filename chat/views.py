@@ -172,9 +172,9 @@ def delete_message(request, msg_id: int):
     # Only author or room owner can delete
     if msg.user_id != request.user.id and room.owner_id != request.user.id:
         return JsonResponse({'error': 'forbidden'}, status=403)
+    # Mark as removed; do not overwrite text to keep a single source of truth.
     msg.is_removed = True
-    msg.text = '[wiadomość usunięta]'
-    msg.save(update_fields=['is_removed', 'text'])
+    msg.save(update_fields=['is_removed'])
     # Broadcast removal
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
