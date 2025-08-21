@@ -9,10 +9,13 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--only', choices=['card','thumb','detail'], help='Generate only this variant')
         parser.add_argument('--limit', type=int, help='Limit number of products processed')
+        parser.add_argument('--slug', type=str, help='Process only product with this slug')
         parser.add_argument('--dry-run', action='store_true', help='Do not write files, just report (not supported yet)')
 
     def handle(self, *args, **options):
         qs = Product.objects.filter(~Q(image=''), image__isnull=False)
+        if options.get('slug'):
+            qs = qs.filter(slug=options['slug'])
         if options.get('limit'):
             qs = qs[: options['limit']]
         count = 0
