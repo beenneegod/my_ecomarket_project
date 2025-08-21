@@ -90,7 +90,7 @@ class ProductResource(resources.ModelResource):
         if 'stock' in row and row['stock'] == '': # Если сток пустой, делаем его 0
             row['stock'] = 0
 
-    def after_save_instance(self, instance, using_transactions, dry_run, **kwargs):
+    def after_save_instance(self, instance, *args, **kwargs):
         """
         После сохранения товара: если у него указано поле image в виде
         - относительного локального пути (например, import_temp/plik.jpg) и физически файл есть в MEDIA_ROOT,
@@ -98,6 +98,12 @@ class ProductResource(resources.ModelResource):
         то открываем источник и сохраняем через ImageField.save(), чтобы файл попал в хранилище
         (в продакшене — в S3, в деве — в локальную папку upload_to).
         """
+        # Совместимость с разными версиями django-import-export
+        dry_run = kwargs.get('dry_run')
+        if dry_run is None and len(args) >= 2:
+            # args обычно: (using_transactions, dry_run, ...) — нам нужен второй
+            dry_run = args[1]
+
         if dry_run:
             return
 
