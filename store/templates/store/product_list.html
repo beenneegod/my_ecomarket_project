@@ -74,13 +74,22 @@
                     </div>
                 </div>
                 <div class="col-12 col-sm-4 col-md-3">
-                    <label for="sort" class="form-label">Sortuj</label>
-                    <select class="form-select" id="sort" name="sort">
-                        <option value="new" {% if sort == 'new' %}selected{% endif %}>Najnowsze</option>
-                        <option value="popular" {% if sort == 'popular' %}selected{% endif %}>Popularne</option>
-                        <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Cena: rosnąco</option>
-                        <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Cena: malejąco</option>
-                    </select>
+                    <label id="sort-label" class="form-label">Sortuj</label>
+                    <input type="hidden" name="sort" id="sort" value="{{ sort|default:'new' }}">
+                    <div class="pseudo-select" data-name="sort">
+                        <button type="button" class="pseudo-select-toggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sort-label sort-current">
+                            <span id="sort-current">
+                                {% if sort == 'popular' %}Popularne{% elif sort == 'price_asc' %}Cena: rosnąco{% elif sort == 'price_desc' %}Cena: malejąco{% else %}Najnowsze{% endif %}
+                            </span>
+                            <i class="caret" aria-hidden="true"></i>
+                        </button>
+                        <ul class="pseudo-select-menu" role="listbox" tabindex="-1" aria-labelledby="sort-label">
+                            <li role="option" data-value="new" class="{% if sort == 'new' or not sort %}selected{% endif %}">Najnowsze</li>
+                            <li role="option" data-value="popular" class="{% if sort == 'popular' %}selected{% endif %}">Popularne</li>
+                            <li role="option" data-value="price_asc" class="{% if sort == 'price_asc' %}selected{% endif %}">Cena: rosnąco</li>
+                            <li role="option" data-value="price_desc" class="{% if sort == 'price_desc' %}selected{% endif %}">Cena: malejąco</li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="col-12 col-md-3 d-grid">
                     <button type="submit" class="btn btn-success">Zastosuj</button>
