@@ -8,6 +8,7 @@ from .models import EcoPlace, PlaceReview, PlaceReviewVote
 
 @admin.register(EcoPlace)
 class EcoPlaceAdmin(admin.ModelAdmin):
+    change_list_template = "admin/places/ecoplace/change_list.html"
     list_display = ("name", "category", "city", "is_active")
     list_filter = ("category", "city", "is_active")
     search_fields = ("name", "city", "address")
