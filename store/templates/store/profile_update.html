@@ -110,6 +110,10 @@
 })();
 </script>
 <style>
+/* Hide the native file input rendered by Django; we trigger it via the green label button */
+.js-avatar-input {
+    display: none !important;
+}
 /* Visually hide file input but keep it accessible and clickable via label */
 .visually-hidden-file {
     position: absolute !important;
