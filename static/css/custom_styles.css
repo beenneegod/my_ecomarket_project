@@ -1203,3 +1203,60 @@ header .navbar form.d-flex button.btn-outline-success {
 @media (max-width: 576px) {
     .page-centered { min-height: auto; }
 }
+
+/* Product filters: refine number input spinners */
+.product-filters input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+.product-filters input[type="number"]::-webkit-outer-spin-button,
+.product-filters input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+/* Optional: custom subtle stepper via background icon (keeps UX clean). You can remove this if not desired. */
+.product-filters .number-field {
+    position: relative;
+}
+.product-filters .number-field input[type="number"] { padding-right: 2.5rem; }
+.product-filters .number-field .spinner-buttons {
+    position: absolute;
+    right: .375rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: .125rem;
+}
+.product-filters .number-field .spinner-btn {
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 1px solid var(--color-border);
+    border-radius: .25rem;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.06));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text-medium);
+}
+.product-filters .number-field .spinner-btn:hover { filter: brightness(1.1); }
+.product-filters .number-field .spinner-btn:active { filter: brightness(0.95); }
+.product-filters .number-field .spinner-btn.up::before,
+.product-filters .number-field .spinner-btn.down::before{
+    content: '';
+    display: block;
+    width: .6rem;
+    height: .6rem;
+    mask: center/contain no-repeat;
+    -webkit-mask: center/contain no-repeat;
+    background-color: currentColor;
+}
+.product-filters .number-field .spinner-btn.up::before{
+    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23000" d="M7 14l5-5 5 5H7z"/></svg>');
+    -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23000" d="M7 14l5-5 5 5H7z"/></svg>');
+}
+.product-filters .number-field .spinner-btn.down::before{
+    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23000" d="M7 10h10l-5 5-5-5z"/></svg>');
+    -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23000" d="M7 10h10l-5 5-5-5z"/></svg>');
+}
