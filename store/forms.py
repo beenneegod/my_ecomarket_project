@@ -168,6 +168,42 @@ class ProfileUpdateForm(forms.ModelForm):
                 instance.avatar = None
             except Exception:
                 instance.avatar = None
+        else:
+            # Дедупликация: если загружен новый файл и он совпадает с текущим по хешу — не пересохраняем
+            uploaded = self.files.get('avatar') if hasattr(self, 'files') else None
+            try:
+                if uploaded and instance.pk and getattr(instance, 'avatar'):
+                    # Вычисляем SHA256 загруженного файла
+                    import hashlib
+                    hasher_new = hashlib.sha256()
+                    for chunk in uploaded.chunks():
+                        hasher_new.update(chunk)
+                    new_digest = hasher_new.hexdigest()
+
+                    # Вычисляем SHA256 текущего файла из стораджа
+                    current_file = instance.avatar
+                    hasher_old = hashlib.sha256()
+                    try:
+                        with current_file.open('rb') as f:
+                            for chunk in iter(lambda: f.read(8192), b''):
+                                hasher_old.update(chunk)
+                        old_digest = hasher_old.hexdigest()
+                    except Exception:
+                        old_digest = None
+
+                    if old_digest and new_digest == old_digest:
+                        # Совпадает: вернуть предыдущее значение и отбросить новое
+                        # Сбрасываем поле к исходному, чтобы Django не сохранил новое
+                        self.cleaned_data['avatar'] = current_file
+                        instance.avatar = current_file
+                        # Также очистим self.files, чтобы не триггерить перезапись
+                        try:
+                            self.files.pop('avatar', None)
+                        except Exception:
+                            pass
+            except Exception:
+                # На ошибке дедупликации просто продолжаем обычный путь
+                pass
         if commit:
             instance.save()
         return instance

@@ -4,6 +4,7 @@ from django.db import models
 from django.conf import settings # Для ссылки на модель пользователя
 from django.urls import reverse
 from django.utils.text import slugify
+import os
 from django.utils.module_loading import import_string
 
 class Category(models.Model):
@@ -237,7 +238,9 @@ class UserCoupon(models.Model):
 class Profile(models.Model): # Без отступа в начале строки
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
     avatar = models.ImageField(
-        upload_to='avatars/',
+        upload_to=lambda instance, filename: (
+            f"avatars/{slugify(getattr(instance.user, 'username', '') or 'user')}/{filename}"
+        ),
         null=True,
         blank=True,
         storage=get_product_image_storage_instance()
