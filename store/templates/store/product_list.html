@@ -50,6 +50,35 @@
                 {% endif %}
             </h2>
 
+            <form method="get" class="row g-2 align-items-end mb-3">
+                {% if current_category %}
+                    <input type="hidden" name="category" value="{{ current_category.slug }}">
+                {% endif %}
+                {% if query %}
+                    <input type="hidden" name="query" value="{{ query }}">
+                {% endif %}
+                <div class="col-6 col-sm-4 col-md-3">
+                    <label for="min_price" class="form-label">Cena od</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="min_price" name="min_price" value="{{ min_price|default:'' }}">
+                </div>
+                <div class="col-6 col-sm-4 col-md-3">
+                    <label for="max_price" class="form-label">Cena do</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="max_price" name="max_price" value="{{ max_price|default:'' }}">
+                </div>
+                <div class="col-12 col-sm-4 col-md-3">
+                    <label for="sort" class="form-label">Sortuj</label>
+                    <select class="form-select" id="sort" name="sort">
+                        <option value="new" {% if sort == 'new' %}selected{% endif %}>Najnowsze</option>
+                        <option value="popular" {% if sort == 'popular' %}selected{% endif %}>Popularne</option>
+                        <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Cena: rosnąco</option>
+                        <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Cena: malejąco</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 d-grid">
+                    <button type="submit" class="btn btn-success">Zastosuj</button>
+                </div>
+            </form>
+
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
                 {% for product in products %}
                     <div class="col">
@@ -66,7 +95,7 @@
                 {% endfor %}
             </div>
 
-            {% include "store/pagination.html" with page=products query=query current_category=current_category %}
+            {% include "store/pagination.html" with page=products query=query current_category=current_category sort=sort min_price=min_price max_price=max_price %}
         </section>
     </div> {# Конец .row для колонок #}
 {% endblock %}

@@ -11,7 +11,7 @@ from django.contrib.auth import login # Функция для автоматич
 from .forms import UserRegistrationForm, ProfileUpdateForm, SubscriptionChoiceForm, CouponApplyForm, UserCouponChoiceForm, CartAddProductForm # Добавлен CartAddProductForm
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q
+from django.db.models import Q, Count
 from blog.models import Post
 from django.contrib import messages
 import stripe
@@ -36,7 +36,7 @@ def product_list(request, category_slug=None):
         current_category = get_object_or_404(Category, slug=category_slug)
         products_list = products_list.filter(category=current_category)
 
-    # --- НОВАЯ ЛОГИКА: Фильтрация по поисковому запросу ---
+    # --- Фильтрация по поисковому запросу ---
     query = request.GET.get('query') # Получаем параметр 'query' из GET-запроса
     if query:
         # Если query не пустой, фильтруем queryset
@@ -44,7 +44,35 @@ def product_list(request, category_slug=None):
         products_list = products_list.filter(
             Q(name__icontains=query) | Q(description__icontains=query)
         )
-    # --- КОНЕЦ ЛОГИКИ ПОИСКА ---
+    # --- Цена: min/max ---
+    min_price = request.GET.get('min_price')
+    max_price = request.GET.get('max_price')
+    try:
+        min_val = Decimal(min_price) if min_price not in (None, "") else None
+    except Exception:
+        min_val = None
+    try:
+        max_val = Decimal(max_price) if max_price not in (None, "") else None
+    except Exception:
+        max_val = None
+    # Если оба заданы и перепутаны — поменяем местами
+    if min_val is not None and max_val is not None and min_val > max_val:
+        min_val, max_val = max_val, min_val
+    if min_val is not None:
+        products_list = products_list.filter(price__gte=min_val)
+    if max_val is not None:
+        products_list = products_list.filter(price__lte=max_val)
+
+    # --- Сортировка ---
+    sort = request.GET.get('sort') or 'new'
+    if sort == 'price_asc':
+        products_list = products_list.order_by('price', '-created_at')
+    elif sort == 'price_desc':
+        products_list = products_list.order_by('-price', '-created_at')
+    elif sort == 'popular':
+        products_list = products_list.annotate(order_count=Count('order_items')).order_by('-order_count', '-created_at')
+    else:  # 'new' по умолчанию
+        products_list = products_list.order_by('-created_at')
 
     # --- Пагинация (как и раньше) ---
     paginator = Paginator(products_list, 12)
@@ -61,7 +89,10 @@ def product_list(request, category_slug=None):
         'categories': categories,
         'current_category': current_category,
         'query': query, # Передаем запрос в контекст (для отображения и пагинации)
-    }
+        'sort': sort,
+        'min_price': min_price,
+        'max_price': max_price,
+        }
     return render(request, 'store/product_list.html', context)
 
 @ensure_csrf_cookie

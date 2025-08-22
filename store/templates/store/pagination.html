@@ -5,7 +5,7 @@
 
             {# --- Кнопка "Предыдущая" --- #}
             <li class="page-item {% if not page.has_previous %}disabled{% endif %}">
-                <a class="page-link" href="{% if page.has_previous %}?page={{ page.previous_page_number }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}{% else %}#__{% endif %}" aria-label="Poprzednia strona" rel="prev">
+                <a class="page-link" href="{% if page.has_previous %}?page={{ page.previous_page_number }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}{% if sort %}&amp;sort={{ sort }}{% endif %}{% if min_price %}&amp;min_price={{ min_price }}{% endif %}{% if max_price %}&amp;max_price={{ max_price }}{% endif %}{% else %}#__{% endif %}" aria-label="Poprzednia strona" rel="prev">
                     <span aria-hidden="true">&laquo;</span>
                     {# <span class="sr-only">Poprzednia</span> #}
                 </a>
@@ -15,12 +15,12 @@
                 {% if page.number == i %}
                     <li class="page-item active" aria-current="page"><span class="page-link">{{ i }}</span></li>
                 {% elif i > page.number|add:'-3' and i < page.number|add:'3' %} {# Показываем +-2 страницы от текущей #}
-                    <li class="page-item"><a class="page-link" href="?page={{ i }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}" aria-label="Idź do strony {{ i }}">{{ i }}</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ i }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}{% if sort %}&amp;sort={{ sort }}{% endif %}{% if min_price %}&amp;min_price={{ min_price }}{% endif %}{% if max_price %}&amp;max_price={{ max_price }}{% endif %}" aria-label="Idź do strony {{ i }}">{{ i }}</a></li>
                 {% elif i == 1 or i == page.paginator.num_pages %} {# Всегда показываем первую и последнюю, если они не в диапазоне +-2 #}
                     {% if i == 1 and page.number > 3 %} {# Многоточие после первой, если текущая > 3 #}
                        <li class="page-item disabled"><span class="page-link">...</span></li>
                     {% endif %}
-                    <li class="page-item"><a class="page-link" href="?page={{ i }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}" aria-label="Idź do strony {{ i }}">{{ i }}</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ i }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}{% if sort %}&amp;sort={{ sort }}{% endif %}{% if min_price %}&amp;min_price={{ min_price }}{% endif %}{% if max_price %}&amp;max_price={{ max_price }}{% endif %}" aria-label="Idź do strony {{ i }}">{{ i }}</a></li>
                     {% if i == page.paginator.num_pages and page.number < page.paginator.num_pages|add:"-2" %} {# Многоточие перед последней #}
                         <li class="page-item disabled"><span class="page-link">...</span></li>
                     {% endif %}
@@ -29,7 +29,7 @@
 
             {# --- Кнопка "Следующая" --- #}
             <li class="page-item {% if not page.has_next %}disabled{% endif %}">
-                <a class="page-link" href="{% if page.has_next %}?page={{ page.next_page_number }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}{% else %}#__{% endif %}" aria-label="Następna strona" rel="next">
+                <a class="page-link" href="{% if page.has_next %}?page={{ page.next_page_number }}{% if current_category %}&amp;category={{ current_category.slug }}{% endif %}{% if query %}&amp;query={{ query }}{% endif %}{% if sort %}&amp;sort={{ sort }}{% endif %}{% if min_price %}&amp;min_price={{ min_price }}{% endif %}{% if max_price %}&amp;max_price={{ max_price }}{% endif %}{% else %}#__{% endif %}" aria-label="Następna strona" rel="next">
                     <span aria-hidden="true">&raquo;</span>
                     {# <span class="sr-only">Następna</span> #}
                 </a>
