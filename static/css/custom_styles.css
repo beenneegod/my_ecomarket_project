@@ -1215,23 +1215,28 @@ header .navbar form.d-flex button.btn-outline-success {
     margin: 0;
 }
 /* Optional: custom subtle stepper via background icon (keeps UX clean). You can remove this if not desired. */
-.product-filters .number-field {
-    position: relative;
+.product-filters .number-field { position: relative; }
+.product-filters .number-field .input-wrap { position: relative; }
+.product-filters .number-field input[type="number"] {
+    padding-right: 2.75rem;
+    height: calc(2.375rem + 2px); /* match .form-control default height */
+    line-height: 1.5;
 }
-.product-filters .number-field input[type="number"] { padding-right: 2.75rem; }
 .product-filters .number-field .spinner-buttons {
     position: absolute;
-    right: .75rem; /* sit well within the input border */
+    right: .5rem; /* inside the input padding */
     top: 50%;
     transform: translateY(-50%);
     display: flex;
     flex-direction: column;
-    gap: .125rem;
+    gap: .15rem;
     z-index: 1;
+    pointer-events: none; /* let clicks through except on buttons */
 }
+.product-filters .number-field .spinner-buttons .spinner-btn { pointer-events: auto; }
 .product-filters .number-field .spinner-btn {
-    width: .95rem;  /* slightly smaller for tight layouts */
-    height: .95rem;
+    width: .9rem;  /* compact */
+    height: .9rem;
     border: 1px solid var(--color-border);
     border-radius: .25rem;
     background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.06));
