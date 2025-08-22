@@ -97,26 +97,22 @@
     });
 
     // Custom avatar picker logic
-    const hiddenInput = document.getElementById('{{ form.avatar.id_for_label }}') || document.querySelector('.js-avatar-input');
-    const pickBtn = document.getElementById('avatar-picker-btn');
+    const hiddenInput = document.querySelector('.js-avatar-input');
     const fileNameField = document.getElementById('avatar-filename');
     const previewImg = document.querySelector('img[alt="Twój awatar"]');
-
-    if (pickBtn && hiddenInput) {
-        pickBtn.addEventListener('click', () => hiddenInput.click());
-    }
+    const updatePreview = () => {
+        const file = hiddenInput && hiddenInput.files && hiddenInput.files[0];
+        if (fileNameField) {
+            fileNameField.textContent = file ? file.name : 'Nie wybrano pliku';
+        }
+        if (file && previewImg) {
+            const url = URL.createObjectURL(file);
+            previewImg.src = url;
+            previewImg.onload = () => URL.revokeObjectURL(url);
+        }
+    };
     if (hiddenInput) {
-        hiddenInput.addEventListener('change', () => {
-            const file = hiddenInput.files && hiddenInput.files[0];
-            if (fileNameField) {
-                fileNameField.textContent = file ? file.name : 'Nie wybrano pliku';
-            }
-            if (file && previewImg) {
-                const url = URL.createObjectURL(file);
-                previewImg.src = url;
-                previewImg.onload = () => URL.revokeObjectURL(url);
-            }
-        });
+        ['change','input'].forEach(evt => hiddenInput.addEventListener(evt, updatePreview));
     }
 })();
 </script>
