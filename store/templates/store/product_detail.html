@@ -26,6 +26,7 @@
 
             <div class="mb-3 d-flex align-items-center gap-2">
                 <div class="product-rating d-inline-flex align-items-center" data-product-id="{{ product.id }}" data-rate-url="{% url 'store:rate_product' product.id %}" data-user-rating="{{ user_rating_value|default:'' }}" data-auth="{% if request.user.is_authenticated %}1{% else %}0{% endif %}" title="{% if not request.user.is_authenticated %}Zaloguj się, aby oceniać{% else %}Oceń ten produkt{% endif %}">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     {% for i in "12345" %}
                         {% with idx=forloop.counter %}
                             {% if user_rating_value and idx <= user_rating_value %}
@@ -139,8 +140,15 @@
         var formData = new FormData();
         formData.append('value', String(value));
         var csrf = (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || getCookie('csrftoken') || '';
+        if (csrf) { formData.append('csrfmiddlewaretoken', csrf); }
         fetch(url, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf }, credentials: 'same-origin' })
-            .then(function(res){ return res.json().then(function(d){ return { res: res, data: d }; }); })
+            .then(function(res){
+                var ct = res.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    return res.json().then(function(d){ return { res: res, data: d }; });
+                }
+                return { res: res, data: { ok: false, error: 'Non-JSON response', status: res.status } };
+            })
             .then(function(payload){
                 var d = payload.data;
                 if (!payload.res.ok || !d.ok) {
@@ -151,13 +159,16 @@
                         s.classList.toggle('text-warning', v <= prev);
                         s.classList.toggle('text-secondary', v > prev);
                     });
+                    if (window.Swal && payload.res && payload.res.status === 403) {
+                        window.Swal.fire({ icon: 'error', title: 'Błąd CSRF', text: 'Nie udało się zapisać oceny (403). Odśwież stronę i spróbuj ponownie.' });
+                    }
                     return;
                 }
                 var meta = rating.querySelector('.rating-meta');
                 if (meta) meta.textContent = '(Śr: ' + (d.average != null ? Number(d.average).toFixed(1) : '0.0') + ', głosów: ' + (d.count || 0) + ')';
                 rating.setAttribute('data-user-rating', String(value));
             })
-            .catch(function(){ /* ignore */ });
+            .catch(function(err){ if (window.Swal) { window.Swal.fire({ icon: 'error', title: 'Błąd', text: 'Nie udało się wysłać oceny. Sprawdź połączenie.' }); } });
     });
 })();
 </script>
