@@ -34,6 +34,13 @@ class Challenge(models.Model):
     # --- НОВЫЕ ПОЛЯ ---
     is_template = models.BooleanField(default=False, verbose_name="Szablon powtarzalny")
     is_active = models.BooleanField(default=True, verbose_name="Aktywne (widoczne)")
+    RECURRENCE_CHOICES = [
+        ('none', 'Bez powtarzania'),
+        ('weekly', 'Co tydzień'),
+        ('monthly', 'Co miesiąc'),
+    ]
+    recurrence_type = models.CharField(max_length=10, choices=RECURRENCE_CHOICES, default='none', verbose_name="Powtarzanie (dla szablonu)")
+    max_future_instances = models.PositiveSmallIntegerField(default=1, verbose_name="Maks. aktywnych/nadchodzących instancji (dla szablonu)")
     template_challenge = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
@@ -80,6 +87,10 @@ class Challenge(models.Model):
     def can_join(self):
         # Можно добавить условия, например, если челлендж не требует регистрации заранее
         return self.is_active_now()
+
+    # Backward-compatible alias used in some views
+    def can_join_now(self):
+        return self.can_join()
 
 
 class UserChallengeParticipation(models.Model):
@@ -138,3 +149,24 @@ class UserBadge(models.Model):
 
     def __str__(self):
         return f"Odznaka '{self.badge.name}' dla {self.user.username}"
+
+
+class EcoPointEvent(models.Model):
+    SOURCE_CHOICES = [
+        ("challenge", "Wyzwanie"),
+        # przyszłe źródła: 'purchase', 'referral', itp.
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="eco_point_events")
+    amount = models.PositiveIntegerField(verbose_name="Punkty")
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="challenge", verbose_name="Źródło")
+    challenge = models.ForeignKey('Challenge', null=True, blank=True, on_delete=models.SET_NULL, related_name="point_events")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Zdarzenie punktowe"
+        verbose_name_plural = "Zdarzenia punktowe"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} +{self.amount} ({self.source})"

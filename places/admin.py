@@ -17,7 +17,7 @@ class EcoPlaceAdmin(admin.ModelAdmin):
     class ImportForm(forms.Form):
         # Put requested cities first
         def preset_choices():
-            preferred = ["Kraków", "Krakow", "Poznań", "Poznan", "Warszawa", "Lublin"]
+            preferred = ["Kraków", "Poznań", "Warszawa", "Lublin"]
             seen = set()
             ordered = []
             for name in preferred:

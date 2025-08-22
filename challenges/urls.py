@@ -12,4 +12,5 @@ urlpatterns = [
     # path('challenge/complete/<int:participation_id>/', views.mark_challenge_complete_view, name='mark_challenge_complete'),
     path('my-progress/', views.my_progress_view, name='my_progress'),
     path('leaderboard/', views.leaderboard_view, name='leaderboard'),
+    path('leaderboard/monthly/', views.leaderboard_monthly_view, name='leaderboard_monthly'),
 ]

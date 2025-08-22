@@ -4,9 +4,10 @@ from django.urls import reverse, reverse_lazy
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
+from datetime import datetime
 from django.db.models import Sum, Count, F
 from django.db import transaction # Для атомарных операций
-from .models import Challenge, UserChallengeParticipation, Badge, UserBadge
+from .models import Challenge, UserChallengeParticipation, Badge, UserBadge, EcoPointEvent
 from store.models import Profile, UserCoupon # Обновленный импорт
 from .forms import ChallengeParticipationForm # Если вы создали этот файл
 from django.views.decorators.http import require_POST
@@ -71,6 +72,7 @@ def challenge_detail_view(request, slug):
                         profile.eco_points = F('eco_points') + challenge.points_for_completion
                         profile.last_points_update = timezone.now()
                         profile.save()
+                        EcoPointEvent.objects.create(user=request.user, amount=challenge.points_for_completion, source="challenge", challenge=challenge)
 
                         success_message = f"Pomyślnie ukończyłeś wyzwanie '{challenge.title}'! Otrzymano: {challenge.points_for_completion} пунктов"
                         
@@ -116,6 +118,7 @@ def challenge_detail_view(request, slug):
                     profile.eco_points = F('eco_points') + challenge.points_for_completion
                     profile.last_points_update = timezone.now()
                     profile.save()
+                    EcoPointEvent.objects.create(user=request.user, amount=challenge.points_for_completion, source="challenge", challenge=challenge)
 
                     success_message = f"Pomyślnie ukończyłeś wyзwanie '{challenge.title}'! Оtrzymano: {challenge.points_for_completion} пунктов"
 
@@ -250,3 +253,62 @@ def leaderboard_view(request):
         'description': 'Zobacz, kto zdobył najwięcej punktów w naszych eko-wyzwaniach! Tutaj znajdziesz najlepszych uczestników, którzy aktywnie dbają o środowisko i zdobywają eko-punkty za swoje działania.',
     }
     return render(request, 'challenges/leaderboard.html', context)
+
+
+def leaderboard_monthly_view(request):
+    # Parse optional year/month from query params, default to current month (Warsaw TZ)
+    now = timezone.now()
+    try:
+        year = int(request.GET.get('year', now.year))
+        month = int(request.GET.get('month', now.month))
+        # normalize tz-aware start of month
+        naive = datetime(year, month, 1, 0, 0, 0)
+        start = timezone.make_aware(naive, timezone=now.tzinfo) if timezone.is_naive(naive) else naive
+    except Exception:
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # compute next/prev month starts
+    if start.month == 12:
+        next_start = start.replace(year=start.year + 1, month=1)
+    else:
+        next_start = start.replace(month=start.month + 1)
+    if start.month == 1:
+        prev_start = start.replace(year=start.year - 1, month=12)
+    else:
+        prev_start = start.replace(month=start.month - 1)
+
+    qs = (
+        EcoPointEvent.objects.filter(created_at__gte=start, created_at__lt=next_start)
+        .values('user')
+        .annotate(points=Sum('amount'))
+        .order_by('-points')[:20]
+    )
+    # Collect user and profile info
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    user_ids = [row['user'] for row in qs]
+    users = {u.id: u for u in User.objects.filter(id__in=user_ids).select_related('profile')}
+
+    leaderboard_entries = []
+    for i, row in enumerate(qs):
+        u = users.get(row['user'])
+        if not u:
+            continue
+        # profile may not exist
+        avatar_url = getattr(getattr(u, 'profile', None), 'avatar_url', None)
+        leaderboard_entries.append({
+            'rank': i + 1,
+            'user': u,
+            'points': row['points'] or 0,
+            'avatar_url': avatar_url,
+        })
+
+    context = {
+        'leaderboard_entries': leaderboard_entries,
+        'page_title': 'Miesięczny ranking Eko-punktów',
+    'period': start,
+    'prev_year': prev_start.year,
+    'prev_month': prev_start.month,
+    'next_year': next_start.year,
+    'next_month': next_start.month,
+    }
+    return render(request, 'challenges/leaderboard_monthly.html', context)

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-3">Miesięczny ranking Eko-punktów</h1>
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <a class="btn btn-sm btn-outline-secondary" href="?year={{ prev_year }}&month={{ prev_month }}">&laquo; Poprzedni</a>
+    <p class="text-muted m-0">Okres: {{ period|date:'F Y' }}</p>
+    <a class="btn btn-sm btn-outline-secondary" href="?year={{ next_year }}&month={{ next_month }}">Następny &raquo;</a>
+  </div>
+  <div class="list-group">
+    {% for entry in leaderboard_entries %}
+      <div class="list-group-item d-flex align-items-center">
+        <div class="me-3" style="width: 2rem; text-align:center;">{{ entry.rank }}</div>
+        {% if entry.avatar_url %}
+          <img src="{{ entry.avatar_url }}" alt="avatar" class="rounded-circle me-3" style="width:36px;height:36px;object-fit:cover;">
+        {% endif %}
+        <div class="flex-grow-1">
+          <strong>{{ entry.user.get_full_name|default:entry.user.username }}</strong>
+        </div>
+        <div class="ms-3 text-nowrap">
+          <span class="badge bg-success">+{{ entry.points }} pkt</span>
+        </div>
+      </div>
+    {% empty %}
+      <div class="alert alert-info">Brak danych w tym miesiącu.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
