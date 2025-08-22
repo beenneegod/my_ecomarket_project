@@ -94,6 +94,22 @@
     color: var(--color-text-dark);
 }
 
+/* Dark mode for product filters custom dropdown (pseudo-select) */
+.dark-mode .product-filters .pseudo-select-toggle {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+    border-color: var(--color-border) !important;
+}
+.dark-mode .product-filters .pseudo-select .caret { background-color: var(--color-text-medium); }
+.dark-mode .product-filters .pseudo-select-menu {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-dark) !important;
+    border-color: var(--color-border) !important;
+    box-shadow: 0 .25rem .75rem rgba(0,0,0,.5);
+}
+.dark-mode .product-filters .pseudo-select-menu li:hover { background: rgba(255,255,255,.08); }
+.dark-mode .product-filters .pseudo-select-menu li.selected { background: rgba(76,175,80,.22); }
+
 .dark-mode .form-control:focus,
 .dark-mode .form-select:focus {
     background-color: var(--color-surface);
