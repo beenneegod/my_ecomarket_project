@@ -36,13 +36,12 @@
                                        name="{{ form.avatar.name }}"
                                        id="{{ form.avatar.id_for_label }}"
                                        accept="image/*"
-                                       class="js-avatar-input"
-                                       hidden
+                                       class="js-avatar-input visually-hidden-file"
                                        aria-hidden="true"
                                        tabindex="-1">
                             </span>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <button type="button" id="avatar-picker-btn" class="btn btn-outline-success mb-0"><i class="bi bi-upload"></i> Wybierz plik</button>
+                                <label for="{{ form.avatar.id_for_label }}" class="btn btn-outline-success mb-0"><i class="bi bi-upload"></i> Wybierz plik</label>
                                 <span id="avatar-filename" class="text-muted small" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nie wybrano pliku</span>
                             </div>
                             {% if form.avatar.help_text %}
@@ -122,10 +121,13 @@
 </script>
 <style>
 /* Hide the native file input rendered by Django; we trigger it via the green label button */
-/* Hide the avatar input robustly; we trigger it via the green label */
-.avatar-field input[type="file"][name="avatar"] {
-    display: none !important;
-    visibility: hidden !important;
+/* Hide off-screen but keep label clicks working */
+.visually-hidden-file {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
 }
 /* Visually hide file input but keep it accessible and clickable via label */
 .visually-hidden-file {
