@@ -18,6 +18,8 @@ import stripe
 from django.urls import reverse, reverse_lazy
 from django.conf import settings
 from django.utils import timezone
+import logging
+logger = logging.getLogger(__name__)
 
 
 
@@ -318,6 +320,23 @@ def profile_update(request):
                 messages.success(request, 'Twój profil został pomyślnie zaktualizowany!')
                 return redirect('store:profile_update') # Перенаправляем обратно на эту же страницу (или другую)
             except Exception as e:
+                try:
+                    uploaded_present = bool(request.FILES.get('avatar'))
+                except Exception:
+                    uploaded_present = None
+                try:
+                    storage_name = type(profile.avatar.storage).__name__ if profile and profile.avatar else None
+                except Exception:
+                    storage_name = None
+                logger.exception(
+                    "Profile update failed",
+                    extra={
+                        'user_id': getattr(request.user, 'id', None),
+                        'uploaded_present': uploaded_present,
+                        'storage': storage_name,
+                        'avatar_clear': request.POST.get('avatar_clear'),
+                    }
+                )
                 messages.error(request, 'Nie udało się zapisać zmian profilu. Spróbuj ponownie lub wybierz inny plik.')
         else:
             messages.error(request, 'Popraw błędy w formularzu.')

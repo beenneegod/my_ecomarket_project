@@ -152,6 +152,15 @@ class ProfileUpdateForm(forms.ModelForm):
         return avatar
 
     def save(self, commit=True):
+        # Grab original avatar before binding new data
+        original_avatar = None
+        if self.instance and getattr(self.instance, 'pk', None):
+            try:
+                original = type(self.instance).objects.only('avatar').get(pk=self.instance.pk)
+                original_avatar = original.avatar
+            except Exception:
+                original_avatar = None
+
         instance = super().save(commit=False)
         # Если пользователь нажал "Usuń zdjęcie" — удаляем файл и очищаем поле
         if self.data.get('avatar_clear') in ('1', 'true', 'on'):
@@ -169,52 +178,50 @@ class ProfileUpdateForm(forms.ModelForm):
             except Exception:
                 instance.avatar = None
         else:
-            # Дедупликация: если загружен новый файл и он совпадает с текущим по хешу — не пересохраняем
-            uploaded = self.files.get('avatar') if hasattr(self, 'files') else None
+            # Deduplication deferred to after save to avoid interfering with pre_save
+            pass
+        if commit:
+            instance.save()
+            # Post-save dedupe: if a new file was uploaded and we already had an avatar, compare and clean up
             try:
-                if uploaded and instance.pk and getattr(instance, 'avatar'):
-                    # Вычисляем SHA256 загруженного файла
+                uploaded_present = hasattr(self, 'files') and 'avatar' in self.files and self.files.get('avatar') is not None
+                if uploaded_present and original_avatar and instance.avatar:
                     import hashlib
-                    hasher_new = hashlib.sha256()
-                    for chunk in uploaded.chunks():
-                        hasher_new.update(chunk)
-                    new_digest = hasher_new.hexdigest()
+                    # Compute hash of newly saved file
+                    new_hash = hashlib.sha256()
+                    with instance.avatar.open('rb') as f:
+                        for chunk in iter(lambda: f.read(8192), b''):
+                            new_hash.update(chunk)
+                    new_digest = new_hash.hexdigest()
 
-                    # Вернем указатель файла в начало, чтобы Django смог сохранить содержимое
+                    # Compute hash of original file
+                    old_hash = hashlib.sha256()
                     try:
-                        if hasattr(uploaded, 'seek'):
-                            uploaded.seek(0)
-                        elif hasattr(uploaded, 'file') and hasattr(uploaded.file, 'seek'):
-                            uploaded.file.seek(0)
-                    except Exception:
-                        pass
-
-                    # Вычисляем SHA256 текущего файла из стораджа
-                    current_file = instance.avatar
-                    hasher_old = hashlib.sha256()
-                    try:
-                        with current_file.open('rb') as f:
+                        with original_avatar.open('rb') as f:
                             for chunk in iter(lambda: f.read(8192), b''):
-                                hasher_old.update(chunk)
-                        old_digest = hasher_old.hexdigest()
+                                old_hash.update(chunk)
+                        old_digest = old_hash.hexdigest()
                     except Exception:
                         old_digest = None
 
                     if old_digest and new_digest == old_digest:
-                        # Совпадает: вернуть предыдущее значение и отбросить новое
-                        # Сбрасываем поле к исходному, чтобы Django не сохранил новое
-                        self.cleaned_data['avatar'] = current_file
-                        instance.avatar = current_file
-                        # Также очистим self.files, чтобы не триггерить перезапись
+                        # Identical: delete the newly uploaded duplicate and restore original path
                         try:
-                            self.files.pop('avatar', None)
+                            new_name = instance.avatar.name
+                            if new_name != (original_avatar.name if original_avatar else None):
+                                storage = instance.avatar.storage
+                                # Reset to original first, then delete the new file
+                                instance.avatar = original_avatar
+                                instance.save(update_fields=['avatar'])
+                                try:
+                                    if storage and new_name:
+                                        storage.delete(new_name)
+                                except Exception:
+                                    pass
                         except Exception:
                             pass
             except Exception:
-                # На ошибке дедупликации просто продолжаем обычный путь
                 pass
-        if commit:
-            instance.save()
         return instance
 
 class SubscriptionChoiceForm(forms.Form):
