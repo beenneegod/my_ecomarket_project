@@ -94,6 +94,10 @@
 {% block extra_css %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{% static 'css/product_detail.css' %}">
+        <style>
+            /* Make sure rating star buttons receive clicks */
+            .product-rating .rating-star { cursor: pointer; pointer-events: auto; }
+        </style>
 {% endblock %}
 
 {% block extra_js %}
@@ -108,7 +112,10 @@
     }
     rating.addEventListener('click', function(ev){
         var t = ev.target;
-        if (!t.classList || !t.classList.contains('rating-star')) return;
+        // Normalize to an Element and find the nearest .rating-star
+        if (t && t.nodeType !== 1) { t = t.parentElement; }
+        var btn = t && t.closest ? t.closest('.rating-star') : null;
+        if (!btn) return;
         ev.preventDefault();
         if (!userLoggedIn) {
             if (window.Swal && typeof window.Swal.fire === 'function') {
@@ -127,7 +134,7 @@
             }
             return;
         }
-        var value = parseInt(t.getAttribute('data-value'));
+    var value = parseInt(btn.getAttribute('data-value'));
         if (!value) return;
         var stars = rating.querySelectorAll('.rating-star');
         // Optimistic highlight
