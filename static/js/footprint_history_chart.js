@@ -29,7 +29,7 @@
     ctx.scale(dpr, dpr);
 
     // Padding for axes
-    const pad = { left: 40, right: 12, top: 12, bottom: 24 };
+  const pad = { left: 40, right: 48, top: 12, bottom: 28 };
     const plotW = Math.max(10, width - pad.left - pad.right);
     const plotH = Math.max(10, height - pad.top - pad.bottom);
 
@@ -85,12 +85,13 @@
     ctx.fillText(String(yMin), pad.left - 6, yScale(yMin));
     ctx.fillText(String(yMax), pad.left - 6, yScale(yMax));
 
-    // X labels: first and last date
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
+  // X labels: first and last date (align to edges so they don't clip)
+  ctx.textBaseline = 'top';
   const fmt = new Intl.DateTimeFormat('pl-PL', { year: 'numeric', month: 'short' });
-    ctx.fillText(fmt.format(new Date(minT)), pad.left, pad.top + plotH + 6);
-    ctx.fillText(fmt.format(new Date(maxT)), pad.left + plotW, pad.top + plotH + 6);
+  ctx.textAlign = 'left';
+  ctx.fillText(fmt.format(new Date(minT)), pad.left, pad.top + plotH + 6);
+  ctx.textAlign = 'right';
+  ctx.fillText(fmt.format(new Date(maxT)), pad.left + plotW, pad.top + plotH + 6);
 
     // Line
     ctx.lineWidth = 2;

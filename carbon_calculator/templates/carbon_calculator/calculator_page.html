@@ -38,7 +38,7 @@
         .results-card {
             background-color: var(--color-surface);
             border-radius: var(--border-radius-lg);
-            padding: 2rem;
+            padding: 2.25rem 2rem 2.5rem;
         }
         .results-card .display-3 { font-size: 3.5rem; }
         .results-card .display-4 { font-size: 2.5rem; }
@@ -63,14 +63,22 @@
             font-weight: 700;
         }
         .category-progress {
-            height: 10px;
-            background-color: rgba(0,0,0,0.06);
+            height: 12px;
+            background-color: rgba(0,0,0,0.08);
             border-radius: 999px;
             overflow: hidden;
+            border: 0;
         }
         .category-progress .bar {
             height: 100%;
+            width: calc(var(--pct, 0) * 1%);
             background: linear-gradient(90deg, #1b9e3e, #6dd47e);
+        }
+        html[data-theme="dark"] .category-progress {
+            background-color: rgba(255,255,255,0.14);
+        }
+        html[data-theme="dark"] .category-progress .bar {
+            background: linear-gradient(90deg, #6dd47e, #a8e6b0);
         }
 
         .tip-card {
@@ -225,8 +233,10 @@
                 <div class="my-5">
                     <h3 class="text-center mb-4">Podział na kategorie:</h3>
                     <div class="row justify-content-center">
-                        <div class="col-md-10 col-lg-8">
-                            <canvas id="footprintChart" style="max-height: 350px; width: 100%;"></canvas>
+                        <div class="col-sm-11 col-md-10 col-lg-8">
+                            <div class="mx-auto" style="max-width: 560px;">
+                                <canvas id="footprintChart" style="max-height: 340px; width: 100%;"></canvas>
+                            </div>
                         </div>
                     </div>
                     <div class="row justify-content-center mt-4">
@@ -238,8 +248,8 @@
                                         <span>{{ category_name }}</span>
                                         <span class="value">{{ value_kg }} kg <span class="text-muted">({{ pct }}%)</span></span>
                                     </div>
-                                    <div class="category-progress mt-1" role="progressbar" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
-                                        <div class="bar" style="width: {{ pct }}%;"></div>
+                                    <div class="category-progress mt-1" role="progressbar" aria-label="{{ category_name }}" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="bar" style="--pct: {{ pct }};"></div>
                                     </div>
                                 </div>
                             {% endfor %}
@@ -330,10 +340,10 @@
                 {% endif %}
             {% endif %}
 
-             <div class="text-center mt-5">
-                 <a href="{% url 'carbon_calculator:calculate_page' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-clockwise"></i> Oblicz ponownie</a>
+             <div class="text-center mt-5 pt-2">
+                 <a href="{% url 'carbon_calculator:calculate_page' %}" class="btn btn-outline-secondary me-2"><i class="bi bi-arrow-clockwise"></i> Oblicz ponownie</a>
                  {% if user.is_authenticated %}
-                 <a href="{% url 'carbon_calculator:footprint_history' %}" class="btn btn-info ms-2"><i class="bi bi-clock-history"></i> Moja historia obliczeń</a>
+                 <a href="{% url 'carbon_calculator:footprint_history' %}" class="btn btn-info"><i class="bi bi-clock-history"></i> Moja historia obliczeń</a>
                  {% endif %}
             </div>
         </div>
