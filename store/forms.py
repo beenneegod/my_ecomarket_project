@@ -139,6 +139,27 @@ class ProfileUpdateForm(forms.ModelForm):
                 raise forms.ValidationError("Niedozwolony typ pliku. Proszę wgrać JPEG, PNG lub GIF.")
         return avatar
 
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Если пользователь нажал "Usuń zdjęcie" — удаляем файл и очищаем поле
+        if self.data.get('avatar_clear') in ('1', 'true', 'on'):
+            try:
+                if instance.avatar:
+                    storage = instance.avatar.storage
+                    name = instance.avatar.name
+                    instance.avatar.delete(save=False)
+                    if storage and name:
+                        try:
+                            storage.delete(name)
+                        except Exception:
+                            pass
+                instance.avatar = None
+            except Exception:
+                instance.avatar = None
+        if commit:
+            instance.save()
+        return instance
+
 class SubscriptionChoiceForm(forms.Form):
     # Поле для выбора типа подписочного бокса.
     # ModelChoiceField позволяет выбрать из существующих объектов модели.
