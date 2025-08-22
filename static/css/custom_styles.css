@@ -1198,6 +1198,7 @@ header .navbar form.d-flex button.btn-outline-success {
     min-height: 80vh;
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 @media (max-width: 576px) {
     .page-centered { min-height: auto; }
