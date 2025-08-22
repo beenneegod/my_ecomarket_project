@@ -24,6 +24,21 @@
                 {{ product.price }} PLN
             </p>
 
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <div class="product-rating d-inline-flex align-items-center" data-product-id="{{ product.id }}" data-rate-url="{% url 'store:rate_product' product.id %}" data-user-rating="{{ user_rating_value|default:'' }}" data-auth="{% if request.user.is_authenticated %}1{% else %}0{% endif %}" title="{% if not request.user.is_authenticated %}Zaloguj się, aby oceniać{% else %}Oceń ten produkt{% endif %}">
+                    {% for i in "12345" %}
+                        {% with idx=forloop.counter %}
+                            {% if user_rating_value and idx <= user_rating_value %}
+                                <button type="button" class="btn btn-link p-0 m-0 star-icon text-warning rating-star" data-value="{{ idx }}" aria-label="Oceń na {{ idx }}">&#9733;</button>
+                            {% else %}
+                                <button type="button" class="btn btn-link p-0 m-0 star-icon text-secondary rating-star" data-value="{{ idx }}" aria-label="Oceń na {{ idx }}">&#9733;</button>
+                            {% endif %}
+                        {% endwith %}
+                    {% endfor %}
+                    <small class="text-muted ms-2 rating-meta">(Śr: {{ product_avg_rating|floatformat:1 }}, głosów: {{ product_rating_count }})</small>
+                </div>
+            </div>
+
             <div class="product-description mb-4">
                 <h4>{% trans "Opis:" %}</h4>
                 <p>{{ product.description|linebreaksbr }}</p>
@@ -78,4 +93,42 @@
 {% block extra_css %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{% static 'css/product_detail.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+        var rating = document.querySelector('.product-rating');
+    if (!rating) return;
+            var userLoggedIn = (rating.getAttribute('data-auth') === '1');
+    rating.addEventListener('click', function(ev){
+        var t = ev.target;
+        if (!t.classList || !t.classList.contains('rating-star')) return;
+        ev.preventDefault();
+        if (!userLoggedIn) return;
+        var value = parseInt(t.getAttribute('data-value'));
+        if (!value) return;
+        var stars = rating.querySelectorAll('.rating-star');
+        stars.forEach(function(s){
+            var v = parseInt(s.getAttribute('data-value'));
+            s.classList.toggle('text-warning', v <= value);
+            s.classList.toggle('text-secondary', v > value);
+        });
+        var url = rating.getAttribute('data-rate-url');
+        var formData = new FormData();
+        formData.append('value', String(value));
+        var csrf = (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || '';
+        fetch(url, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf } })
+            .then(function(res){ return res.json().then(function(d){ return { res: res, data: d }; }); })
+            .then(function(payload){
+                var d = payload.data;
+                if (!payload.res.ok || !d.ok) return;
+                var meta = rating.querySelector('.rating-meta');
+                if (meta) meta.textContent = '(Śr: ' + (d.average != null ? Number(d.average).toFixed(1) : '0.0') + ', głosów: ' + (d.count || 0) + ')';
+                rating.setAttribute('data-user-rating', String(value));
+            })
+            .catch(function(){ /* ignore */ });
+    });
+})();
+</script>
 {% endblock %}

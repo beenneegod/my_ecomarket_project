@@ -1,7 +1,7 @@
 # store/admin.py
 
 from django.contrib import admin
-from .models import (Category, Product, Order, OrderItem, Profile, SubscriptionBoxType, UserSubscription, Coupon, UserCoupon)
+from .models import (Category, Product, Order, OrderItem, Profile, SubscriptionBoxType, UserSubscription, Coupon, UserCoupon, ProductRating)
 from import_export.admin import ImportExportModelAdmin
 from .admin_resources import CategoryResource, ProductResource
 from django.utils.safestring import mark_safe
@@ -109,6 +109,13 @@ class OrderAdmin(admin.ModelAdmin):
     @admin.display(description='Suma zamówienia')
     def get_total_cost_display(self, obj):
         return f"{obj.get_total_cost()} PLN"
+
+
+@admin.register(ProductRating)
+class ProductRatingAdmin(admin.ModelAdmin):
+    list_display = ("product", "user", "value", "created_at")
+    list_filter = ("value", "created_at")
+    search_fields = ("product__name", "user__username")
 
 
 @admin.register(Profile)

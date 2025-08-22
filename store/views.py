@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse # Для AJAX ответов
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
-from .models import Product, Order, Category, Profile, SubscriptionBoxType, UserSubscription, Coupon, UserCoupon # Импортируем UserCoupon
+from .models import Product, Order, Category, Profile, SubscriptionBoxType, UserSubscription, Coupon, UserCoupon, ProductRating # Импортируем UserCoupon
 from .cart import Cart
 from decimal import Decimal
 from django.contrib.auth import login # Функция для автоматического входа пользователя
@@ -12,6 +12,7 @@ from .forms import UserRegistrationForm, ProfileUpdateForm, SubscriptionChoiceFo
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q, Count
+from django.db.models import Avg
 from blog.models import Post
 from django.contrib import messages
 import stripe
@@ -74,6 +75,12 @@ def product_list(request, category_slug=None):
     else:  # 'new' по умолчанию
         products_list = products_list.order_by('-created_at')
 
+    # --- Аггрегаты рейтинга (до пагинации) ---
+    products_list = products_list.annotate(
+        avg_rating=Avg('ratings__value'),
+        rating_count=Count('ratings')
+    )
+
     # --- Пагинация (как и раньше) ---
     paginator = Paginator(products_list, 12)
     page_number = request.GET.get('page', 1)
@@ -98,6 +105,17 @@ def product_list(request, category_slug=None):
 @ensure_csrf_cookie
 def product_detail(request, product_slug):
     product = get_object_or_404(Product, slug=product_slug, available=True)
+    # Fetch rating aggregates
+    agg = product.ratings.aggregate(avg=Avg('value'), cnt=Count('id'))
+    avg_rating = agg.get('avg') or 0
+    rating_count = agg.get('cnt') or 0
+    user_rating_value = None
+    if request.user.is_authenticated:
+        try:
+            ur = ProductRating.objects.get(product=product, user=request.user)
+            user_rating_value = ur.value
+        except ProductRating.DoesNotExist:
+            user_rating_value = None
     related_products = []
     if product.category: # Check if the product has a category
         related_products = Product.objects.filter(
@@ -108,8 +126,34 @@ def product_detail(request, product_slug):
     context = {
         'product': product,
         'related_products': related_products, # Add to context
+        'product_avg_rating': avg_rating,
+        'product_rating_count': rating_count,
+        'user_rating_value': user_rating_value,
     }
     return render(request, 'store/product_detail.html', context)
+
+@login_required
+@require_POST
+def rate_product(request, product_id: int):
+    """Create/update a user's 1-5 star rating for a product; returns JSON with new average and count."""
+    try:
+        product = Product.objects.get(id=product_id, available=True)
+    except Product.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Produkt nie został znaleziony'}, status=404)
+
+    try:
+        data = request.POST
+        v = int(data.get('value') or 0)
+    except Exception:
+        v = 0
+    if v not in (1,2,3,4,5):
+        return JsonResponse({'ok': False, 'error': 'Ocena musi być w zakresie 1-5.'}, status=400)
+
+    obj, _ = ProductRating.objects.update_or_create(product=product, user=request.user, defaults={'value': v})
+    agg = product.ratings.aggregate(avg=Avg('value'), cnt=Count('id'))
+    avg = agg.get('avg') or 0
+    cnt = agg.get('cnt') or 0
+    return JsonResponse({'ok': True, 'average': round(avg, 2), 'count': cnt, 'your_value': v})
 
 def register(request):
     """Представление для регистрации нового пользователя."""

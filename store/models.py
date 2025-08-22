@@ -21,6 +21,7 @@ def profile_avatar_upload_to(instance, filename: str) -> str:
     safe_name = slugify(name or 'avatar')
     return f"avatars/{safe_user}/{safe_name}{ext.lower()}"
 from django.utils.module_loading import import_string
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Category(models.Model):
     """Модель категории товаров"""
@@ -351,3 +352,21 @@ class UserSubscription(models.Model):
 
     def is_active(self):
         return self.status == 'active'
+
+
+class ProductRating(models.Model):
+    """Star rating for products, 1-5, one per user per product."""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='ratings', verbose_name="Produkt")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='product_ratings', verbose_name="Użytkownik")
+    value = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], verbose_name="Ocena (1-5)")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Utworzono")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Zaktualizowano")
+
+    class Meta:
+        verbose_name = "Ocena produktu"
+        verbose_name_plural = "Oceny produktów"
+        unique_together = ("product", "user")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.product.name} - {self.user} ({self.value})"
