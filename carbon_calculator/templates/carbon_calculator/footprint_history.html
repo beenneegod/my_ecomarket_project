@@ -8,6 +8,22 @@
     <h1 class="mb-4">{{ page_title|default:"Historia moich obliczeń śladu węglowego" }}</h1>
 
     {% if history_sessions %}
+        <section class="mb-4">
+            <h2 class="h5 mb-3">Zmiana śladu węglowego w czasie</h2>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div id="footprint-history-chart"
+                         class="w-100"
+                         style="height: 260px;"
+                         data-points='{{ history_points|default:"[]"|safe }}'>
+                        <!-- Chart renders here via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+    {% if history_sessions %}
         <div class="list-group shadow-sm">
             {% for session_calc in history_sessions %}
                 <div class="list-group-item list-group-item-action flex-column align-items-start mb-2">
@@ -44,4 +60,9 @@
         </p>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'js/footprint_history_chart.js' %}"></script>
 {% endblock %}

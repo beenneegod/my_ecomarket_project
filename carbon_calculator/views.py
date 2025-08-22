@@ -540,8 +540,22 @@ def calculate_footprint_view(request):
 @login_required
 def user_footprint_history_view(request):
     history_sessions = UserFootprintSession.objects.filter(user=request.user).order_by('-calculated_at')
+    # Prepare ascending-ordered points for chart: [{date: ISO8601, value: float}, ...]
+    try:
+        points = [
+            {
+                'date': hs.calculated_at.isoformat(),
+                'value': float(hs.total_co2_emissions_kg_annual or 0),
+            }
+            for hs in history_sessions
+        ]
+        points.sort(key=lambda p: p['date'])
+    except Exception:
+        points = []
+
     context = {
         'history_sessions': history_sessions,
+        'history_points': points,
         'page_title': 'Historia moich obliczeń śladu węglowego'
     }
     return render(request, 'carbon_calculator/footprint_history.html', context)
