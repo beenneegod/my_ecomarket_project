@@ -8,6 +8,7 @@ from django.contrib.auth.forms import (
     SetPasswordForm     
 )
 from django.contrib.auth.models import User # Если нужна стандартная модель User
+from django.core.files.uploadedfile import UploadedFile
 from django.utils import timezone # Импортируем timezone
 from .models import Order
 from .models import Profile, SubscriptionBoxType, Coupon, UserCoupon # Добавляем Coupon и UserCoupon
@@ -131,12 +132,23 @@ class ProfileUpdateForm(forms.ModelForm):
         }
 
     def clean_avatar(self):
+        # Если пользователь нажал 'Usuń zdjęcie' — пропускаем любые проверки, аватар будет очищен в save()
+        if self.data.get('avatar_clear') in ('1', 'true', 'on'):
+            return None
+
         avatar = self.cleaned_data.get('avatar')
-        if avatar: # Проверяем, только если файл был загружен/изменен
-            if avatar.size > self.MAX_AVATAR_SIZE:
-                raise forms.ValidationError(f"Rozmiar pliku awatara nie może przekraczać {self.MAX_AVATAR_SIZE // 1024 // 1024} MB.")
-            if avatar.content_type not in self.ALLOWED_AVATAR_TYPES:
-                raise forms.ValidationError("Niedozwolony typ pliku. Proszę wgrać JPEG, PNG lub GIF.")
+        # Валидируем ТОЛЬКО если пришёл новый загруженный файл
+        if 'avatar' in self.files:
+            uploaded = self.files.get('avatar')
+            if isinstance(uploaded, UploadedFile):
+                if uploaded.size and uploaded.size > self.MAX_AVATAR_SIZE:
+                    raise forms.ValidationError(
+                        f"Rozmiar pliku awatara nie może przekraczać {self.MAX_AVATAR_SIZE // 1024 // 1024} MB."
+                    )
+                content_type = getattr(uploaded, 'content_type', '') or ''
+                if content_type not in self.ALLOWED_AVATAR_TYPES:
+                    raise forms.ValidationError("Niedozwolony typ pliku. Proszę wgrać JPEG, PNG lub GIF.")
+        # Если файла нет в self.files (не загружали новый) — ничего не проверяем
         return avatar
 
     def save(self, commit=True):
