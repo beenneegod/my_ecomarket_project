@@ -7,6 +7,7 @@ from .models import Challenge, UserChallengeParticipation, Badge, UserBadge, Eco
 from store.models import Profile, UserCoupon
 from .email import notify_challenge_review
 from django import forms
+from django.contrib.admin.helpers import ActionForm
 
 @admin.register(Challenge)
 class ChallengeAdmin(admin.ModelAdmin):
@@ -34,7 +35,7 @@ class ChallengeAdmin(admin.ModelAdmin):
     def is_active_now(self, obj):
         return obj.is_active_now()
 
-class ReviewActionForm(forms.Form):
+class ReviewActionForm(ActionForm):
     review_notes = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={
