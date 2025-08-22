@@ -381,6 +381,44 @@ def stripe_webhook(request):
                                     order.id,
                                 )
 
+                        # Decrease stock for purchased products exactly once, within the same DB transaction.
+                        # Lock each Product row to avoid race conditions across concurrent orders.
+                        try:
+                            for item in order.items.select_related('product').select_for_update():
+                                # Lock the product row and update stock
+                                try:
+                                    product = Product.objects.select_for_update().get(pk=item.product_id)
+                                except Product.DoesNotExist:
+                                    logger.warning(
+                                        "WEBHOOK: Order %s references missing product id=%s; skip stock update",
+                                        order.id,
+                                        item.product_id,
+                                    )
+                                    continue
+
+                                new_stock = product.stock - int(item.quantity or 0)
+                                if new_stock < 0:
+                                    logger.warning(
+                                        "WEBHOOK: stock underflow for product id=%s (had %s, ordered %s). Clamping to 0.",
+                                        product.id,
+                                        product.stock,
+                                        item.quantity,
+                                    )
+                                    new_stock = 0
+
+                                # Apply updates
+                                product.stock = new_stock
+                                if new_stock == 0 and product.available:
+                                    product.available = False
+                                product.save(update_fields=["stock", "available", "updated_at"])  # updated_at exists on Product
+                        except Exception as stock_err:
+                            logger.exception(
+                                "WEBHOOK: failed to update stock for order %s: %s",
+                                order.id,
+                                stock_err,
+                            )
+                            # We still proceed to save the order as paid to avoid duplicate processing; inventory issue is logged for manual review.
+
                         order.save()
                         # Schedule email only after the transaction commits successfully
                         transaction.on_commit(
