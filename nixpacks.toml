@@ -10,7 +10,13 @@ providers = ['python']
 nixPkgs = ['...', 'gettext', 'libwebp', 'libjpeg', 'zlib', 'pkg-config']
 
 [phases.build]
-cmds = ['chmod +x entrypoint.sh']
+cmds = [
+	'chmod +x entrypoint.sh',
+	# Collect static once during build; cached across deploys when unchanged
+	"python manage.py collectstatic --noinput",
+	# Compile translations during build (requires gettext from setup phase)
+	"python manage.py compilemessages || echo 'compilemessages failed; continuing'"
+]
 
 [start]
 cmd = 'bash entrypoint.sh'
