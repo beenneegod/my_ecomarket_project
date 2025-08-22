@@ -51,6 +51,28 @@
         .category-breakdown-list .list-group-item:first-child { border-top: none; }
         .category-breakdown-list .list-group-item:last-child { border-bottom: none; }
 
+        /* Proportional category breakdown bars */
+        .category-row-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-weight: 500;
+        }
+        .category-row-label .value {
+            color: var(--color-primary);
+            font-weight: 700;
+        }
+        .category-progress {
+            height: 10px;
+            background-color: rgba(0,0,0,0.06);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .category-progress .bar {
+            height: 100%;
+            background: linear-gradient(90deg, #1b9e3e, #6dd47e);
+        }
+
         .tip-card {
             background-color: var(--color-surface-alt);
             border-left: 5px solid var(--color-primary);
@@ -209,14 +231,18 @@
                     </div>
                     <div class="row justify-content-center mt-4">
                         <div class="col-md-10 col-lg-8">
-                            <ul class="list-group list-group-flush category-breakdown-list">
-                                {% for category_name, value_kg in results_data.breakdown_annual_display.items %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        <span class="fw-medium">{{ category_name }}</span>
-                                        <span class="badge bg-primary rounded-pill fs-6">{{ value_kg }} kg</span>
-                                    </li>
-                                {% endfor %}
-                            </ul>
+                            {% for category_name, value_kg in results_data.breakdown_annual_display.items %}
+                                {% widthratio value_kg results_data.total_co2_annual 100 as pct %}
+                                <div class="mb-3">
+                                    <div class="category-row-label">
+                                        <span>{{ category_name }}</span>
+                                        <span class="value">{{ value_kg }} kg <span class="text-muted">({{ pct }}%)</span></span>
+                                    </div>
+                                    <div class="category-progress mt-1" role="progressbar" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="bar" style="width: {{ pct }}%;"></div>
+                                    </div>
+                                </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>

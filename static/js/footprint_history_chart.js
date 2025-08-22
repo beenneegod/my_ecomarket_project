@@ -88,7 +88,7 @@
     // X labels: first and last date
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    const fmt = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short' });
+  const fmt = new Intl.DateTimeFormat('pl-PL', { year: 'numeric', month: 'short' });
     ctx.fillText(fmt.format(new Date(minT)), pad.left, pad.top + plotH + 6);
     ctx.fillText(fmt.format(new Date(maxT)), pad.left + plotW, pad.top + plotH + 6);
 
