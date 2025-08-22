@@ -398,6 +398,14 @@ button:focus-visible {
 }
 
 /* Alert info palette remap */
+/* Profile Update: hide file input off-screen but keep it focusable via label click */
+.avatar-field .js-avatar-input {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+}
 .alert-info {
     background-color: rgba(var(--color-primary-rgb), 0.10) !important;
     border-color: var(--color-primary) !important;

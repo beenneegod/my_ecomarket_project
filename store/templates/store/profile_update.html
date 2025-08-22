@@ -36,7 +36,8 @@
                                        name="{{ form.avatar.name }}"
                                        id="{{ form.avatar.id_for_label }}"
                                        accept="image/*"
-                                       class="js-avatar-input visually-hidden-file"
+                                           class="js-avatar-input visually-hidden-file"
+                                           style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"
                                        aria-hidden="true"
                                        tabindex="-1">
                             </span>
@@ -119,42 +120,5 @@
     }
 })();
 </script>
-<style>
-/* Hide the native file input rendered by Django; we trigger it via the green label button */
-/* Hide off-screen but keep label clicks working */
-.visually-hidden-file {
-    position: absolute !important;
-    left: -9999px !important;
-    width: 1px !important;
-    height: 1px !important;
-    opacity: 0 !important;
-}
-/* Visually hide file input but keep it accessible and clickable via label */
-.visually-hidden-file {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: -1px !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-    white-space: nowrap !important;
-    border: 0 !important;
-}
-/* Extra: ensure any input[type=file] inside wrapper is fully hidden */
-.avatar-input-wrapper input[type="file"] {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: -1px !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-    white-space: nowrap !important;
-    border: 0 !important;
-}
-.avatar-field input[type="file"] {
-    display: none !important;
-}
-</style>
+<style></style>
 {% endblock %}
