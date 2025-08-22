@@ -1192,3 +1192,13 @@ header .navbar form.d-flex button.btn-outline-success {
     white-space: nowrap !important;
     border: 0 !important;
 }
+
+/* Center single-card pages like profile edit and avoid touching footer */
+.page-centered {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+}
+@media (max-width: 576px) {
+    .page-centered { min-height: auto; }
+}
