@@ -41,10 +41,14 @@
                                        aria-hidden="true"
                                        tabindex="-1">
                             </span>
-                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <label for="{{ form.avatar.id_for_label }}" class="btn btn-outline-success mb-0"><i class="bi bi-upload"></i> Wybierz plik</label>
-                                <span id="avatar-filename" class="text-muted small" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nie wybrano pliku</span>
-                            </div>
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                <label for="{{ form.avatar.id_for_label }}" class="btn btn-outline-success mb-0"><i class="bi bi-upload"></i> Wybierz plik</label>
+                                                                <span id="avatar-filename" class="text-muted small" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nie wybrano pliku</span>
+                                                                {% if profile.avatar %}
+                                                                    <button type="button" id="avatar-clear-btn" class="btn btn-outline-danger btn-sm ms-2">Usuń zdjęcie</button>
+                                                                    <input type="checkbox" name="avatar_clear" id="avatar-clear-flag" class="d-none" value="1">
+                                                                {% endif %}
+                                                        </div>
                             {% if form.avatar.help_text %}
                                 <small class="form-text text-muted d-block mt-1">{{ form.avatar.help_text|safe }}</small>
                             {% endif %}
@@ -80,41 +84,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-(() => {
-    'use strict';
-
-    // Bootstrap validation (scoped)
-    const forms = document.querySelectorAll('.needs-validation');
-    Array.from(forms).forEach(form => {
-        form.addEventListener('submit', event => {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            form.classList.add('was-validated');
-        });
-    });
-
-    // Custom avatar picker logic
-    const hiddenInput = document.querySelector('.js-avatar-input');
-    const fileNameField = document.getElementById('avatar-filename');
-    const previewImg = document.querySelector('img[alt="Twój awatar"]');
-    const updatePreview = () => {
-        const file = hiddenInput && hiddenInput.files && hiddenInput.files[0];
-        if (fileNameField) {
-            fileNameField.textContent = file ? file.name : 'Nie wybrano pliku';
-        }
-        if (file && previewImg) {
-            const url = URL.createObjectURL(file);
-            previewImg.src = url;
-            previewImg.onload = () => URL.revokeObjectURL(url);
-        }
-    };
-    if (hiddenInput) {
-        ['change','input'].forEach(evt => hiddenInput.addEventListener(evt, updatePreview));
-    }
-})();
-</script>
-<style></style>
+<script src="{% static 'js/profile_update.js' %}"></script>
 {% endblock %}
