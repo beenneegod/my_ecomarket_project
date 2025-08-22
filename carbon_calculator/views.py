@@ -555,7 +555,8 @@ def user_footprint_history_view(request):
 
     context = {
         'history_sessions': history_sessions,
-        'history_points': points,
+    'history_points': points,
+    'history_points_json': json.dumps(points),
         'page_title': 'Historia moich obliczeń śladu węglowego'
     }
     return render(request, 'carbon_calculator/footprint_history.html', context)

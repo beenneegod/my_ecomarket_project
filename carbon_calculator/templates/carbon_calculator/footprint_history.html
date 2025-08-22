@@ -12,10 +12,10 @@
             <h2 class="h5 mb-3">Zmiana śladu węglowego w czasie</h2>
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <div id="footprint-history-chart"
+                <div id="footprint-history-chart"
                          class="w-100"
                          style="height: 260px;"
-                         data-points='{{ history_points|default:"[]"|safe }}'>
+                    data-points='{{ history_points_json|default:"[]"|safe }}'>
                         <!-- Chart renders here via JS -->
                     </div>
                 </div>
