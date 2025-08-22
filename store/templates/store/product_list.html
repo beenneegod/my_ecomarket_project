@@ -83,7 +83,7 @@
                     <div class="pseudo-select" data-name="sort">
                         <button type="button" class="pseudo-select-toggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sort-label sort-current">
                             <span id="sort-current">
-                                {% if sort == 'popular' %}Popularne{% elif sort == 'price_asc' %}Cena: rosnąco{% elif sort == 'price_desc' %}Cena: malejąco{% else %}Najnowsze{% endif %}
+                                {% if sort == 'popular' %}Popularne{% elif sort == 'price_asc' %}Cena: rosnąco{% elif sort == 'price_desc' %}Cena: malejąco{% elif sort == 'rating_desc' %}Ocena: najwyższa{% elif sort == 'rating_asc' %}Ocena: najniższa{% else %}Najnowsze{% endif %}
                             </span>
                             <i class="caret" aria-hidden="true"></i>
                         </button>
@@ -92,8 +92,21 @@
                             <li role="option" data-value="popular" class="{% if sort == 'popular' %}selected{% endif %}">Popularne</li>
                             <li role="option" data-value="price_asc" class="{% if sort == 'price_asc' %}selected{% endif %}">Cena: rosnąco</li>
                             <li role="option" data-value="price_desc" class="{% if sort == 'price_desc' %}selected{% endif %}">Cena: malejąco</li>
+                            <li role="option" data-value="rating_desc" class="{% if sort == 'rating_desc' %}selected{% endif %}">Ocena: najwyższa</li>
+                            <li role="option" data-value="rating_asc" class="{% if sort == 'rating_asc' %}selected{% endif %}">Ocena: najniższa</li>
                         </ul>
                     </div>
+                </div>
+                <div class="col-12 col-sm-4 col-md-3">
+                    <label for="min_rating" class="form-label">Minimalna ocena</label>
+                    <select id="min_rating" name="min_rating" class="form-select">
+                        <option value="" {% if not min_rating %}selected{% endif %}>Dowolna</option>
+                        <option value="1" {% if min_rating == '1' %}selected{% endif %}>1+ ★</option>
+                        <option value="2" {% if min_rating == '2' %}selected{% endif %}>2+ ★</option>
+                        <option value="3" {% if min_rating == '3' %}selected{% endif %}>3+ ★</option>
+                        <option value="4" {% if min_rating == '4' %}selected{% endif %}>4+ ★</option>
+                        <option value="4.5" {% if min_rating == '4.5' %}selected{% endif %}>4.5+ ★</option>
+                    </select>
                 </div>
                 <div class="col-12 col-md-3 d-grid">
                     <button type="submit" class="btn btn-success">Zastosuj</button>

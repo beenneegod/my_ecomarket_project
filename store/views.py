@@ -64,6 +64,21 @@ def product_list(request, category_slug=None):
     if max_val is not None:
         products_list = products_list.filter(price__lte=max_val)
 
+    # --- Аггрегаты рейтинга (до сортировки/пагинации) ---
+    products_list = products_list.annotate(
+        avg_rating=Avg('ratings__value'),
+        rating_count=Count('ratings')
+    )
+
+    # --- Фильтр по минимальному рейтингу ---
+    min_rating_param = request.GET.get('min_rating')
+    try:
+        if min_rating_param not in (None, ''):
+            mr = float(min_rating_param)
+            products_list = products_list.filter(avg_rating__gte=mr)
+    except Exception:
+        pass
+
     # --- Сортировка ---
     sort = request.GET.get('sort') or 'new'
     if sort == 'price_asc':
@@ -72,14 +87,13 @@ def product_list(request, category_slug=None):
         products_list = products_list.order_by('-price', '-created_at')
     elif sort == 'popular':
         products_list = products_list.annotate(order_count=Count('order_items')).order_by('-order_count', '-created_at')
+    elif sort == 'rating_desc':
+        # сначала по средней оценке, затем по количеству голосов, затем по новизне
+        products_list = products_list.order_by('-avg_rating', '-rating_count', '-created_at')
+    elif sort == 'rating_asc':
+        products_list = products_list.order_by('avg_rating', '-rating_count', '-created_at')
     else:  # 'new' по умолчанию
         products_list = products_list.order_by('-created_at')
-
-    # --- Аггрегаты рейтинга (до пагинации) ---
-    products_list = products_list.annotate(
-        avg_rating=Avg('ratings__value'),
-        rating_count=Count('ratings')
-    )
 
     # --- Пагинация (как и раньше) ---
     paginator = Paginator(products_list, 12)
@@ -99,6 +113,7 @@ def product_list(request, category_slug=None):
         'sort': sort,
         'min_price': min_price,
         'max_price': max_price,
+        'min_rating': request.GET.get('min_rating') or '',
         }
     return render(request, 'store/product_list.html', context)
 
