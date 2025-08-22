@@ -2,6 +2,7 @@
 from django.db import migrations, models
 import django.db.models.deletion
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Migration(migrations.Migration):
 
@@ -15,7 +16,7 @@ class Migration(migrations.Migration):
             name='ProductRating',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('value', models.PositiveSmallIntegerField(validators=[models.Min(1), models.Max(5)], verbose_name='Ocena (1-5)')),
+                ('value', models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)], verbose_name='Ocena (1-5)')),
                 ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Utworzono')),
                 ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Zaktualizowano')),
                 ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ratings', to='store.product', verbose_name='Produkt')),

@@ -101,6 +101,10 @@
         var rating = document.querySelector('.product-rating');
     if (!rating) return;
             var userLoggedIn = (rating.getAttribute('data-auth') === '1');
+    function getCookie(name){
+        var m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return m ? m.pop() : '';
+    }
     rating.addEventListener('click', function(ev){
         var t = ev.target;
         if (!t.classList || !t.classList.contains('rating-star')) return;
@@ -109,6 +113,7 @@
         var value = parseInt(t.getAttribute('data-value'));
         if (!value) return;
         var stars = rating.querySelectorAll('.rating-star');
+        // Optimistic highlight
         stars.forEach(function(s){
             var v = parseInt(s.getAttribute('data-value'));
             s.classList.toggle('text-warning', v <= value);
@@ -117,12 +122,21 @@
         var url = rating.getAttribute('data-rate-url');
         var formData = new FormData();
         formData.append('value', String(value));
-        var csrf = (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || '';
-        fetch(url, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf } })
+        var csrf = (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || getCookie('csrftoken') || '';
+        fetch(url, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf }, credentials: 'same-origin' })
             .then(function(res){ return res.json().then(function(d){ return { res: res, data: d }; }); })
             .then(function(payload){
                 var d = payload.data;
-                if (!payload.res.ok || !d.ok) return;
+                if (!payload.res.ok || !d.ok) {
+                    // Revert to previous value on failure
+                    var prev = parseInt(rating.getAttribute('data-user-rating')) || 0;
+                    stars.forEach(function(s){
+                        var v = parseInt(s.getAttribute('data-value'));
+                        s.classList.toggle('text-warning', v <= prev);
+                        s.classList.toggle('text-secondary', v > prev);
+                    });
+                    return;
+                }
                 var meta = rating.querySelector('.rating-meta');
                 if (meta) meta.textContent = '(Śr: ' + (d.average != null ? Number(d.average).toFixed(1) : '0.0') + ', głosów: ' + (d.count || 0) + ')';
                 rating.setAttribute('data-user-rating', String(value));
