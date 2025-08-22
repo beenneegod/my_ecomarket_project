@@ -1,9 +1,10 @@
 # carbon_calculator/models.py
 from django.db import models
 from django.conf import settings
-from store.models import Product # Убедитесь, что модель Product доступна для импорта
+from store.models import Product  # Upewnij się, że model Product jest dostępny do importu
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
+from decimal import Decimal
 
 
 class Region(models.Model):
@@ -81,7 +82,7 @@ class EmissionFactor(models.Model):
     form_field_options = models.JSONField(
         null=True, blank=True,
         verbose_name="Opcje dla pola 'select' (JSON)",
-        help_text='Dla "select": {"option_value1": "Etykieta opcji 1", "option_value2": "Etykieta opcji 2"}. Wartość to mnożnik dla co2_kg_per_unit lub wartość do obliczeń.'
+        help_text='Dla "select": {"1": "Etykieta 1", "0.15": "Etykieta 2"}. Klucze muszą być LICZBAMI (np. "1", "0.15"), bo są używane bezpośrednio w obliczeniach jako mnożnik/wartość.'
     )
     form_placeholder = models.CharField(max_length=100, blank=True, null=True, verbose_name="Tekst podpowiedzi (placeholder) dla pola liczbowego")
     form_help_text = models.TextField(blank=True, null=True, verbose_name="Podpowiedź do pola w formularzu")
@@ -99,6 +100,26 @@ class EmissionFactor(models.Model):
         default=False,
         verbose_name="Użyj intensywności sieci regionu (zamiast co2/kg na jednostkę)"
     )
+    # Czy aktywność dotyczy gospodarstwa domowego — dzielić na liczbę osób
+    per_household = models.BooleanField(
+        default=False,
+        verbose_name="Dotyczy gospodarstwa domowego (dzielić na liczbę osób)"
+    )
+    # Granice zdroworozsądkowe (opcjonalne)
+    min_reasonable_value = models.DecimalField(
+        max_digits=14,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        verbose_name="Minimalna rozsądna wartość"
+    )
+    max_reasonable_value = models.DecimalField(
+        max_digits=14,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        verbose_name="Maksymalna rozsądna wartość"
+    )
 
     class Meta:
         verbose_name = "Współczynnik emisji"
@@ -110,26 +131,31 @@ class EmissionFactor(models.Model):
 
     def clean(self):
         super().clean()
-        # Валидация form_field_options
+        # Walidacja form_field_options
         if self.form_field_type == 'select' and self.form_field_options:
             if not isinstance(self.form_field_options, dict):
-                raise ValidationError({'form_field_options': 'form_field_options должен быть словарём (dict).'} )
+                raise ValidationError({'form_field_options': 'form_field_options musi być słownikiem (dict).'})
             for k, v in self.form_field_options.items():
                 if not isinstance(k, str):
-                    raise ValidationError({'form_field_options': 'Ключи в form_field_options должны быть строками.'})
+                    raise ValidationError({'form_field_options': 'Klucze w form_field_options muszą być łańcuchami (str).'})
                 if not (isinstance(v, (str, int, float))):
-                    raise ValidationError({'form_field_options': 'Значения в form_field_options должны быть строками или числами.'})
-        # Валидация periodicity_options_for_form
+                    raise ValidationError({'form_field_options': 'Wartości w form_field_options muszą być tekstem lub liczbą.'})
+                # Klucze muszą być liczbowe (parsowane do Decimal), bo są używane jako wartość do obliczeń
+                try:
+                    Decimal(str(k))
+                except Exception:
+                    raise ValidationError({'form_field_options': f"Klucz '{k}' nie jest liczbą. Użyj liczb (np. '1', '0.15')."})
+        # Walidacja periodicity_options_for_form
         if self.periodicity_options_for_form:
             if not isinstance(self.periodicity_options_for_form, dict):
-                raise ValidationError({'periodicity_options_for_form': 'periodicity_options_for_form должен быть словарём (dict).'})
+                raise ValidationError({'periodicity_options_for_form': 'periodicity_options_for_form musi być słownikiem (dict).'})
             for k, v in self.periodicity_options_for_form.items():
                 if not isinstance(k, str):
-                    raise ValidationError({'periodicity_options_for_form': 'Ключи в periodicity_options_for_form должны быть строками.'})
+                    raise ValidationError({'periodicity_options_for_form': 'Klucze w periodicity_options_for_form muszą być łańcuchami (str).'})
                 if not isinstance(v, dict):
-                    raise ValidationError({'periodicity_options_for_form': 'Значения в periodicity_options_for_form должны быть словарями.'})
+                    raise ValidationError({'periodicity_options_for_form': 'Wartości w periodicity_options_for_form muszą być słownikami.'})
                 if 'label' not in v or 'annual_multiplier' not in v:
-                    raise ValidationError({'periodicity_options_for_form': 'Каждый элемент должен содержать label и annual_multiplier.'})
+                    raise ValidationError({'periodicity_options_for_form': 'Każdy element musi zawierać label i annual_multiplier.'})
 
 class UserFootprintSession(models.Model):
     user = models.ForeignKey(

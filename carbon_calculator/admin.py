@@ -2,7 +2,7 @@
 from django.contrib import admin
 from .models import ActivityCategory, EmissionFactor, UserFootprintSession, ReductionTip
 from .models import Region
-from django.utils.html import format_html # Для отображения JSON в админке
+from django.utils.html import format_html # Do wyświetlania JSON w panelu admina
 import json
 
 @admin.register(ActivityCategory)
@@ -29,16 +29,16 @@ class EmissionFactorAdmin(admin.ModelAdmin):
         (None, {
             'fields': ('activity_category', 'name', 'description', 'is_active', 'order')
         }),
-        ('Дane для расчета CO2', {
+        ('Dane do obliczeń CO2', {
             'fields': ('unit_name', 'co2_kg_per_unit', 'use_region_grid_intensity', 'data_source_info', ('valid_from', 'valid_to'))
         }),
-        ('Настройки поля в форме калькулятора', {
+        ('Ustawienia pola w formularzu kalkulatora', {
             'classes': ('collapse',),
             'fields': ('form_question_text', 'form_field_type', 'form_field_options', 'form_placeholder', 'form_help_text', 'periodicity_options_for_form'),
         }),
     )
     ordering = ('activity_category__order', 'order')
-    save_as = True # Удобно для создания похожих факторов
+    save_as = True # Wygodne do tworzenia podobnych czynników
 
 
 @admin.register(Region)
@@ -51,13 +51,13 @@ class RegionAdmin(admin.ModelAdmin):
 class UserFootprintSessionAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'user_display', 'total_co2_emissions_kg_annual', 'calculated_at', 'calculation_version')
     list_filter = ('calculated_at', 'calculation_version')
-    search_fields = ('user__username', 'session_key', 'inputs_data') # Поиск по JSON может быть медленным
+    search_fields = ('user__username', 'session_key', 'inputs_data') # Wyszukiwanie po JSON może być wolne
     readonly_fields = (
         'user', 'session_key', 'inputs_data_formatted', 
         'total_co2_emissions_kg_annual', 'category_breakdown_kg_annual_formatted', 
         'calculated_at', 'calculation_version'
     )
-    exclude = ('inputs_data', 'category_breakdown_kg_annual') # Скрываем сырые JSON, показываем отформатированные
+    exclude = ('inputs_data', 'category_breakdown_kg_annual') # Ukrywamy surowe JSON-y, pokazujemy sformatowane
 
     @admin.display(description="Użytkownik")
     def user_display(self, obj):

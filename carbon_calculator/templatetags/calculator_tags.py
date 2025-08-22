@@ -6,8 +6,8 @@ register = template.Library()
 @register.filter(name='get_form_field')
 def get_form_field(form, field_name_str):
     """
-    Позволяет получить поле формы по его строковому имени.
-    Использование: {{ my_form|get_form_field:dynamic_field_name_variable }}
+    Pozwala pobrać pole formularza po jego nazwie (łańcuch znaków).
+    Użycie: {{ my_form|get_form_field:dynamic_field_name_variable }}
     """
     try:
         return form[field_name_str]
@@ -17,9 +17,9 @@ def get_form_field(form, field_name_str):
 @register.simple_tag
 def get_bound_field(form, field_name_str):
     """
-    Возвращает связанное поле (BoundField) формы по его строковому имени.
-    Использование: {% get_bound_field my_form dynamic_field_name_variable as my_field %}
-                   {{ my_field.label_tag }} {{ my_field }} ...
+    Zwraca powiązane pole (BoundField) formularza według nazwy.
+    Użycie: {% get_bound_field my_form dynamic_field_name_variable as my_field %}
+        {{ my_field.label_tag }} {{ my_field }} ...
     """
     try:
         return form[field_name_str]
