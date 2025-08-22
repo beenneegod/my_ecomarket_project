@@ -1,0 +1,7 @@
+{% load i18n %}
+{% blocktrans %}Twoje zgłoszenie wyzwania zostało zaakceptowane: {{ challenge_title }}{% endblocktrans %}
+{% if notes %}
+{% trans "Uwagi moderatora:" %}
+{{ notes }}
+{% endif %}
+{% trans "Punkty zostały przyznane. Dziękujemy za udział!" %}

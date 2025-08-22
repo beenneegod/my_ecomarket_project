@@ -1,0 +1,13 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif;">
+  <h2>{% trans "Weryfikacja zgłoszenia wyzwania: odmowa" %}</h2>
+  <p>{% blocktrans %}Wyzwanie: {{ challenge_title }}{% endblocktrans %}</p>
+  {% if notes %}
+    <p><strong>{% trans "Uwagi moderatora" %}:</strong></p>
+    <p>{{ notes|linebreaksbr }}</p>
+  {% endif %}
+  <p>{% trans "Możesz poprawić zgłoszenie i spróbować ponownie, jeśli wyzwanie nadal trwa." %}</p>
+</body>
+</html>

@@ -108,9 +108,10 @@ class UserChallengeParticipation(models.Model):
     joined_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True, verbose_name="Data faktycznego ukończenia")
     
-    # Поле для заметок пользователя или загрузки доказательств (если требуется)
+    # Поле для заметок пользователя и файла-доказательства
     user_notes = models.TextField(blank=True, null=True, verbose_name="Notatki użytkownika/Raport")
-    # proof_image = models.ImageField(upload_to='challenge_proofs/', blank=True, null=True, verbose_name="Доказательство (изображение)")
+    proof_file = models.FileField(upload_to='challenge_proofs/', blank=True, null=True, verbose_name="Dowód (zdjęcie/wideo)")
+    review_notes = models.TextField(blank=True, null=True, verbose_name="Uwagi moderatora")
 
     class Meta:
         verbose_name = "Udział w wyzwaniu"

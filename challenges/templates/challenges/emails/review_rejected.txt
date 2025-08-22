@@ -1,0 +1,7 @@
+{% load i18n %}
+{% blocktrans %}Twoje zgłoszenie wyzwania zostało odrzucone: {{ challenge_title }}{% endblocktrans %}
+{% if notes %}
+{% trans "Uwagi moderatora:" %}
+{{ notes }}
+{% endif %}
+{% trans "Możesz poprawić zgłoszenie i spróbować ponownie, jeśli wyzwanie nadal trwa." %}

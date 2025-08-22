@@ -1,0 +1,13 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif;">
+  <h2>{% trans "Gratulacje! Twoje zgłoszenie wyzwania zostało zaakceptowane" %}</h2>
+  <p>{% blocktrans %}Wyzwanie: {{ challenge_title }}{% endblocktrans %}</p>
+  {% if notes %}
+    <p><strong>{% trans "Uwagi moderatora" %}:</strong></p>
+    <p>{{ notes|linebreaksbr }}</p>
+  {% endif %}
+  <p>{% trans "Punkty zostały przyznane. Dziękujemy za udział!" %}</p>
+</body>
+</html>

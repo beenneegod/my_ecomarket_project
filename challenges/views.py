@@ -63,86 +63,26 @@ def challenge_detail_view(request, slug):
                 if form_for_completion.is_valid():
                     with transaction.atomic():
                         updated_participation = form_for_completion.save(commit=False)
-                        updated_participation.status = 'completed_approved' # Пока авто-подтверждение
+                        # Отправляем на модерацию: без мгновенного начисления очков
+                        updated_participation.status = 'completed_pending_review'
                         updated_participation.completed_at = timezone.now()
                         updated_participation.save()
-
-                        # Начисление очков
-                        profile, created = Profile.objects.get_or_create(user=request.user)
-                        profile.eco_points = F('eco_points') + challenge.points_for_completion
-                        profile.last_points_update = timezone.now()
-                        profile.save()
-                        EcoPointEvent.objects.create(user=request.user, amount=challenge.points_for_completion, source="challenge", challenge=challenge)
-
-                        success_message = f"Pomyślnie ukończyłeś wyzwanie '{challenge.title}'! Otrzymano: {challenge.points_for_completion} пунктов"
-                        
-                        # Выдача значка (если есть)
-                        if challenge.badge_name_reward: # Используем поле из Challenge
-                            badge, badge_created = Badge.objects.get_or_create(
-                                name=challenge.badge_name_reward,
-                                defaults={'icon_class': challenge.badge_icon_class_reward or 'bi bi-patch-check-fill'}
-                            )
-                            UserBadge.objects.get_or_create(
-                                user=request.user,
-                                badge=badge
-                                # defaults={'challenge_source': challenge} # Поле отсутствует в модели UserBadge
-                            )
-                            success_message += f" i odznakę '{badge.name}'"
-                        
-                        # Выдача купона (если есть)
-                        if challenge.reward_coupon and challenge.reward_coupon.active:
-                            UserCoupon.objects.get_or_create(
-                                user=request.user,
-                                coupon=challenge.reward_coupon,
-                                defaults={
-                                    'challenge_source': challenge,
-                                    'is_used': False # Явно указываем, что купон не использован
-                                }
-                            )
-                            coupon_code = challenge.reward_coupon.code
-                            success_message += f". Twój kod rabatowy: {coupon_code}"
-                            # Опционально: можно создать запись UserCoupon, если такая модель будет
-
-                        success_message += "."
-                        messages.success(request, success_message)
-                        
+                        messages.success(request, (
+                            "Twoje zgłoszenie zostało wysłane do weryfikacji. "
+                            "Punkty i nagrody zostaną przyznane po akceptacji przez moderatora."
+                        ))
                         return redirect(challenge.get_absolute_url()) # Перезагружаем страницу деталей
                 # else: форма не валидна, она будет передана в контекст ниже
             else: # Если форма не используется, просто меняем статус
                 with transaction.atomic():
-                    participation.status = 'completed_approved' # Пока авто-подтверждение
+                    # Отправляем на модерацию без мгновенного начисления очков
+                    participation.status = 'completed_pending_review'
                     participation.completed_at = timezone.now()
                     participation.save()
-                    
-                    profile, created = Profile.objects.get_or_create(user=request.user)
-                    profile.eco_points = F('eco_points') + challenge.points_for_completion
-                    profile.last_points_update = timezone.now()
-                    profile.save()
-                    EcoPointEvent.objects.create(user=request.user, amount=challenge.points_for_completion, source="challenge", challenge=challenge)
-
-                    success_message = f"Pomyślnie ukończyłeś wyзwanie '{challenge.title}'! Оtrzymano: {challenge.points_for_completion} пунктов"
-
-                    if challenge.badge_name_reward:
-                        badge, badge_created = Badge.objects.get_or_create(name=challenge.badge_name_reward, defaults={'icon_class': challenge.badge_icon_class_reward or 'bi bi-patch-check-fill'})
-                        UserBadge.objects.get_or_create(user=request.user, badge=badge) # Поле challenge_source отсутствует
-                        success_message += f" i odznakę '{badge.name}'"
-
-                    # Выдача купона (если есть)
-                    if challenge.reward_coupon and challenge.reward_coupon.active:
-                        UserCoupon.objects.get_or_create(
-                            user=request.user,
-                            coupon=challenge.reward_coupon,
-                            defaults={
-                                'challenge_source': challenge,
-                                'is_used': False # Явно указываем, что купон не использован
-                            }
-                        )
-                        coupon_code = challenge.reward_coupon.code
-                        success_message += f". Twój kod rabatowy: {coupon_code}"
-                        # Опционально: можно создать запись UserCoupon, если такая модель будет
-                    
-                    success_message += "."
-                    messages.success(request, success_message)
+                    messages.success(request, (
+                        "Twoje zgłoszenie zostało wysłane do weryfikacji. "
+                        "Punkty i nagrody zostaną przyznane po akceptacji przez moderatora."
+                    ))
                     return redirect(challenge.get_absolute_url())
     
     if can_mark_as_done and not form_for_completion: # Если не было POST или форма не была создана из-за ошибки

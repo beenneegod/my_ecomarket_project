@@ -56,7 +56,7 @@
                                 </div>
                             {% elif can_mark_as_done %}
                                 <h4 class="mb-3">Oznacz wykonanie:</h4>
-                                <form method="post">
+                                <form method="post" enctype="multipart/form-data">
                                     {% csrf_token %}
                                     {% if completion_form %}
                                         {% for field in completion_form %}

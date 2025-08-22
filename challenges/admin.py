@@ -4,7 +4,9 @@ from django.utils import timezone
 from django.db import transaction
 from django.db.models import F
 from .models import Challenge, UserChallengeParticipation, Badge, UserBadge, EcoPointEvent
-from store.models import Profile
+from store.models import Profile, UserCoupon
+from .email import notify_challenge_review
+from django import forms
 
 @admin.register(Challenge)
 class ChallengeAdmin(admin.ModelAdmin):
@@ -32,14 +34,43 @@ class ChallengeAdmin(admin.ModelAdmin):
     def is_active_now(self, obj):
         return obj.is_active_now()
 
+class ReviewActionForm(forms.Form):
+    review_notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'rows': 2,
+            'placeholder': 'Uwagi moderatora (opcjonalnie)'
+        }),
+        label="Uwagi moderatora",
+    )
+
+
 @admin.register(UserChallengeParticipation)
 class UserChallengeParticipationAdmin(admin.ModelAdmin):
-    list_display = ('user', 'challenge', 'status', 'joined_at', 'completed_at')
+    list_display = ('user', 'challenge', 'status', 'joined_at', 'completed_at', 'has_proof')
     list_filter = ('status', 'challenge', 'joined_at')
     search_fields = ('user__username', 'challenge__title', 'user_notes')
     list_editable = ('status',)
-    readonly_fields = ('user', 'challenge', 'joined_at')
+    readonly_fields = ('user', 'challenge', 'joined_at', 'proof_preview')
+    fields = ('user', 'challenge', 'status', 'joined_at', 'completed_at', 'user_notes', 'review_notes', 'proof_preview')
     actions = ['approve_completion', 'reject_completion']
+    action_form = ReviewActionForm
+
+    @admin.display(boolean=True, description="Dowód")
+    def has_proof(self, obj):
+        return bool(getattr(obj, 'proof_file', None))
+
+    @admin.display(description="Podgląd dowodu")
+    def proof_preview(self, obj):
+        if getattr(obj, 'proof_file', None):
+            url = obj.proof_file.url
+            name = getattr(obj.proof_file, 'name', 'plik')
+            from django.utils.html import format_html
+            # Пытаемся отобразить изображение, иначе просто ссылка
+            if any(url.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']):
+                return format_html('<a href="{}" target="_blank"><img src="{}" style="max-width:240px; max-height:240px; object-fit:contain;"/></a>', url, url)
+            return format_html('<a href="{}" target="_blank">{}</a>', url, name)
+        return "-"
 
     @admin.action(description="Zatwierdź ukończenie i przyznaj punkty")
     def approve_completion(self, request, queryset):
@@ -50,9 +81,11 @@ class UserChallengeParticipationAdmin(admin.ModelAdmin):
                 if part.status == 'completed_approved':
                     continue
                 ch = part.challenge
+                notes = request.POST.get('review_notes', '').strip() or part.review_notes
                 part.status = 'completed_approved'
                 part.completed_at = part.completed_at or timezone.now()
-                part.save(update_fields=['status', 'completed_at'])
+                part.review_notes = notes
+                part.save(update_fields=['status', 'completed_at', 'review_notes'])
                 updated += 1
 
                 # Idempotent award: skip if event for this user+challenge already exists
@@ -69,6 +102,21 @@ class UserChallengeParticipationAdmin(admin.ModelAdmin):
                         challenge=ch,
                     )
                     awarded += 1
+                # Rewards
+                if ch.badge_name_reward:
+                    badge, _ = Badge.objects.get_or_create(
+                        name=ch.badge_name_reward,
+                        defaults={'icon_class': ch.badge_icon_class_reward or 'bi bi-patch-check-fill'}
+                    )
+                    UserBadge.objects.get_or_create(user=part.user, badge=badge)
+                if ch.reward_coupon and ch.reward_coupon.active:
+                    UserCoupon.objects.get_or_create(
+                        user=part.user,
+                        coupon=ch.reward_coupon,
+                        defaults={'challenge_source': ch, 'is_used': False}
+                    )
+                # Notify user
+                notify_challenge_review(getattr(part.user, 'email', None), ch.title, approved=True, notes=notes)
         messages.success(request, f"Zatwierdzono: {updated}, punkty przyznane: {awarded}")
 
     @admin.action(description="Odrzuć ukończenie (bez punktów)")
@@ -77,8 +125,11 @@ class UserChallengeParticipationAdmin(admin.ModelAdmin):
         with transaction.atomic():
             for part in queryset:
                 if part.status in ('completed_approved', 'completed_pending_review'):
+                    notes = request.POST.get('review_notes', '').strip() or part.review_notes
                     part.status = 'in_progress'
-                    part.save(update_fields=['status'])
+                    part.review_notes = notes
+                    part.save(update_fields=['status', 'review_notes'])
+                    notify_challenge_review(getattr(part.user, 'email', None), part.challenge.title, approved=False, notes=notes)
                     count += 1
         messages.info(request, f"Przywrócono status 'w trakcie' dla: {count}")
 
