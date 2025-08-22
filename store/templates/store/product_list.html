@@ -81,8 +81,8 @@
                     <label id="sort-label" class="form-label">Sortuj</label>
                     <input type="hidden" name="sort" id="sort" value="{{ sort|default:'new' }}">
                     <div class="pseudo-select" data-name="sort">
-                        <button type="button" class="pseudo-select-toggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sort-label sort-current">
-                            <span id="sort-current">
+                        <button type="button" class="pseudo-select-toggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sort-label">
+                            <span class="pseudo-current">
                                 {% if sort == 'popular' %}Popularne{% elif sort == 'price_asc' %}Cena: rosnąco{% elif sort == 'price_desc' %}Cena: malejąco{% elif sort == 'rating_desc' %}Ocena: najwyższa{% elif sort == 'rating_asc' %}Ocena: najniższa{% else %}Najnowsze{% endif %}
                             </span>
                             <i class="caret" aria-hidden="true"></i>
@@ -98,15 +98,24 @@
                     </div>
                 </div>
                 <div class="col-12 col-sm-4 col-md-3">
-                    <label for="min_rating" class="form-label">Minimalna ocena</label>
-                    <select id="min_rating" name="min_rating" class="form-select">
-                        <option value="" {% if not min_rating %}selected{% endif %}>Dowolna</option>
-                        <option value="1" {% if min_rating == '1' %}selected{% endif %}>1+ ★</option>
-                        <option value="2" {% if min_rating == '2' %}selected{% endif %}>2+ ★</option>
-                        <option value="3" {% if min_rating == '3' %}selected{% endif %}>3+ ★</option>
-                        <option value="4" {% if min_rating == '4' %}selected{% endif %}>4+ ★</option>
-                        <option value="4.5" {% if min_rating == '4.5' %}selected{% endif %}>4.5+ ★</option>
-                    </select>
+                    <label id="min-rating-label" class="form-label">Minimalna ocena</label>
+                    <input type="hidden" name="min_rating" value="{{ min_rating|default:'' }}">
+                    <div class="pseudo-select" data-name="min_rating">
+                        <button type="button" class="pseudo-select-toggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="min-rating-label">
+                            <span class="pseudo-current">
+                                {% if min_rating == '1' %}1+ ★{% elif min_rating == '2' %}2+ ★{% elif min_rating == '3' %}3+ ★{% elif min_rating == '4' %}4+ ★{% elif min_rating == '4.5' %}4.5+ ★{% else %}Dowolna{% endif %}
+                            </span>
+                            <i class="caret" aria-hidden="true"></i>
+                        </button>
+                        <ul class="pseudo-select-menu" role="listbox" tabindex="-1" aria-labelledby="min-rating-label">
+                            <li role="option" data-value="" class="{% if not min_rating %}selected{% endif %}">Dowolna</li>
+                            <li role="option" data-value="1" class="{% if min_rating == '1' %}selected{% endif %}">1+ ★</li>
+                            <li role="option" data-value="2" class="{% if min_rating == '2' %}selected{% endif %}">2+ ★</li>
+                            <li role="option" data-value="3" class="{% if min_rating == '3' %}selected{% endif %}">3+ ★</li>
+                            <li role="option" data-value="4" class="{% if min_rating == '4' %}selected{% endif %}">4+ ★</li>
+                            <li role="option" data-value="4.5" class="{% if min_rating == '4.5' %}selected{% endif %}">4.5+ ★</li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="col-12 col-md-3 d-grid">
                     <button type="submit" class="btn btn-success">Zastosuj</button>

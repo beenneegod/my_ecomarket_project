@@ -110,6 +110,12 @@
 .dark-mode .product-filters .pseudo-select-menu li:hover { background: rgba(255,255,255,.08); }
 .dark-mode .product-filters .pseudo-select-menu li.selected { background: rgba(76,175,80,.22); }
 
+/* Match focus ring tone in dark mode */
+.dark-mode .product-filters .pseudo-select-toggle:focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+}
+
 .dark-mode .form-control:focus,
 .dark-mode .form-select:focus {
     background-color: var(--color-surface);

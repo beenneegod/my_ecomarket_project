@@ -53,18 +53,18 @@
         });
     });
 
-    // Pseudo select for sort
-    const pseudo = container.querySelector('.pseudo-select');
-    if(pseudo){
-        const hidden = container.querySelector('input[type="hidden"][name="sort"]');
+    // Pseudo-selects (support multiple instances: sort, min_rating, etc.)
+    container.querySelectorAll('.pseudo-select').forEach(pseudo => {
+        const name = pseudo.getAttribute('data-name');
+        if(!name) return;
+        const hidden = container.querySelector(`input[type="hidden"][name="${name}"]`);
         const toggle = pseudo.querySelector('.pseudo-select-toggle');
-        const currentEl = pseudo.querySelector('#sort-current');
+        const currentEl = pseudo.querySelector('.pseudo-current');
         const menu = pseudo.querySelector('.pseudo-select-menu');
 
         function open(){
             pseudo.classList.add('open');
             toggle.setAttribute('aria-expanded', 'true');
-            // trap simple: focus menu for keyboard nav
             menu.focus();
         }
         function close(){
@@ -77,10 +77,10 @@
             menu.querySelectorAll('li').forEach(li => li.classList.toggle('selected', li.dataset.value === value));
         }
 
-        toggle.addEventListener('click', () => {
+        toggle?.addEventListener('click', () => {
             if(pseudo.classList.contains('open')) close(); else open();
         });
-        menu.addEventListener('click', (e) => {
+        menu?.addEventListener('click', (e) => {
             const li = e.target.closest('li[role="option"]');
             if(!li) return;
             setValue(li.dataset.value, li.textContent.trim());
@@ -89,7 +89,7 @@
         document.addEventListener('click', (e) => {
             if(!pseudo.contains(e.target)) close();
         });
-        menu.addEventListener('keydown', (e) => {
+        menu?.addEventListener('keydown', (e) => {
             const items = Array.from(menu.querySelectorAll('li'));
             const idx = items.findIndex(li => li.classList.contains('selected'));
             if(e.key === 'Escape'){ close(); toggle.focus(); }
@@ -98,6 +98,6 @@
             else if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); const el = document.activeElement.closest('li'); if(el){ setValue(el.dataset.value, el.textContent.trim()); close(); toggle.focus(); } }
         });
         // Make items focusable for keyboard
-        menu.querySelectorAll('li').forEach(li => li.tabIndex = 0);
-    }
+        menu?.querySelectorAll('li').forEach(li => li.tabIndex = 0);
+    });
 })();
