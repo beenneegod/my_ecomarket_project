@@ -47,59 +47,59 @@
 
             <form method="post" action="{% url 'store:cart_add' product.id %}" class="add-to-cart-form">
                 {% csrf_token %}
-                    <script src="{% static 'js/product_rating.js' %}"></script>
-                    cancelButtonText: 'Anuluj',
-                }).then(function(res){
-                    if (res.isConfirmed) {
-                        window.location.href = (document.querySelector('a[href$="/login/"]')?.href) || '/accounts/login/';
-                    }
-                });
-            }
-            return;
-        }
-    var value = parseInt(btn.getAttribute('data-value'));
-        if (!value) return;
-        var stars = rating.querySelectorAll('.rating-star');
-        // Optimistic highlight
-        stars.forEach(function(s){
-            var v = parseInt(s.getAttribute('data-value'));
-            s.classList.toggle('text-warning', v <= value);
-            s.classList.toggle('text-secondary', v > value);
-        });
-        var url = rating.getAttribute('data-rate-url');
-        var formData = new FormData();
-        formData.append('value', String(value));
-        var csrf = (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || getCookie('csrftoken') || '';
-        if (csrf) { formData.append('csrfmiddlewaretoken', csrf); }
-        fetch(url, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf }, credentials: 'same-origin' })
-            .then(function(res){
-                var ct = res.headers.get('content-type') || '';
-                if (ct.includes('application/json')) {
-                    return res.json().then(function(d){ return { res: res, data: d }; });
-                }
-                return { res: res, data: { ok: false, error: 'Non-JSON response', status: res.status } };
-            })
-            .then(function(payload){
-                var d = payload.data;
-                if (!payload.res.ok || !d.ok) {
-                    // Revert to previous value on failure
-                    var prev = parseInt(rating.getAttribute('data-user-rating')) || 0;
-                    stars.forEach(function(s){
-                        var v = parseInt(s.getAttribute('data-value'));
-                        s.classList.toggle('text-warning', v <= prev);
-                        s.classList.toggle('text-secondary', v > prev);
-                    });
-                    if (window.Swal && payload.res && payload.res.status === 403) {
-                        window.Swal.fire({ icon: 'error', title: 'Błąd CSRF', text: 'Nie udało się zapisać oceny (403). Odśwież stronę i spróbuj ponownie.' });
-                    }
-                    return;
-                }
-                var meta = rating.querySelector('.rating-meta');
-                if (meta) meta.textContent = '(Śr: ' + (d.average != null ? Number(d.average).toFixed(1) : '0.0') + ', głosów: ' + (d.count || 0) + ')';
-                rating.setAttribute('data-user-rating', String(value));
-            })
-            .catch(function(err){ if (window.Swal) { window.Swal.fire({ icon: 'error', title: 'Błąd', text: 'Nie udało się wysłać oceny. Sprawdź połączenie.' }); } });
-    });
-})();
-</script>
+                <div class="mb-3">
+                    <label for="quantity" class="form-label">{% trans "Ilość:" %}</label>
+                    <div class="d-flex align-items-center">
+                        <input type="number" name="quantity" value="1" min="1" max="{{ product.stock }}" class="quantity-input-detail form-control me-2">
+                        <button type="button" data-product-id="{{ product.id }}" data-add-url="{% url 'store:cart_add' product.id %}" class="btn btn-primary add-to-cart-btn">
+                            <i class="bi bi-cart-plus"></i> {% trans "Dodaj do koszyka" %}
+                        </button>
+                    </div>
+                </div>
+                {% if product.stock > 5 %}
+                    <div class="stock-info stock-available mt-2">
+                        <i class="bi bi-check-circle-fill"></i> {% trans "Na stanie:" %} {{ product.stock }} {% trans "szt." %}
+                    </div>
+                {% elif product.stock > 0 %}
+                    <div class="stock-info stock-low mt-2">
+                        <i class="bi bi-exclamation-triangle-fill"></i> {% trans "Ostatnie sztuki:" %} {{ product.stock }} {% trans "szt." %}
+                    </div>
+                {% endif %}
+            </form>
+
+            <a href="{% url 'store:product_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> {% trans "Wróć do listy produktów" %}
+            </a>
+        </div>
+    </div>
+
+    {% if related_products %}
+    <hr class="my-5 hr-eco">
+    <div class="row">
+        <div class="col">
+            <h3 class="text-center mb-4">{% trans "Może Cię również zainteresować:" %}</h3>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+                {% for related_product in related_products %}
+                    <div class="col">
+                        {% include "store/partials/product_card.html" with product=related_product %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'css/product_detail.css' %}">
+    <style>
+      /* Make sure rating star buttons receive clicks */
+      .product-rating .rating-star { cursor: pointer; pointer-events: auto; }
+    </style>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/product_rating.js' %}"></script>
 {% endblock %}
