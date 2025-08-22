@@ -15,7 +15,7 @@
                 <div class="card-body p-4 p-md-5">
                     {% comment %} Отображение текущего аватара {% endcomment %}
                     <div class="text-center mb-4">
-                        <img src="{{ profile.avatar_url }}" alt="Twój awatar" class="img-thumbnail rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                        <img src="{{ profile.avatar_url }}" alt="Twój awatar" class="img-thumbnail rounded-circle" style="width: 150px; height: 150px; object-fit: cover;" data-default-avatar-url="{% static 'img/default_avatar.svg' %}">
                     </div>
 
                     <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
