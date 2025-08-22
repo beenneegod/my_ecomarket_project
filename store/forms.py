@@ -180,6 +180,15 @@ class ProfileUpdateForm(forms.ModelForm):
                         hasher_new.update(chunk)
                     new_digest = hasher_new.hexdigest()
 
+                    # Вернем указатель файла в начало, чтобы Django смог сохранить содержимое
+                    try:
+                        if hasattr(uploaded, 'seek'):
+                            uploaded.seek(0)
+                        elif hasattr(uploaded, 'file') and hasattr(uploaded.file, 'seek'):
+                            uploaded.file.seek(0)
+                    except Exception:
+                        pass
+
                     # Вычисляем SHA256 текущего файла из стораджа
                     current_file = instance.avatar
                     hasher_old = hashlib.sha256()
