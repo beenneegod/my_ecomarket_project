@@ -303,20 +303,22 @@ def profile_update(request):
         # instance=profile нужен, чтобы форма знала, какой объект Profile мы обновляем
         form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
-            # Сохраняем изменения в профиле (включая новый аватар)
-            obj = form.save()
-            # Доп. защита: если пришёл флаг avatar_clear, а форма/виджет могли его игнорировать — почистим сервером
-            if request.POST.get('avatar_clear') in ('1', 'true', 'on'):
-                try:
-                    if obj.avatar:
-                        obj.avatar.delete(save=False)
-                        obj.avatar = None
-                        obj.save(update_fields=['avatar'])
-                except Exception:
-                    # Не валим запрос, просто оставляем без падения
-                    pass
-            messages.success(request, 'Twój profil został pomyślnie zaktualizowany!')
-            return redirect('store:profile_update') # Перенаправляем обратно на эту же страницу (или другую)
+            try:
+                # Сохраняем изменения в профиле (включая новый аватар)
+                obj = form.save()
+                # Доп. защита: если пришёл флаг avatar_clear, а форма/виджет могли его игнорировать — почистим сервером
+                if request.POST.get('avatar_clear') in ('1', 'true', 'on'):
+                    try:
+                        if obj.avatar:
+                            obj.avatar.delete(save=False)
+                            obj.avatar = None
+                            obj.save(update_fields=['avatar'])
+                    except Exception:
+                        pass
+                messages.success(request, 'Twój profil został pomyślnie zaktualizowany!')
+                return redirect('store:profile_update') # Перенаправляем обратно на эту же страницу (или другую)
+            except Exception as e:
+                messages.error(request, 'Nie udało się zapisać zmian profilu. Spróbuj ponownie lub wybierz inny plik.')
         else:
             messages.error(request, 'Popraw błędy w formularzu.')
     else:
