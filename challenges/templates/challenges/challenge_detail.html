@@ -9,7 +9,7 @@
         <div class="col-lg-9">
             <div class="card shadow-lg challenge-detail-card">
                 {% if challenge.image %}
-                    <img src="{{ challenge.image.url }}" class="card-img-top" alt="{{ challenge.title }}" style="max-height: 400px; object-fit: cover;">
+                    <img src="{{ challenge.image.url }}" class="challenge-hero-img" alt="{{ challenge.title }}" loading="lazy">
                 {% endif %}
                 <div class="card-body p-4 p-md-5">
                     <h1 class="card-title display-5 fw-bold mb-3">{{ challenge.title }}</h1>

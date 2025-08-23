@@ -570,6 +570,15 @@ html.suspend-transitions *::after {
     object-fit: cover; /* Гарантирует, что изображение покроет область без искажений */
 }
 
+/* Challenge detail hero image: keep aspect ratio, avoid excessive cropping */
+.challenge-detail-card .challenge-hero-img {
+    display: block;
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain; /* show full image without distortion */
+    background-color: #111; /* subtle backdrop in dark sections */
+}
+
 .card-body {
     padding: 1.25rem; /* Стандартный паддинг Bootstrap, можно немного увеличить */
     display: flex;
