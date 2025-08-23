@@ -321,7 +321,13 @@ if not STRIPE_WEBHOOK_SECRET:
 # -------------------
 LOGIN_REDIRECT_URL = '/' # URL для перенаправления ПОСЛЕ успешного входа
 LOGOUT_REDIRECT_URL = '/' # URL для перенаправления ПОСЛЕ выхода
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+# --- Email configuration (SMTP by default; auto-switch to Resend if RESEND_API_KEY set) ---
+# To force a specific backend, set EMAIL_BACKEND explicitly.
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'config.email_backends.resend.ResendEmailBackend' if os.getenv('RESEND_API_KEY') else 'django.core.mail.backends.smtp.EmailBackend'
+)
 EMAIL_HOST = os.getenv('EMAIL_HOST')
 # Порт должен быть числом, конвертируем его
 API_POST_AUTHOR_USERNAME = os.getenv('API_POST_AUTHOR_USERNAME', 'default_api_user')
@@ -338,18 +344,24 @@ EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() == 'true'
 if EMAIL_USE_SSL and EMAIL_USE_TLS:
     logger.warning("Both EMAIL_USE_SSL and EMAIL_USE_TLS were True. Forcing TLS only.")
     EMAIL_USE_SSL = False
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL', '')
 # Email отправителя по умолчанию
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER) # Часто совпадает с логином
+DEFAULT_FROM_EMAIL = (
+    os.getenv('DEFAULT_FROM_EMAIL')
+    or (RESEND_FROM_EMAIL if RESEND_API_KEY and RESEND_FROM_EMAIL else EMAIL_HOST_USER)
+) # Часто совпадает с логином / или в Resend — проверенный домен
 
 # Опционально: Управление соединениями (может помочь при некоторых проблемах)
 EMAIL_TIMEOUT = 60 # Время ожидания ответа от сервера (секунды)
 
-# Проверка наличия основных настроек для SMTP
-if not all([EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD]):
-    print("Warning: SMTP Email settings (EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD) are not fully configured in .env. Real email sending might fail.")
-    # In development, fall back to console backend so emails show up in the runserver/process_tasks output
-    if DEBUG:
-        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Проверка наличия основных настроек: предупреждаем только если выбран SMTP бекенд
+if EMAIL_BACKEND.endswith('smtp.EmailBackend'):
+    if not all([EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD]):
+        print("Warning: SMTP Email settings (EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD) are not fully configured in .env. Real email sending might fail.")
+        # In development, fall back to console backend so emails show up in the runserver/process_tasks output
+        if DEBUG:
+            EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',

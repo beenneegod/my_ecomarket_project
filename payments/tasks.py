@@ -3,10 +3,10 @@
 import logging
 from background_task import background
 from django.conf import settings
-from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.db import transaction
 from store.models import Order, UserSubscription
+from common.mail import send_email
 
 logger = logging.getLogger(__name__)
 
@@ -46,12 +46,12 @@ def send_order_confirmation_email_task(order_id: int) -> bool:
         plain_message = render_to_string("emails/order_confirmation.txt", context)
         html_message = render_to_string("emails/order_confirmation.html", context)
 
-        send_mail(
-            subject,
-            plain_message,
-            from_email,
-            [recipient_email],
-            html_message=html_message,
+        send_email(
+            subject=subject,
+            to=[recipient_email],
+            text=plain_message,
+            html=html_message,
+            from_email=from_email,
             fail_silently=False,
         )
         # Mark as sent after successful send
@@ -94,12 +94,12 @@ def send_subscription_confirmation_email_task(user_subscription_id: int) -> bool
         plain_message = render_to_string("emails/subscription_confirmation.txt", context)
         html_message = render_to_string("emails/subscription_confirmation.html", context)
 
-        send_mail(
-            subject,
-            plain_message,
-            from_email,
-            [recipient_email],
-            html_message=html_message,
+        send_email(
+            subject=subject,
+            to=[recipient_email],
+            text=plain_message,
+            html=html_message,
+            from_email=from_email,
             fail_silently=False,
         )
         logger.info(
@@ -145,12 +145,12 @@ def send_subscription_canceled_email_task(user_subscription_id: int) -> bool:
         plain_message = render_to_string("emails/subscription_canceled_notice.txt", context)
         html_message = render_to_string("emails/subscription_canceled_notice.html", context)
 
-        send_mail(
-            subject,
-            plain_message,
-            from_email,
-            [recipient_email],
-            html_message=html_message,
+        send_email(
+            subject=subject,
+            to=[recipient_email],
+            text=plain_message,
+            html=html_message,
+            from_email=from_email,
             fail_silently=False,
         )
         logger.info(
@@ -198,12 +198,12 @@ def send_payment_failed_email_task(user_subscription_id: int) -> bool:
         plain_message = render_to_string("emails/subscription_payment_failed.txt", context)
         html_message = render_to_string("emails/subscription_payment_failed.html", context)
 
-        send_mail(
-            subject,
-            plain_message,
-            from_email,
-            [user_sub.user.email],
-            html_message=html_message,
+        send_email(
+            subject=subject,
+            to=[user_sub.user.email],
+            text=plain_message,
+            html=html_message,
+            from_email=from_email,
             fail_silently=False,
         )
         logger.info(

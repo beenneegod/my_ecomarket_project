@@ -1,8 +1,8 @@
 import logging
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
-from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from common.mail import send_email
 
 from store.models import UserSubscription
 
@@ -42,12 +42,12 @@ class Command(BaseCommand):
         plain_message = render_to_string("emails/subscription_confirmation.txt", context)
         html_message = render_to_string("emails/subscription_confirmation.html", context)
 
-        send_mail(
-            subject,
-            plain_message,
-            from_email,
-            [recipient_email],
-            html_message=html_message,
+        send_email(
+            subject=subject,
+            to=[recipient_email],
+            text=plain_message,
+            html=html_message,
+            from_email=from_email,
             fail_silently=False,
         )
 

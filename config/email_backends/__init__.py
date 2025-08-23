@@ -1,0 +1,1 @@
+# Package for custom email backends (e.g., Resend)

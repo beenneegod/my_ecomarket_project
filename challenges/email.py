@@ -1,7 +1,6 @@
-from django.core.mail import EmailMultiAlternatives
-from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
+from common.mail import send_email
 
 
 def notify_challenge_review(user_email: str, challenge_title: str, approved: bool, notes: str | None = None):
@@ -20,11 +19,4 @@ def notify_challenge_review(user_email: str, challenge_title: str, approved: boo
         text_body = render_to_string("challenges/emails/review_rejected.txt", context)
         html_body = render_to_string("challenges/emails/review_rejected.html", context)
 
-    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'no-reply@example.com'
-    try:
-        msg = EmailMultiAlternatives(subject, text_body, from_email, [user_email])
-        msg.attach_alternative(html_body, "text/html")
-        msg.send(fail_silently=True)
-    except Exception:
-        # Swallow errors to not break admin action flow
-        pass
+    send_email(subject=subject, to=[user_email], text=text_body, html=html_body, fail_silently=True)

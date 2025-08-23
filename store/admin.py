@@ -226,13 +226,12 @@ def export_to_csv(modeladmin, request, queryset):
 
 @admin.action(description="Отправить email-напоминание о неиспользованных купонах")
 def send_coupon_reminder(modeladmin, request, queryset):
-    from django.core.mail import send_mail
+    from common.mail import send_email
     for uc in queryset.filter(is_used=False):
-        send_mail(
+        send_email(
             subject="У вас есть неиспользованный купон!",
-            message=f"Здравствуйте, {uc.user.username}! У вас есть купон {uc.coupon.code} на скидку {uc.coupon.discount}%. Не забудьте использовать его до {uc.coupon.valid_to.strftime('%d.%m.%Y')}!",
-            from_email=None,
-            recipient_list=[uc.user.email],
+            to=[uc.user.email],
+            text=f"Здравствуйте, {uc.user.username}! У вас есть купон {uc.coupon.code} на скидку {uc.coupon.discount}%. Не забудьте использовать его до {uc.coupon.valid_to.strftime('%d.%m.%Y')}!",
             fail_silently=True,
         )
     modeladmin.message_user(request, f"Отправлено {queryset.filter(is_used=False).count()} напоминаний.")
