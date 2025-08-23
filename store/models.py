@@ -323,7 +323,13 @@ class SubscriptionBoxType(models.Model):
         default='month',
         verbose_name="Okres rozliczeniowy"
     )
-    image = models.ImageField(upload_to='subscription_boxes/', blank=True, null=True, verbose_name="Obrazek Boxa")
+    image = models.ImageField(
+        upload_to='subscription_boxes/',
+        blank=True,
+        null=True,
+        verbose_name="Obrazek Boxa",
+        storage=get_product_image_storage_instance()
+    )
     is_active = models.BooleanField(default=True, verbose_name="Aktywny (dostępny do subskrypcji)")
     # Поле для ID тарифного плана в Stripe (Stripe Price ID)
     stripe_price_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Stripe Price ID")
