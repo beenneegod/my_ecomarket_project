@@ -26,7 +26,7 @@ class ChallengeAdmin(admin.ModelAdmin):
             'description': 'Ustaw daty, status, czy to szablon powtarzalny oraz widoczność.'
         }),
         ('Nagrody', {
-            'fields': ('points_for_completion', 'badge_name_reward', 'badge_icon_class_reward'),
+            'fields': ('points_for_completion', 'badge_name_reward', 'badge_icon_class_reward', 'reward_coupon'),
             'description': 'Punkty i odznaka za ukończenie wyzwania.'
         }),
     )

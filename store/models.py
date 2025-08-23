@@ -187,6 +187,30 @@ class Order(models.Model):
     def __str__(self):
         return f"Zamówienie №{self.id}"
 
+    def get_full_name(self) -> str:
+        """Return customer's full name for templates and emails.
+        Falls back to linked user full_name/username if order fields are empty.
+        """
+        first = (self.first_name or '').strip()
+        last = (self.last_name or '').strip()
+        full = (f"{first} {last}").strip()
+        if full:
+            return full
+        try:
+            if self.user:
+                # Prefer user's full name, then username
+                user_full = ''
+                try:
+                    user_full = (self.user.get_full_name() or '').strip()
+                except Exception:
+                    user_full = ''
+                if user_full:
+                    return user_full
+                return getattr(self.user, 'username', '') or ''
+        except Exception:
+            pass
+        return ''
+
     def get_total_cost(self):
         total = sum(item.get_cost() for item in self.items.all())
         if self.discount:

@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.urls import reverse
 import re
 import uuid
-from store.models import Coupon
+from store.models import Coupon, get_product_image_storage_instance
 
 class Challenge(models.Model):
     STATUS_CHOICES = [
@@ -24,7 +24,13 @@ class Challenge(models.Model):
     start_date = models.DateTimeField(verbose_name="Data rozpoczęcia")
     end_date = models.DateTimeField(verbose_name="Data zakończenia")
     
-    image = models.ImageField(upload_to='challenges_images/', null=True, blank=True, verbose_name="Obrazek wyzwania")
+    image = models.ImageField(
+        upload_to='challenges_images/',
+        null=True,
+        blank=True,
+        storage=get_product_image_storage_instance(),
+        verbose_name="Obrazek wyzwania"
+    )
     
     badge_name_reward = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nazwa odznaki za wyzwanie")
     badge_icon_class_reward = models.CharField(max_length=50, blank=True, null=True, verbose_name="CSS klasa ikony odznaki")
@@ -110,7 +116,13 @@ class UserChallengeParticipation(models.Model):
     
     # Поле для заметок пользователя и файла-доказательства
     user_notes = models.TextField(blank=True, null=True, verbose_name="Notatki użytkownika/Raport")
-    proof_file = models.FileField(upload_to='challenge_proofs/', blank=True, null=True, verbose_name="Dowód (zdjęcie/wideo)")
+    proof_file = models.FileField(
+        upload_to='challenge_proofs/',
+        blank=True,
+        null=True,
+        storage=get_product_image_storage_instance(),
+        verbose_name="Dowód (zdjęcie/wideo)"
+    )
     review_notes = models.TextField(blank=True, null=True, verbose_name="Uwagi moderatora")
 
     class Meta:
