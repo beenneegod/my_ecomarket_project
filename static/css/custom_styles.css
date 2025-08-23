@@ -570,6 +570,22 @@ html.suspend-transitions *::after {
     object-fit: cover; /* Гарантирует, что изображение покроет область без искажений */
 }
 
+/* Subscription Boxes: keep full image visible without cropping */
+.subscription-box-card .subscription-box-img {
+    height: 220px;
+    width: 100%;
+    object-fit: contain; /* show full image */
+    background-color: #f7f7f7; /* neutral backdrop */
+}
+
+.subscription-box-detail-img {
+    width: 100%;
+    height: 100%;
+    max-height: 480px; /* prevent huge vertical stretch on tall images */
+    object-fit: contain; /* show full image */
+    background-color: #111; /* subtle dark backdrop like challenge hero */
+}
+
 /* Challenge detail hero image: keep aspect ratio, avoid excessive cropping */
 .challenge-detail-card .challenge-hero-img {
     display: block;
