@@ -61,6 +61,7 @@
 /* Utilities */
 .ws-nowrap { white-space: nowrap; }
 .avatar-30 { width:30px; height:30px; object-fit:cover; }
+.avatar-50 { width:50px !important; height:50px !important; object-fit:cover; border-radius:50%; display:inline-block; }
 .search-form-narrow { max-width: 400px; min-width: 200px; }
 .d-none { display:none !important; }
 

@@ -59,19 +59,62 @@
                                 <form method="post" enctype="multipart/form-data">
                                     {% csrf_token %}
                                     {% if completion_form %}
-                                        {% for field in completion_form %}
-                                            <div class="mb-3">
-                                                {% if field.label %}{{ field.label_tag }}{% endif %}
-                                                {{ field }}
-                                                {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                                                {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>{% endif %}
+                                        {# Notes textarea #}
+                                        <div class="mb-3">
+                                            <label for="{{ completion_form.user_notes.id_for_label }}" class="form-label">{{ completion_form.user_notes.label }}</label>
+                                            {{ completion_form.user_notes }}
+                                            {% if completion_form.user_notes.help_text %}
+                                                <small class="form-text text-muted">{{ completion_form.user_notes.help_text }}</small>
+                                            {% endif %}
+                                            {% if completion_form.user_notes.errors %}
+                                                <div class="invalid-feedback d-block">{{ completion_form.user_notes.errors|join:", " }}</div>
+                                            {% endif %}
+                                        </div>
+
+                                        {# Custom file input for proof_file #}
+                                        <div class="mb-3">
+                                            <label for="{{ completion_form.proof_file.id_for_label }}" class="form-label">{{ completion_form.proof_file.label }}</label>
+                                            <input type="file"
+                                                   name="{{ completion_form.proof_file.name }}"
+                                                   id="{{ completion_form.proof_file.id_for_label }}"
+                                                   accept="image/*,video/*"
+                                                   class="d-none js-proof-input"
+                                                   aria-label="{{ completion_form.proof_file.label }}">
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <label for="{{ completion_form.proof_file.id_for_label }}" class="btn btn-outline-success mb-0">
+                                                    <i class="bi bi-upload"></i> Wybierz plik
+                                                </label>
+                                                <span id="proof-filename" class="text-muted small" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nie wybrano pliku</span>
                                             </div>
-                                        {% endfor %}
+                                            {% if completion_form.proof_file.help_text %}
+                                                <small class="form-text text-muted d-block mt-1">{{ completion_form.proof_file.help_text }}</small>
+                                            {% endif %}
+                                            {% if completion_form.proof_file.errors %}
+                                                <div class="invalid-feedback d-block">{{ completion_form.proof_file.errors|join:", " }}</div>
+                                            {% endif %}
+                                        </div>
                                     {% endif %}
                                     <button type="submit" name="mark_completed_action" class="btn btn-success btn-lg w-100">
                                         <i class="bi bi-check2-square"></i> Wykonałem(am) to wyzwanie!
                                     </button>
                                 </form>
+                                <script>
+                                    (function(){
+                                        const input = document.querySelector('.js-proof-input');
+                                        const label = document.querySelector('label[for="{{ completion_form.proof_file.id_for_label }}"].btn');
+                                        const fnSpan = document.getElementById('proof-filename');
+                                        if (input && fnSpan) {
+                                            input.addEventListener('change', function(){
+                                                const files = input.files;
+                                                if (files && files.length > 0) {
+                                                    fnSpan.textContent = files.length === 1 ? files[0].name : (files.length + ' pliki');
+                                                } else {
+                                                    fnSpan.textContent = 'Nie wybrano pliku';
+                                                }
+                                            });
+                                        }
+                                    })();
+                                </script>
                             {% elif participation.status == 'joined' or participation.status == 'in_progress' %}
                                  <div class="alert alert-info text-center" role="alert">
                                     <i class="bi bi-clock-history fs-3 me-2"></i>

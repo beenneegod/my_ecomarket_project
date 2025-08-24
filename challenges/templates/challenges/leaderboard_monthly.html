@@ -12,7 +12,7 @@
       <div class="list-group-item d-flex align-items-center">
         <div class="me-3" style="width: 2rem; text-align:center;">{{ entry.rank }}</div>
         {% if entry.avatar_url %}
-          <img src="{{ entry.avatar_url }}" alt="avatar" class="rounded-circle me-3" style="width:36px;height:36px;object-fit:cover;">
+          <img src="{{ entry.avatar_url }}" alt="avatar" class="avatar-50 me-3">
         {% endif %}
         <div class="flex-grow-1">
           <strong>{{ entry.user.get_full_name|default:entry.user.username }}</strong>
