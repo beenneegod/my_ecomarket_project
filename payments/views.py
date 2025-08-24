@@ -510,7 +510,10 @@ def stripe_webhook(request):
             user_subscription.save()
 
             if user_subscription.user:
-                if user_subscription.status == 'active' and original_local_status != 'active':
+                if (
+                    (user_subscription.status == 'active' and original_local_status != 'active')
+                    or (user_subscription.status == 'trialing' and original_local_status != 'trialing')
+                ):
                     # Send immediately on activation; invoice.paid handler will not duplicate
                     send_subscription_confirmation_email_task(user_subscription.id)
                 elif (
