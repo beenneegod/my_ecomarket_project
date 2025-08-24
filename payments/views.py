@@ -511,11 +511,8 @@ def stripe_webhook(request):
 
             if user_subscription.user:
                 if user_subscription.status == 'active' and original_local_status != 'active':
-                    if (
-                        user_subscription.current_period_start
-                        and user_subscription.current_period_end
-                    ):
-                        send_subscription_confirmation_email_task(user_subscription.id)
+                    # Send immediately on activation; invoice.paid handler will not duplicate
+                    send_subscription_confirmation_email_task(user_subscription.id)
                 elif (
                     user_subscription.status == 'canceled'
                     and original_local_status != 'canceled'
@@ -728,11 +725,9 @@ def stripe_webhook(request):
 
                 if user_subscription.status in ['incomplete', 'past_due', 'pending_payment']:
                     user_subscription.status = 'active'
-                    if (
-                        billing_reason == 'subscription_create'
-                        and user_subscription.user
-                        and user_subscription.current_period_end
-                    ):
+                    # Send confirmation on first successful charge for the subscription
+                    # without requiring current_period_* to be already populated.
+                    if billing_reason == 'subscription_create' and user_subscription.user:
                         send_subscription_confirmation_email_task(user_subscription.id)
 
                 current_stripe_customer_id = invoice.get('customer')
