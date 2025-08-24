@@ -79,6 +79,7 @@
                                                    id="{{ completion_form.proof_file.id_for_label }}"
                                                    accept="image/*,video/*"
                                                    class="d-none js-proof-input"
+                                                   data-filename-target="proof-filename"
                                                    aria-label="{{ completion_form.proof_file.label }}">
                                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                                 <label for="{{ completion_form.proof_file.id_for_label }}" class="btn btn-outline-success mb-0">
@@ -98,23 +99,7 @@
                                         <i class="bi bi-check2-square"></i> Wykonałem(am) to wyzwanie!
                                     </button>
                                 </form>
-                                <script>
-                                    (function(){
-                                        const input = document.querySelector('.js-proof-input');
-                                        const label = document.querySelector('label[for="{{ completion_form.proof_file.id_for_label }}"].btn');
-                                        const fnSpan = document.getElementById('proof-filename');
-                                        if (input && fnSpan) {
-                                            input.addEventListener('change', function(){
-                                                const files = input.files;
-                                                if (files && files.length > 0) {
-                                                    fnSpan.textContent = files.length === 1 ? files[0].name : (files.length + ' pliki');
-                                                } else {
-                                                    fnSpan.textContent = 'Nie wybrano pliku';
-                                                }
-                                            });
-                                        }
-                                    })();
-                                </script>
+                                {# JS moved to extra_js to ensure consistent execution order #}
                             {% elif participation.status == 'joined' or participation.status == 'in_progress' %}
                                  <div class="alert alert-info text-center" role="alert">
                                     <i class="bi bi-clock-history fs-3 me-2"></i>
@@ -153,4 +138,43 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    // Filename preview: robust binding via event delegation
+    (function(){
+        function updatePreview(input){
+            try {
+                var targetId = input.getAttribute('data-filename-target') || 'proof-filename';
+                var span = document.getElementById(targetId);
+                if (!span) return;
+                var files = input.files;
+                if (files && files.length > 0) {
+                    span.textContent = files.length === 1 ? files[0].name : (files.length + ' pliki');
+                } else {
+                    span.textContent = 'Nie wybrano pliku';
+                }
+            } catch (e) { /* no-op */ }
+        }
+
+        document.addEventListener('change', function(e){
+            if (e.target && e.target.classList && e.target.classList.contains('js-proof-input')) {
+                updatePreview(e.target);
+            }
+        }, false);
+
+        // Initialize on DOM ready in case browser restores file input state (some don't expose for security)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function(){
+                var el = document.querySelector('.js-proof-input');
+                if (el) updatePreview(el);
+            });
+        } else {
+            var el = document.querySelector('.js-proof-input');
+            if (el) updatePreview(el);
+        }
+    })();
+</script>
 {% endblock %}
