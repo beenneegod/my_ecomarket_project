@@ -85,7 +85,7 @@
                                                 <label for="{{ completion_form.proof_file.id_for_label }}" class="btn btn-outline-success mb-0">
                                                     <i class="bi bi-upload"></i> Wybierz plik
                                                 </label>
-                                                <span id="proof-filename" class="text-muted small" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nie wybrano pliku</span>
+                                                <span id="proof-filename" class="text-muted small" data-default-text="Nie wybrano pliku" style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nie wybrano pliku</span>
                                             </div>
                                             {% if completion_form.proof_file.help_text %}
                                                 <small class="form-text text-muted d-block mt-1">{{ completion_form.proof_file.help_text }}</small>
@@ -142,39 +142,5 @@
 
 {% block extra_js %}
 {{ block.super }}
-<script>
-    // Filename preview: robust binding via event delegation
-    (function(){
-        function updatePreview(input){
-            try {
-                var targetId = input.getAttribute('data-filename-target') || 'proof-filename';
-                var span = document.getElementById(targetId);
-                if (!span) return;
-                var files = input.files;
-                if (files && files.length > 0) {
-                    span.textContent = files.length === 1 ? files[0].name : (files.length + ' pliki');
-                } else {
-                    span.textContent = 'Nie wybrano pliku';
-                }
-            } catch (e) { /* no-op */ }
-        }
-
-        document.addEventListener('change', function(e){
-            if (e.target && e.target.classList && e.target.classList.contains('js-proof-input')) {
-                updatePreview(e.target);
-            }
-        }, false);
-
-        // Initialize on DOM ready in case browser restores file input state (some don't expose for security)
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function(){
-                var el = document.querySelector('.js-proof-input');
-                if (el) updatePreview(el);
-            });
-        } else {
-            var el = document.querySelector('.js-proof-input');
-            if (el) updatePreview(el);
-        }
-    })();
-</script>
+<script src="{% static 'js/challenge_detail.js' %}?v=20250824"></script>
 {% endblock %}
