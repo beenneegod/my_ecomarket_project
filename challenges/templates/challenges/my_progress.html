@@ -85,7 +85,15 @@
                                 <span class="badge bg-warning text-dark fs-6"><i class="bi bi-x-octagon me-1"></i>{% trans "Wygasł / Nieaktywny" %}</span>
                             {% else %}
                                 <span class="badge bg-success fs-6"><i class="bi bi-check-circle-fill me-1"></i>{% trans "Aktywny" %}</span>
-                                <a href="{% url 'store:cart_detail' %}" class="btn btn-sm btn-primary float-end"><i class="bi bi-cart-plus me-1"></i>{% trans "Użyj" %}</a>
+                                <form method="post" action="{% url 'store:coupon_apply' %}" class="d-inline float-end ms-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="source_form" value="user_choice">
+                                    <input type="hidden" name="user_coupon" value="{{ user_coupon_item.id }}">
+                                    <input type="hidden" name="next" value="{% url 'challenges:my_progress' %}">
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-cart-plus me-1"></i>{% trans "Użyj" %}
+                                    </button>
+                                </form>
                             {% endif %}
                         </div>
                     </div>

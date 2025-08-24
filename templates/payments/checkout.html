@@ -26,7 +26,7 @@
             </li>
             {% if cart.coupon %}
             <li class="list-group-item d-flex justify-content-between text-success">
-                <span>{% blocktrans %}Zniżka ({{ cart.coupon.code }}){% endblocktrans %}</span>
+                <span>{% blocktrans with ccode=cart.coupon.code cdis=cart.coupon.discount|floatformat:"-2g" %}Zniżka ({{ ccode }} — {{ cdis }}%){% endblocktrans %}</span>
                 <span>-{{ cart.get_discount_amount }} PLN</span>
             </li>
             <li class="list-group-item d-flex justify-content-between">
