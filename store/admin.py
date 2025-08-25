@@ -1,7 +1,7 @@
 # store/admin.py
 
 from django.contrib import admin
-from .models import (Category, Product, Order, OrderItem, Profile, SubscriptionBoxType, UserSubscription, Coupon, UserCoupon, ProductRating)
+from .models import (Category, Product, Order, OrderItem, Profile, SubscriptionBoxType, UserSubscription, Coupon, UserCoupon, ProductRating, HomePageSettings)
 from import_export.admin import ImportExportModelAdmin
 from .admin_resources import CategoryResource, ProductResource
 from django.utils.safestring import mark_safe
@@ -281,3 +281,36 @@ class UserCouponAdmin(admin.ModelAdmin):
         label = 'Aktywny' if not obj.is_used else 'Użyty'
         return mark_safe(f'<span style="color: {color}; font-weight: bold;">{label}</span>')
     colored_status.short_description = 'Status'
+
+
+@admin.register(HomePageSettings)
+class HomePageSettingsAdmin(admin.ModelAdmin):
+    list_display = ("id", "hero_image_preview", "box_image_preview", "updated_at")
+    readonly_fields = ("hero_image_preview", "box_image_preview",)
+
+    fieldsets = (
+        (None, {
+            'fields': (
+                'hero_image', 'hero_image_alt', 'hero_image_preview',
+                'box_image', 'box_image_alt', 'box_image_preview',
+            )
+        }),
+    )
+
+    @admin.display(description='Podgląd hero')
+    def hero_image_preview(self, obj):
+        try:
+            if obj.hero_image:
+                return mark_safe(f'<img src="{obj.hero_image.url}" style="max-height:120px;object-fit:contain;border:1px solid #e5e7eb;border-radius:6px;"/>')
+        except Exception:
+            pass
+        return "-"
+
+    @admin.display(description='Podgląd box')
+    def box_image_preview(self, obj):
+        try:
+            if obj.box_image:
+                return mark_safe(f'<img src="{obj.box_image.url}" style="max-height:120px;object-fit:contain;border:1px solid #e5e7eb;border-radius:6px;"/>')
+        except Exception:
+            pass
+        return "-"

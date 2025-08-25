@@ -1,0 +1,20 @@
+{% extends "emails/base_email.html" %}
+{% load i18n %}
+
+{% block title %}{% blocktrans with site=site_name|default:"EcoMarket" %}Powiadomienie — {{ site }}{% endblocktrans %}{% endblock %}
+
+{% block header_pill %}
+  <div class="pill">{% block header_pill_text %}{% trans "Powiadomienie" %}{% endblock %}</div>
+{% endblock %}
+
+{% block content %}
+  {% block greeting %}
+    <p>{% trans "Witaj," %}{% if recipient_name %} {{ recipient_name }}{% endif %}!</p>
+  {% endblock %}
+
+  {% block body %}
+    <p>{% trans "To jest standardowe powiadomienie." %}</p>
+  {% endblock %}
+
+  {% block cta %}{% endblock %}
+{% endblock %}

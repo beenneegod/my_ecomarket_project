@@ -28,7 +28,12 @@
 {# 1. Hero Section #}
 <section class="hero-section text-center bg-light py-3 mb-4" data-aos="fade-in">
     <div class="container">
-    <img src="{% static 'img/placeholder_box.png' %}" alt="{% trans 'EcoMarket - świeże produkty dla Ciebie' %}" class="img-fluid rounded mb-3 hero-image">
+    {% if homepage_settings and homepage_settings.hero_image %}
+        {% trans "EcoMarket - świeże produkty dla Ciebie" as hero_alt_fallback %}
+        <img src="{{ homepage_settings.hero_image.url }}" alt="{{ homepage_settings.hero_image_alt|default:hero_alt_fallback }}" class="img-fluid rounded mb-3 hero-image">
+    {% else %}
+        <img src="{% static 'img/placeholder_box.png' %}" alt="{% trans 'EcoMarket - świeże produkty dla Ciebie' %}" class="img-fluid rounded mb-3 hero-image">
+    {% endif %}
     <h1 class="display-4 fw-bold text-primary">{% trans "Odkryj Świat Zdrowia z EcoMarket!" %}</h1>
         <p class="lead text-muted col-lg-8 mx-auto">
             {% trans "Najlepsze ekologiczne produkty, świeże warzywa, owoce i wyjątkowe zestawy subskrypcyjne prosto pod Twoje drzwi." %}
@@ -159,7 +164,12 @@
             </div>
             <div class="col-lg-5" data-aos="fade-left">
                 <div class="position-relative">
-                    <img src="{% static 'img/placeholder_box.png' %}" alt="{% trans 'EcoMarket Eko-Box' %}" class="img-fluid rounded shadow-lg">
+                    {% if homepage_settings and homepage_settings.box_image %}
+                        {% trans "EcoMarket Eko-Box" as box_alt_fallback %}
+                        <img src="{{ homepage_settings.box_image.url }}" alt="{{ homepage_settings.box_image_alt|default:box_alt_fallback }}" class="img-fluid rounded shadow-lg">
+                    {% else %}
+                        <img src="{% static 'img/placeholder_box.png' %}" alt="{% trans 'EcoMarket Eko-Box' %}" class="img-fluid rounded shadow-lg">
+                    {% endif %}
                     <div class="position-absolute top-0 end-0 bg-primary text-white py-2 px-3 rounded-pill mt-3 me-3 shadow">
                         <span class="fw-bold">-15%</span>
                     </div>

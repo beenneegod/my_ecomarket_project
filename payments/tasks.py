@@ -1,6 +1,7 @@
 """Background email tasks for payments app."""
 
 import logging
+from urllib.parse import urlparse
 from background_task import background
 from django.conf import settings
 from django.template.loader import render_to_string
@@ -9,6 +10,27 @@ from store.models import Order, UserSubscription
 from common.mail import send_email
 
 logger = logging.getLogger(__name__)
+
+
+def _email_base_context() -> dict:
+    """Common context for emails: support contacts and site name/url."""
+    site_url = getattr(settings, "SITE_URL", None)
+    site_name = None
+    if site_url:
+        try:
+            netloc = urlparse(site_url).netloc
+            site_name = netloc.split(":")[0] if netloc else None
+        except Exception:  # noqa: BLE001
+            site_name = None
+    if not site_name:
+        site_name = "EcoMarket"
+    return {
+        "support_email": getattr(settings, "SUPPORT_EMAIL", None) or getattr(settings, "DEFAULT_FROM_EMAIL", None),
+        "support_phone": getattr(settings, "SUPPORT_PHONE", ""),
+        "support_address": getattr(settings, "SUPPORT_ADDRESS", ""),
+        "site_name": site_name,
+        "site_url": site_url,
+    }
 
 
 @background(schedule=5)
@@ -42,7 +64,13 @@ def send_order_confirmation_email_task(order_id: int) -> bool:
             profile_url = None
             orders_url = None
 
-        context = {"order": order, "user": order.user, "profile_url": profile_url, "orders_url": orders_url}
+        context = {
+            "order": order,
+            "user": order.user,
+            "profile_url": profile_url,
+            "orders_url": orders_url,
+            **_email_base_context(),
+        }
         plain_message = render_to_string("emails/order_confirmation.txt", context)
         html_message = render_to_string("emails/order_confirmation.html", context)
 
@@ -90,7 +118,7 @@ def send_subscription_confirmation_email_task(user_subscription_id: int) -> bool
             profile_url = f"{base}/store/profile/edit/"
         except Exception:
             profile_url = None
-        context = {"user_subscription": user_sub, "profile_url": profile_url}
+        context = {"user_subscription": user_sub, "profile_url": profile_url, **_email_base_context()}
         plain_message = render_to_string("emails/subscription_confirmation.txt", context)
         html_message = render_to_string("emails/subscription_confirmation.html", context)
 
@@ -141,7 +169,7 @@ def send_subscription_canceled_email_task(user_subscription_id: int) -> bool:
             profile_url = f"{base}/store/profile/edit/"
         except Exception:
             profile_url = None
-        context = {"user_subscription": user_sub, "profile_url": profile_url}
+        context = {"user_subscription": user_sub, "profile_url": profile_url, **_email_base_context()}
         plain_message = render_to_string("emails/subscription_canceled_notice.txt", context)
         html_message = render_to_string("emails/subscription_canceled_notice.html", context)
 
@@ -194,7 +222,7 @@ def send_payment_failed_email_task(user_subscription_id: int) -> bool:
             profile_url = f"{base}/store/profile/edit/"
         except Exception:
             profile_url = None
-        context = {"user_subscription": user_sub, "profile_url": profile_url}
+        context = {"user_subscription": user_sub, "profile_url": profile_url, **_email_base_context()}
         plain_message = render_to_string("emails/subscription_payment_failed.txt", context)
         html_message = render_to_string("emails/subscription_payment_failed.html", context)
 

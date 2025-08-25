@@ -379,11 +379,19 @@ def homepage(request):
     # Можно также получить категории для отображения
     categories = Category.objects.all()[:4] # Первые 4 категории
 
+    # Загружаем настройки главной страницы (singleton)
+    try:
+        from .models import HomePageSettings
+        homepage_settings = HomePageSettings.load()
+    except Exception:
+        homepage_settings = None
+
     context = {
         'featured_products': featured_products,
         'latest_posts': latest_posts,
         'categories': categories,
-        'page_title': 'Witamy w EcoMarket!' # Для <title> тега
+        'page_title': 'Witamy w EcoMarket!', # Для <title> тега
+        'homepage_settings': homepage_settings,
     }
     return render(request, 'store/homepage.html', context)
 

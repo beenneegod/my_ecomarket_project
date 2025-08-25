@@ -134,6 +134,32 @@ class Product(models.Model):
                 pass 
         super().save(*args, **kwargs)
 
+
+class HomePageSettings(models.Model):
+    """Singleton settings for homepage hero and teaser images.
+    Admins can change images without touching static files.
+    """
+    hero_image = models.ImageField(upload_to='homepage/', blank=True, null=True, verbose_name="Obrazek hero (góra)")
+    hero_image_alt = models.CharField(max_length=255, blank=True, verbose_name="Tekst ALT dla hero")
+
+    box_image = models.ImageField(upload_to='homepage/', blank=True, null=True, verbose_name="Obrazek sekcji box")
+    box_image_alt = models.CharField(max_length=255, blank=True, verbose_name="Tekst ALT dla obrazka box")
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Ustawienia strony głównej"
+        verbose_name_plural = "Ustawienia strony głównej"
+
+    def __str__(self):
+        return "Ustawienia strony głównej"
+
+    @classmethod
+    def load(cls):
+        """Get the singleton instance, creating it if missing."""
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
 class Coupon(models.Model):
     from django.core.validators import MinValueValidator, MaxValueValidator
     code = models.CharField(max_length=50, unique=True, verbose_name="Kod kuponu")
