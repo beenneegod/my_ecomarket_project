@@ -1,41 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Potwierdzenie Subskrypcji - {{ user_subscription.box_type.name }}</title>
-    <style>
-        body { font-family: sans-serif; line-height: 1.5; color: #333; }
-        .container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-        h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .details { margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 4px;}
-        .details p { margin: 5px 0; }
-        .footer { margin-top: 20px; font-size: 0.9em; color: #777; text-align: center; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Dziękujemy za subskrypcję w EcoMarket!</h2>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {% load i18n %}
+        <title>{% blocktrans %}Potwierdzenie subskrypcji — {{ user_subscription.box_type.name }}{% endblocktrans %}</title>
+        <style>
+            body { margin:0; padding:0; background:#f6f9fc; color:#2d3748; }
+            a { color:#2b6cb0; text-decoration:none; }
+            .container { width:100%; background:#f6f9fc; padding:24px 0; }
+            .card { max-width:680px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.06); }
+            .header { background:linear-gradient(135deg, #2ecc71, #27ae60); padding:20px 28px; color:#ffffff; }
+            .brand { font-size:20px; font-weight:700; letter-spacing:.3px; }
+            .content { padding:28px; line-height:1.6; font-size:16px; }
+            .pill { display:inline-block; font-size:12px; background:#e6fffa; color:#276749; border:1px solid #9ae6b4; padding:4px 10px; border-radius:999px; margin-top:8px; }
+            .meta { font-size:14px; color:#4a5568; }
+            .footer { padding:18px 28px; background:#f7fafc; font-size:12px; color:#718096; text-align:center; }
+            .divider { height:1px; background:#edf2f7; margin:20px 0; }
+            .box { background:#f7fafc; border:1px solid #edf2f7; border-radius:6px; padding:12px 14px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="card">
+                <div class="header">
+                    <div class="brand">{{ site_name|default:"EcoMarket" }}</div>
+                    <div class="pill">{% trans "Potwierdzenie subskrypcji" %}</div>
+                </div>
+                <div class="content">
+                    <p>{% trans "Witaj" %}{% if user_subscription.user %} {{ user_subscription.user.get_full_name|default:user_subscription.user.username }}{% else %} {% trans "Kliencie" %}{% endif %},</p>
+                    <p>{% blocktrans with box=user_subscription.box_type.name %}Twoja subskrypcja na <strong>"{{ box }}"</strong> została pomyślnie aktywowana.{% endblocktrans %}</p>
+                    <p class="meta">{% trans "ID Twojej subskrypcji Stripe" %}: <strong>{{ user_subscription.stripe_subscription_id }}</strong></p>
 
-        <p>Witaj {% if user_subscription.user %}{{ user_subscription.user.get_full_name|default:user_subscription.user.username }}{% else %}Kliencie{% endif %},</p>
-        <p>Twoja subskrypcja na <strong>"{{ user_subscription.box_type.name }}"</strong> została pomyślnie aktywowana.</p>
-        <p>ID Twojej subskrypcji Stripe: <strong>{{ user_subscription.stripe_subscription_id }}</strong></p>
+                    <div class="divider"></div>
+                    <p class="meta"><strong>{% trans "Szczegóły subskrypcji" %}:</strong></p>
+                    <div class="box">
+                        <p><strong>{% trans "Nazwa Boxa" %}:</strong> {{ user_subscription.box_type.name }}</p>
+                        <p><strong>{% trans "Cena" %}:</strong> {{ user_subscription.box_type.price }} PLN / {{ user_subscription.box_type.get_billing_period_display }}</p>
+                        <p><strong>{% trans "Status" %}:</strong> {{ user_subscription.get_status_display }}</p>
+                        {% if user_subscription.current_period_start and user_subscription.current_period_end %}
+                        <p><strong>{% trans "Bieżący opłacony okres" %}:</strong> {{ user_subscription.current_period_start|date:"d.m.Y" }} - {{ user_subscription.current_period_end|date:"d.m.Y" }}</p>
+                        {% endif %}
+                    </div>
 
-        <h3>Szczegóły subskrypcji:</h3>
-        <div class="details">
-            <p><strong>Nazwa Boxa:</strong> {{ user_subscription.box_type.name }}</p>
-            <p><strong>Cena:</strong> {{ user_subscription.box_type.price }} PLN / {{ user_subscription.box_type.get_billing_period_display }}</p>
-            <p><strong>Status:</strong> {{ user_subscription.get_status_display }}</p>
-            {% if user_subscription.current_period_start and user_subscription.current_period_end %}
-            <p><strong>Bieżący opłacony okres:</strong> {{ user_subscription.current_period_start|date:"d.m.Y" }} - {{ user_subscription.current_period_end|date:"d.m.Y" }}</p>
-            {% endif %}
+                    {% if user_subscription.user and profile_url %}
+                        <p>{% trans "Możesz zarządzać swoim profilem i danymi w" %} <a href="{{ profile_url }}">{% trans "panelu użytkownika" %}</a>.</p>
+                    {% endif %}
+
+                    <div class="divider"></div>
+                    <p class="meta">
+                        <strong>{% trans "Kontakt do nas:" %}</strong><br/>
+                        {% if support_email %}{% trans "Email" %}: <a href="mailto:{{ support_email }}">{{ support_email }}</a><br/>{% endif %}
+                        {% if support_phone %}{% trans "Telefon" %}: <a href="tel:{{ support_phone }}">{{ support_phone }}</a><br/>{% endif %}
+                        {% if support_address %}{% trans "Adres" %}: {{ support_address }}<br/>{% endif %}
+                    </p>
+
+                    <p>{% trans "Pozdrawiamy," %}<br/>{% blocktrans with site=site_name|default:"EcoMarket" %}Zespół {{ site }}{% endblocktrans %}</p>
+                </div>
+                <div class="footer">
+                    {% trans "Ten e-mail został wysłany automatycznie, prosimy na niego nie odpowiadać, chyba że poproszono inaczej." %}
+                </div>
+            </div>
         </div>
-
-    {% if user_subscription.user and profile_url %}
-    <p>Możesz zarządzać swoim profilem i danymi w <a href="{{ profile_url }}">panelu użytkownika</a>.</p>
-    {% endif %}
-
-        <p class="footer">Z pozdrowieniami,<br>Zespół EcoMarket</p>
-    </div>
-</body>
-</html>
+    </body>
+    </html>

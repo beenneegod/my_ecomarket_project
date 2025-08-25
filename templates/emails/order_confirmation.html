@@ -1,74 +1,101 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Potwierdzenie zamówienia #{{ order.id }}</title>
-    <style>
-        body { font-family: sans-serif; line-height: 1.5; color: #333; }
-        .container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-        h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #eee; padding: 8px; text-align: left; }
-        th { background-color: #f8f8f8; }
-        .total-row td { border-top: 2px solid #333; font-weight: bold; }
-        address { font-style: normal; line-height: 1.4; }
-        .footer { margin-top: 20px; font-size: 0.9em; color: #777; text-align: center; }
-    </style>
-</head>
-<body>
-    <div class="container">
-    <h2>Dziękujemy za zamówienie w EcoMarket!</h2>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {% load i18n %}
+        <title>{% blocktrans %}Potwierdzenie zamówienia #{{ order.id }}{% endblocktrans %}</title>
+        <style>
+            body { margin:0; padding:0; background:#f6f9fc; color:#2d3748; }
+            a { color:#2b6cb0; text-decoration:none; }
+            .container { width:100%; background:#f6f9fc; padding:24px 0; }
+            .card { max-width:680px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.06); }
+            .header { background:linear-gradient(135deg, #2ecc71, #27ae60); padding:20px 28px; color:#ffffff; }
+            .brand { font-size:20px; font-weight:700; letter-spacing:.3px; }
+            .content { padding:28px; line-height:1.6; font-size:16px; }
+            .pill { display:inline-block; font-size:12px; background:#e6fffa; color:#276749; border:1px solid #9ae6b4; padding:4px 10px; border-radius:999px; margin-top:8px; }
+            .meta { font-size:14px; color:#4a5568; }
+            .footer { padding:18px 28px; background:#f7fafc; font-size:12px; color:#718096; text-align:center; }
+            .divider { height:1px; background:#edf2f7; margin:20px 0; }
+            table { width:100%; border-collapse: collapse; margin:16px 0; }
+            th, td { border:1px solid #edf2f7; padding:8px; text-align:left; }
+            th { background:#f7fafc; }
+            .total-row td { font-weight:700; }
+            address { font-style:normal; line-height:1.5; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="card">
+                <div class="header">
+                    <div class="brand">{{ site_name|default:"EcoMarket" }}</div>
+                    <div class="pill">{% trans "Potwierdzenie zamówienia" %}</div>
+                </div>
+                <div class="content">
+                    <p>{% trans "Witaj," %} {{ order.get_full_name }}!</p>
+                    <p>{% blocktrans with oid=order.id odate=order.created_at|date:"d.m.Y H:i" %}Twoje zamówienie nr <strong>#{{ oid }}</strong> z {{ odate }} zostało pomyślnie złożone i opłacone.{% endblocktrans %}</p>
 
-    <p>Witaj, {{ order.get_full_name }}!</p>
-    <p>Twoje zamówienie nr <strong>#{{ order.id }}</strong> z {{ order.created_at|date:"d.m.Y H:i" }} zostało pomyślnie złożone i opłacone.</p>
+                    <div class="divider"></div>
+                    <p class="meta"><strong>{% trans "Szczegóły zamówienia" %}:</strong></p>
+                    <table role="table">
+                        <thead>
+                            <tr>
+                                <th>{% trans "Produkt" %}</th>
+                                <th>{% trans "Ilość" %}</th>
+                                <th>{% trans "Cena za szt." %}</th>
+                                <th>{% trans "Suma" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items.all %}
+                                <tr>
+                                    <td>{{ item.product.name }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ item.price }} PLN</td>
+                                    <td>{{ item.get_cost }} PLN</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4">{% trans "Brak pozycji w zamówieniu." %}</td>
+                                </tr>
+                            {% endfor %}
+                            <tr class="total-row">
+                                <td colspan="3"><strong>{% trans "Razem" %}:</strong></td>
+                                <td><strong>{{ order.get_total_cost }} PLN</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-    <h3>Szczegóły zamówienia:</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Produkt</th>
-                    <th>Ilość</th>
-                    <th>Cena za szt.</th>
-                    <th>Suma</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in order.items.all %}
-                    <tr>
-                        <td>{{ item.product.name }}</td>
-                        <td>{{ item.quantity }}</td>
-                        <td>{{ item.price }} PLN</td>
-                        <td>{{ item.get_cost }} PLN</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="4">Brak pozycji w zamówieniu.</td>
-                    </tr>
-                {% endfor %}
-                <tr class="total-row">
-                    <td colspan="3"><strong>Razem:</strong></td>
-                    <td><strong>{{ order.get_total_cost }} PLN</strong></td>
-                </tr>
-            </tbody>
-        </table>
+                    <div class="divider"></div>
+                    <p class="meta"><strong>{% trans "Adres dostawy" %}:</strong></p>
+                    <address>
+                        {{ order.first_name }} {{ order.last_name }}<br/>
+                        {{ order.address_line_1 }}<br/>
+                        {% if order.address_line_2 %}{{ order.address_line_2 }}<br/>{% endif %}
+                        {{ order.postal_code }}, {{ order.city }}<br/>
+                        {{ order.country }}
+                    </address>
 
-    <h3>Adres dostawy:</h3>
-        <address>
-            {{ order.first_name }} {{ order.last_name }}<br>
-            {{ order.address_line_1 }}<br>
-            {% if order.address_line_2 %}{{ order.address_line_2 }}<br>{% endif %}
-            {{ order.postal_code }}, {{ order.city }}<br>
-            {{ order.country }}
-        </address>
+                    {% if user and orders_url %}
+                        <p>{% trans "Możesz zobaczyć szczegóły zamówienia w" %} <a href="{{ orders_url }}">{% trans "Twoim koncie" %}</a>.</p>
+                    {% elif user and profile_url %}
+                        <p>{% trans "Możesz zobaczyć i zaktualizować swoje dane w" %} <a href="{{ profile_url }}">{% trans "Twoim koncie" %}</a>.</p>
+                    {% endif %}
 
-    {% if user and orders_url %}
-    <p>Możesz zobaczyć szczegóły zamówienia w <a href="{{ orders_url }}">Twoim koncie</a>.</p>
-    {% elif user and profile_url %}
-    <p>Możesz zobaczyć i zaktualizować swoje dane w <a href="{{ profile_url }}">Twoim koncie</a>.</p>
-    {% endif %}
+                    <div class="divider"></div>
+                    <p class="meta">
+                        <strong>{% trans "Kontakt do nas:" %}</strong><br/>
+                        {% if support_email %}{% trans "Email" %}: <a href="mailto:{{ support_email }}">{{ support_email }}</a><br/>{% endif %}
+                        {% if support_phone %}{% trans "Telefon" %}: <a href="tel:{{ support_phone }}">{{ support_phone }}</a><br/>{% endif %}
+                        {% if support_address %}{% trans "Adres" %}: {{ support_address }}<br/>{% endif %}
+                    </p>
 
-    <p class="footer">Pozdrawiamy,<br>Zespół EcoMarket</p>
-    </div>
-</body>
-</html>
+                    <p>{% trans "Pozdrawiamy," %}<br/>{% blocktrans with site=site_name|default:"EcoMarket" %}Zespół {{ site }}{% endblocktrans %}</p>
+                </div>
+                <div class="footer">
+                    {% trans "Ten e-mail został wysłany automatycznie, prosimy na niego nie odpowiadać, chyba że poproszono inaczej." %}
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>

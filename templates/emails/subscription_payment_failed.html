@@ -1,28 +1,62 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <title>Problem z płatnością za subskrypcję - EcoMarket</title>
-    <style> body { font-family: sans-serif; line-height: 1.5; color: #333; }
-        .container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-        h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .details { margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 4px;}
-        .details p { margin: 5px 0; }
-        .footer { margin-top: 20px; font-size: 0.9em; color: #777; text-align: center; } </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Problem z płatnością za subskrypcję "{{ user_subscription.box_type.name }}"</h2>
-        <p>Witaj {% if user_subscription.user %}{{ user_subscription.user.get_full_name|default:user_subscription.user.username }}{% else %}Kliencie{% endif %},</p>
-        <p>Niestety, napotkaliśmy problem podczas próby przetworzenia płatności za Twoją subskrypcję na <strong>"{{ user_subscription.box_type.name }}"</strong>.</p>
-        <p>ID Twojej subskrypcji Stripe: <strong>{{ user_subscription.stripe_subscription_id }}</strong>.</p>
-        <p>Obecny status Twojej subskrypcji to: <strong>{{ user_subscription.get_status_display }}</strong>.</p>
-    <p>Prosimy o sprawdzenie i zaktualizowanie swoich danych płatniczych. Możesz to zrobić poprzez portal klienta Stripe (jeśli zintegrowany) lub kontaktując się z naszym wsparciem. </p>
-    {% if profile_url %}
-    <p>Przejdź do <a href="{{ profile_url }}">panelu użytkownika</a>, aby zaktualizować dane kontaktowe.</p>
-    {% endif %}
-        <p>Jeśli płatność została już pomyślnie dokonana lub problem został rozwiązany, prosimy zignorować tę wiadomość.</p>
-        <p class="footer">Z pozdrowieniami,<br>Zespół EcoMarket</p>
-    </div>
-</body>
-</html>
+    <head>
+        <meta charset="utf-8" />
+        {% load i18n %}
+        <title>{% trans "Problem z płatnością za subskrypcję - EcoMarket" %}</title>
+        <style>
+            body { margin:0; padding:0; background:#f6f9fc; color:#2d3748; }
+            a { color:#2b6cb0; text-decoration:none; }
+            .container { width:100%; background:#f6f9fc; padding:24px 0; }
+            .card { max-width:680px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.06); }
+            .header { background:linear-gradient(135deg, #2ecc71, #27ae60); padding:20px 28px; color:#ffffff; }
+            .brand { font-size:20px; font-weight:700; letter-spacing:.3px; }
+            .content { padding:28px; line-height:1.6; font-size:16px; }
+            .pill { display:inline-block; font-size:12px; background:#fffaf0; color:#b7791f; border:1px solid #fbd38d; padding:4px 10px; border-radius:999px; margin-top:8px; }
+            .meta { font-size:14px; color:#4a5568; }
+            .footer { padding:18px 28px; background:#f7fafc; font-size:12px; color:#718096; text-align:center; }
+            .divider { height:1px; background:#edf2f7; margin:20px 0; }
+            .box { background:#fffaf0; border:1px solid #fbd38d; border-radius:6px; padding:12px 14px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="card">
+                <div class="header">
+                    <div class="brand">{{ site_name|default:"EcoMarket" }}</div>
+                    <div class="pill">{% trans "Problem z płatnością" %}</div>
+                </div>
+                <div class="content">
+                    <p>{% trans "Witaj" %}{% if user_subscription.user %} {{ user_subscription.user.get_full_name|default:user_subscription.user.username }}{% else %} {% trans "Kliencie" %}{% endif %},</p>
+                    <p>{% blocktrans with box=user_subscription.box_type.name %}Napotkaliśmy problem podczas próby przetworzenia płatności za Twoją subskrypcję na <strong>"{{ box }}"</strong>.{% endblocktrans %}</p>
+                    <p class="meta">{% trans "ID subskrypcji" %}: <strong>{{ user_subscription.stripe_subscription_id }}</strong></p>
+                    <p class="meta">{% trans "Status" %}: <strong>{{ user_subscription.get_status_display }}</strong></p>
+
+                    <div class="divider"></div>
+                    <div class="box">
+                        <p>{% trans "Prosimy o sprawdzenie i zaktualizowanie danych płatniczych. Możesz to zrobić przez portal klienta Stripe (jeśli dostępny) lub kontaktując się z naszym wsparciem." %}</p>
+                    </div>
+
+                    {% if profile_url %}
+                        <p>{% trans "Przejdź do" %} <a href="{{ profile_url }}">{% trans "panelu użytkownika" %}</a>, {% trans "aby zaktualizować dane kontaktowe." %}</p>
+                    {% endif %}
+
+                    <p>{% trans "Jeśli płatność została już dokonana lub problem rozwiązano, zignoruj tę wiadomość." %}</p>
+
+                    <div class="divider"></div>
+                    <p class="meta">
+                        <strong>{% trans "Kontakt do nas:" %}</strong><br/>
+                        {% if support_email %}{% trans "Email" %}: <a href="mailto:{{ support_email }}">{{ support_email }}</a><br/>{% endif %}
+                        {% if support_phone %}{% trans "Telefon" %}: <a href="tel:{{ support_phone }}">{{ support_phone }}</a><br/>{% endif %}
+                        {% if support_address %}{% trans "Adres" %}: {{ support_address }}<br/>{% endif %}
+                    </p>
+
+                    <p>{% trans "Pozdrawiamy," %}<br/>{% blocktrans with site=site_name|default:"EcoMarket" %}Zespół {{ site }}{% endblocktrans %}</p>
+                </div>
+                <div class="footer">
+                    {% trans "Ten e-mail został wysłany automatycznie, prosimy na niego nie odpowiadać, chyba że poproszono inaczej." %}
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
