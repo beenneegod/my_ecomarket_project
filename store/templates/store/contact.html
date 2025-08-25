@@ -75,34 +75,6 @@
 {{ block.super }}
 {% if RECAPTCHA_SITE_KEY %}
 <script src="https://www.google.com/recaptcha/api.js?render={{ RECAPTCHA_SITE_KEY }}" defer></script>
-<script>
-  (function(){
-    function setToken(){
-      if (!window.grecaptcha || !grecaptcha.execute) return;
-      try {
-        grecaptcha.ready(function(){
-          grecaptcha.execute('{{ RECAPTCHA_SITE_KEY }}', {action: 'contact'}).then(function(token){
-            var el = document.getElementById('id_recaptcha_token');
-            if (el) el.value = token;
-          });
-        });
-      } catch (e) { /* no-op */ }
-    }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', setToken);
-    } else {
-      setToken();
-    }
-  })();
-  // Refresh token every 90 seconds on this page to keep fresh
-  setInterval(function(){
-    if (window.grecaptcha && grecaptcha.execute) {
-      grecaptcha.execute('{{ RECAPTCHA_SITE_KEY }}', {action: 'contact'}).then(function(token){
-        var el = document.getElementById('id_recaptcha_token');
-        if (el) el.value = token;
-      });
-    }
-  }, 90000);
-</script>
+<script src="{% static 'js/contact_recaptcha.js' %}?v=20250825" defer></script>
 {% endif %}
 {% endblock %}

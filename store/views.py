@@ -743,9 +743,13 @@ def contact(request):
                         timeout=10
                     )
                     data = resp.json()
+                    logger.info('reCAPTCHA verify resp: %s', data)
                     if data.get('success'):
                         score = float(data.get('score', 0)) if 'score' in data else 1.0
                         recaptcha_ok = score >= getattr(settings, 'RECAPTCHA_MIN_SCORE', 0.5)
+                    else:
+                        # If failed, surface error codes in logs
+                        logger.warning('reCAPTCHA failed: %s', data.get('error-codes'))
                 except Exception as e:
                     logger.warning('reCAPTCHA verification failed: %s', e)
                     recaptcha_ok = False
