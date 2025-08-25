@@ -453,6 +453,10 @@ CSP_SCRIPT_SRC = (
     'https://cdn.jsdelivr.net',
     'https://unpkg.com',
     'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+    # Google reCAPTCHA v3
+    'https://www.google.com',
+    'https://www.gstatic.com',
+    'https://www.recaptcha.net',
 )
 
 # Стили: наши + CDN; в DEBUG допускаем инлайн-стили.
@@ -477,6 +481,9 @@ CSP_IMG_SRC = (
     'blob:',
     'https://*.tile.openstreetmap.org',
     'https://unpkg.com',
+    # reCAPTCHA assets/images
+    'https://www.google.com',
+    'https://www.gstatic.com',
 )
 AWS_IMG_SOURCES = []
 try:
@@ -508,6 +515,13 @@ CSP_CONNECT_SRC = (
 CSP_OBJECT_SRC = ("'none'",)
 CSP_FRAME_ANCESTORS = ("'none'",)
 CSP_BASE_URI = ("'self'",)
+
+# Allow embedding reCAPTCHA challenge iframe if Google prompts it
+CSP_FRAME_SRC = (
+    "'self'",
+    'https://www.google.com',
+    'https://www.recaptcha.net',
+)
 
 # No inline scripts required now; all JS is external. Keep nonces off.
 if 'CSP_NONCE_IN_CONTEXT' in globals():
