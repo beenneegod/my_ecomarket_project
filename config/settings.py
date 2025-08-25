@@ -198,7 +198,6 @@ USE_I18N = True
 # Wymuś polski jako jedyny język w interfejsie
 LANGUAGES = [
     ('pl', 'Polski'),
-    ('en', 'English'),
 ]
 LOCALE_PATHS = [ BASE_DIR / 'locale' ]
 
