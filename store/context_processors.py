@@ -19,7 +19,7 @@ def support_email(request):
     return {
         'SUPPORT_EMAIL': getattr(settings, 'SUPPORT_EMAIL', None),
         'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None),
-    'SUPPORT_PHONE': getattr(settings, 'SUPPORT_PHONE', ''),
-    'SUPPORT_ADDRESS': getattr(settings, 'SUPPORT_ADDRESS', ''),
-    'RECAPTCHA_SITE_KEY': getattr(settings, 'RECAPTCHA_SITE_KEY', ''),
+        'SUPPORT_PHONE': getattr(settings, 'SUPPORT_PHONE', ''),
+        'SUPPORT_ADDRESS': getattr(settings, 'SUPPORT_ADDRESS', ''),
+        'RECAPTCHA_SITE_KEY': getattr(settings, 'RECAPTCHA_SITE_KEY', ''),
     }
