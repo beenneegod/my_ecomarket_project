@@ -20,6 +20,7 @@ from .sitemaps import (
     SubscriptionBoxSitemap,
 )
 from django.http import HttpResponse  # <-- добавить
+from .csp_views import csp_report
 
 
 urlpatterns = [
@@ -84,6 +85,8 @@ urlpatterns = [
         "User-agent: *\nAllow: /\nSitemap: {}/sitemap.xml\n".format(settings.SITE_URL),
         content_type='text/plain'
     )),
+    # CSP violation reports endpoint
+    path('csp-report/', csp_report, name='csp_report'),
 ]
 
 # В режиме разработки (DEBUG=True) добавляем обработку медиа-файлов

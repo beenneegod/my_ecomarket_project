@@ -541,6 +541,11 @@ CSP_OBJECT_SRC = ("'none'",)
 CSP_FRAME_ANCESTORS = ("'none'",)
 CSP_BASE_URI = ("'self'",)
 
+# Collect violation reports to help tune CSP in production without guesswork
+# Browsers will POST JSON reports to this path when a violation occurs.
+# Keeping it relative ensures it works across environments.
+CSP_REPORT_URI = ('/csp-report/',)
+
 # Allow embedding reCAPTCHA challenge iframe if Google prompts it
 CSP_FRAME_SRC = (
     "'self'",
