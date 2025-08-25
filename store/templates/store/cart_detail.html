@@ -41,7 +41,8 @@
                             </td>
                             <td>
                                 <div class="input-group input-group-sm" style="max-width: 130px;"> {# input-group для объединения поля и кнопок (если будете добавлять кнопки +/-) #}
-                                    <input type="number" value="{{ item.quantity }}" min="0" max="{{ product.stock }}" class="form-control quantity-input text-center" data-product-id="{{ product.id }}" data-update-url="{% url 'store:cart_add' product_id=product.id %}">
+                                    <label for="qty-{{ product.id }}" class="visually-hidden">{% trans "Ilość dla" %} {{ product.name }}</label>
+                                    <input id="qty-{{ product.id }}" name="quantity-{{ product.id }}" type="number" value="{{ item.quantity }}" min="0" max="{{ product.stock }}" class="form-control quantity-input text-center" data-product-id="{{ product.id }}" data-update-url="{% url 'store:cart_add' product_id=product.id %}">
                                     {# Можно добавить кнопки +/- сюда позже #}
                                 </div>
                             </td>

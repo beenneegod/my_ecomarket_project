@@ -25,7 +25,8 @@
 	<hr/>
 	<form id="inviteForm" class="d-flex gap-2" action="{% url 'chat:send_invite' room.id %}" method="post">
 		{% csrf_token %}
-		<input name="username" class="form-control chat-invite-input" placeholder="@nazwa_użytkownika" />
+		<label for="invite-username" class="visually-hidden">{% trans "Nazwa użytkownika do zaproszenia" %}</label>
+		<input id="invite-username" name="username" class="form-control chat-invite-input" placeholder="@nazwa_użytkownika" />
 		<button class="btn btn-outline-secondary">Zaproś</button>
 	</form>
 </div>

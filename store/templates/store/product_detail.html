@@ -50,7 +50,7 @@
                 <div class="mb-3">
                     <label for="quantity" class="form-label">{% trans "Ilość:" %}</label>
                     <div class="d-flex align-items-center">
-                        <input type="number" name="quantity" value="1" min="1" max="{{ product.stock }}" class="quantity-input-detail form-control me-2">
+                        <input id="quantity" type="number" name="quantity" value="1" min="1" max="{{ product.stock }}" class="quantity-input-detail form-control me-2">
                         <button type="button" data-product-id="{{ product.id }}" data-add-url="{% url 'store:cart_add' product.id %}" class="btn btn-primary add-to-cart-btn">
                             <i class="bi bi-cart-plus"></i> {% trans "Dodaj do koszyka" %}
                         </button>
