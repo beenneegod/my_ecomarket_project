@@ -20,10 +20,13 @@ from .sitemaps import (
     SubscriptionBoxSitemap,
 )
 from django.http import HttpResponse  # <-- добавить
+from django.conf.urls import i18n  # for language switching
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Internationalization: language switch endpoint
+    path('i18n/', include('django.conf.urls.i18n')),
     # Healthcheck для Railway
     path('healthz/', lambda r: HttpResponse('ok'), name='healthz'),  # <-- добавить
     path('', store_views.homepage, name='homepage'),

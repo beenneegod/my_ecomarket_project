@@ -84,7 +84,18 @@
                         <button class="btn btn-outline-success" type="submit">{% trans "Szukaj" %}</button>
                     </form>
 
-                    <ul class="navbar-nav">
+                    <ul class="navbar-nav align-items-center">
+                        <li class="nav-item me-2">
+                            <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center" style="gap:.25rem;">
+                                {% csrf_token %}
+                                <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                                <label for="lang-select" class="visually-hidden">{% trans "Język" %}</label>
+                                <select id="lang-select" name="language" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="{% trans 'Wybierz język' %}">
+                                    <option value="pl" {% if LANGUAGE_CODE|default:'pl' == 'pl' %}selected{% endif %}>PL</option>
+                                    <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>EN</option>
+                                </select>
+                            </form>
+                        </li>
                         <li class="nav-item">
                             <button id="theme-toggle-btn" class="theme-toggle-btn nav-link" type="button" aria-label="Przełącz motyw">
                                 <i class="bi bi-moon-fill"></i>

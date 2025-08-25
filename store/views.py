@@ -21,7 +21,9 @@ from django.conf import settings
 from django.utils import timezone
 import logging
 logger = logging.getLogger(__name__)
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.translation import gettext as _
 import requests
 
 
@@ -714,6 +716,7 @@ def cart_count(request):
 
 def contact(request):
     """Public contact page to reach the shop support."""
+    site_name = getattr(settings, 'SITE_NAME', 'EcoMarket')
     initial = {}
     if request.user.is_authenticated:
         initial['email'] = getattr(request.user, 'email', '')
@@ -758,9 +761,9 @@ def contact(request):
                     recaptcha_ok = True  # allow if keys missing but not to block prod unexpectedly
 
             if not recaptcha_ok:
-                messages.error(request, 'Weryfikacja reCAPTCHA nie powiodła się. Spróbuj ponownie.')
-                return render(request, 'store/contact.html', {'form': form, 'page_title': 'Kontakt z EcoMarket'})
-            full_subject = f"[Kontakt] {subject}"
+                messages.error(request, _('Weryfikacja reCAPTCHA nie powiodła się. Spróbuj ponownie.'))
+                return render(request, 'store/contact.html', {'form': form, 'page_title': _('Kontakt z %(site)s') % {'site': site_name}})
+            full_subject = _('[Kontakt] %(subject)s') % {'subject': subject}
             body = (
                 f"Imię i nazwisko: {name}\n"
                 f"E-mail: {email}\n"
@@ -783,29 +786,36 @@ def contact(request):
                     )
                     # Autoresponder to the customer
                     try:
-                        send_mail(
-                            subject='Potwierdzenie kontaktu – EcoMarket',
-                            message=(
-                                'Dziękujemy za kontakt! Otrzymaliśmy Twoją wiadomość i odpowiemy tak szybko, jak to możliwe.\n\n'
-                                f'Temat: {subject}\n'
-                                f'Treść:\n{message}\n\n'
-                                'Pozdrawiamy,\nZespół EcoMarket'
-                            ),
+                        ctx = {
+                            'subject': subject,
+                            'message': message,
+                            'user_name': name,
+                            'support_email': support_email,
+                            'support_phone': getattr(settings, 'SUPPORT_PHONE', ''),
+                            'support_address': getattr(settings, 'SUPPORT_ADDRESS', ''),
+                            'site_name': site_name,
+                        }
+                        text_body = render_to_string('emails/contact_autoresponder.txt', ctx)
+                        html_body = render_to_string('emails/contact_autoresponder.html', ctx)
+                        email_msg = EmailMultiAlternatives(
+                            subject=_('Potwierdzenie kontaktu – %(site)s') % {'site': site_name},
+                            body=text_body,
                             from_email=settings.DEFAULT_FROM_EMAIL or support_email,
-                            recipient_list=[email],
-                            fail_silently=True,
+                            to=[email],
                         )
+                        email_msg.attach_alternative(html_body, "text/html")
+                        email_msg.send(fail_silently=True)
                     except Exception:
                         pass
-                messages.success(request, 'Dziękujemy za kontakt! Odpowiemy tak szybko, jak to możliwe.')
+                messages.success(request, _('Dziękujemy za kontakt! Odpowiemy tak szybko, jak to możliwe.'))
                 return redirect('store:contact')
             except Exception as e:
                 logger.exception("Contact form send failed: %s", e)
-                messages.error(request, 'Nie udało się wysłać wiadomości. Spróbuj ponownie później lub napisz bezpośrednio e‑mail.')
+                messages.error(request, _('Nie udało się wysłać wiadomości. Spróbuj ponownie później lub napisz bezpośrednio e‑mail.'))
     else:
         form = ContactForm(initial=initial, user=request.user)
     context = {
         'form': form,
-        'page_title': 'Kontakt z EcoMarket',
+        'page_title': _('Kontakt z %(site)s') % {'site': site_name},
     }
     return render(request, 'store/contact.html', context)

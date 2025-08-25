@@ -1,0 +1,17 @@
+{% load i18n %}
+{% trans "Dziękujemy za kontakt!" %}
+
+{% trans "Otrzymaliśmy Twoją wiadomość i wrócimy z odpowiedzią tak szybko, jak to możliwe." %}
+
+{% trans "Temat" %}: {{ subject }}
+
+{% trans "Treść" %}:
+{{ message }}
+
+{% trans "Kontakt do nas:" %}
+{% if support_email %}- {% trans "Email" %}: {{ support_email }}{% endif %}
+{% if support_phone %}- {% trans "Telefon" %}: {{ support_phone }}{% endif %}
+{% if support_address %}- {% trans "Adres" %}: {{ support_address }}{% endif %}
+
+{% trans "Pozdrawiamy," %}
+{% blocktrans with site_name=site_name %}Zespół {{ site_name }}{% endblocktrans %}

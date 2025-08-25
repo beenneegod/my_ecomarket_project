@@ -3,22 +3,19 @@
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-25 11:05+0200\n"
+"POT-Creation-Date: 2025-08-25 11:10+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"Language: en\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && "
-"(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
-"n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: .\blog\models.py:12
 msgid "Szkic"
@@ -199,52 +196,52 @@ msgstr ""
 #: .\challenges\templates\challenges\my_progress.html:35
 #, python-format
 msgid "otrzymano %(awarded_at_date)s"
-msgstr ""
+msgstr "received %(awarded_at_date)s"
 
 #: .\challenges\templates\challenges\my_progress.html:68
 msgid "Kod"
-msgstr ""
+msgstr "Code"
 
 #: .\challenges\templates\challenges\my_progress.html:71
 msgid "Zniżka"
-msgstr ""
+msgstr "Discount"
 
 #: .\challenges\templates\challenges\my_progress.html:72
 msgid "Ważny od"
-msgstr ""
+msgstr "Valid from"
 
 #: .\challenges\templates\challenges\my_progress.html:73
 msgid "Ważny do"
-msgstr ""
+msgstr "Valid until"
 
 #: .\challenges\templates\challenges\my_progress.html:77
 #, python-format
 msgid "Otrzymany za: %(challenge_title)s"
-msgstr ""
+msgstr "Earned for: %(challenge_title)s"
 
 #: .\challenges\templates\challenges\my_progress.html:83
 msgid "Wykorzystany"
-msgstr ""
+msgstr "Used"
 
 #: .\challenges\templates\challenges\my_progress.html:85
 msgid "Wygasł / Nieaktywny"
-msgstr ""
+msgstr "Expired / Inactive"
 
 #: .\challenges\templates\challenges\my_progress.html:94
 msgid "Użyj"
-msgstr ""
+msgstr "Use"
 
 #: .\challenges\templates\challenges\my_progress.html:106
 msgid "Nie masz jeszcze żadnych kuponów. Ukończ wyzwania, aby je zdobyć!"
-msgstr ""
+msgstr "You don’t have any coupons yet. Complete challenges to earn them!"
 
 #: .\challenges\templates\challenges\my_progress.html:114
 msgid "Aktywne wyzwania"
-msgstr ""
+msgstr "Active challenges"
 
 #: .\challenges\templates\challenges\my_progress.html:136
 msgid "Ukończone wyzwania"
-msgstr ""
+msgstr "Completed challenges"
 
 #: .\store\templates\store\cart_detail.html:5
 #: .\store\templates\store\cart_detail.html:9
@@ -331,45 +328,45 @@ msgstr ""
 
 #: .\store\templates\store\contact.html:12
 msgid "Skontaktuj się z nami"
-msgstr ""
+msgstr "Contact us"
 
 #: .\store\templates\store\contact.html:18
 #: .\templates\emails\contact_autoresponder.html:51
 #: .\templates\emails\contact_autoresponder.txt:14
 msgid "Adres"
-msgstr ""
+msgstr "Address"
 
 #: .\store\templates\store\contact.html:21
 #: .\templates\emails\contact_autoresponder.html:50
 #: .\templates\emails\contact_autoresponder.txt:13
 msgid "Telefon"
-msgstr ""
+msgstr "Phone"
 
 #: .\store\templates\store\contact.html:28
 msgid "Imię i nazwisko"
-msgstr ""
+msgstr "Full name"
 
 #: .\store\templates\store\contact.html:35
 msgid "Adres e‑mail"
-msgstr ""
+msgstr "Email address"
 
 #: .\store\templates\store\contact.html:42
 #: .\templates\emails\contact_autoresponder.html:36
 #: .\templates\emails\contact_autoresponder.txt:6
 msgid "Temat"
-msgstr ""
+msgstr "Subject"
 
 #: .\store\templates\store\contact.html:49
 msgid "Wiadomość"
-msgstr ""
+msgstr "Message"
 
 #: .\store\templates\store\contact.html:58
 msgid "Wyślij"
-msgstr ""
+msgstr "Send"
 
 #: .\store\templates\store\contact.html:64
 msgid "Możesz też napisać do nas bezpośrednio"
-msgstr ""
+msgstr "You can also write to us directly"
 
 #: .\store\templates\store\homepage.html:9
 msgid ""
@@ -874,77 +871,77 @@ msgstr ""
 
 #: .\templates\base.html:158
 msgid "Kontakt:"
-msgstr ""
+msgstr "Contact:"
 
 #: .\templates\base.html:159
 msgid "formularz"
-msgstr ""
+msgstr "form"
 
 #: .\templates\base.html:160
 msgid "lub e‑mail"
-msgstr ""
+msgstr "or email"
 
 #: .\templates\emails\contact_autoresponder.html:7
 #, python-format
 msgid "Potwierdzenie kontaktu – %(site_name)s"
-msgstr ""
+msgstr "Contact confirmation – %(site_name)s"
 
 #: .\templates\emails\contact_autoresponder.html:29
 msgid "Potwierdzenie kontaktu"
-msgstr ""
+msgstr "Contact confirmation"
 
 #: .\templates\emails\contact_autoresponder.html:32
 msgid "Cześć"
-msgstr ""
+msgstr "Hi"
 
 #: .\templates\emails\contact_autoresponder.html:33
 msgid ""
 "Dziękujemy za wiadomość! Otrzymaliśmy Twoje zgłoszenie i wrócimy z "
 "odpowiedzią tak szybko, jak to możliwe."
-msgstr ""
+msgstr "Thank you for your message! We’ve received your request and will reply as soon as possible."
 
 #: .\templates\emails\contact_autoresponder.html:43
 msgid ""
 "W międzyczasie, jeśli chcesz uzupełnić informacje lub masz pilną sprawę, "
 "odpowiedz bezpośrednio na tego maila."
-msgstr ""
+msgstr "In the meantime, if you want to add more details or have an urgent matter, reply directly to this email."
 
 #: .\templates\emails\contact_autoresponder.html:48
 #: .\templates\emails\contact_autoresponder.txt:11
 msgid "Kontakt do nas:"
-msgstr ""
+msgstr "Contact us:"
 
 #: .\templates\emails\contact_autoresponder.html:49
 #: .\templates\emails\contact_autoresponder.txt:12
 msgid "Email"
-msgstr ""
+msgstr "Email"
 
 #: .\templates\emails\contact_autoresponder.html:54
 #: .\templates\emails\contact_autoresponder.txt:16
 msgid "Pozdrawiamy,"
-msgstr ""
+msgstr "Best regards,"
 
 #: .\templates\emails\contact_autoresponder.html:54
 #: .\templates\emails\contact_autoresponder.txt:17
 #, python-format
 msgid "Zespół %(site_name)s"
-msgstr ""
+msgstr "%(site_name)s Team"
 
 #: .\templates\emails\contact_autoresponder.html:57
 msgid ""
 "Ten e-mail został wysłany automatycznie, prosimy na niego nie odpowiadać, "
 "chyba że poproszono inaczej."
-msgstr ""
+msgstr "This email was sent automatically; please don’t reply unless instructed otherwise."
 
 #: .\templates\emails\contact_autoresponder.txt:2
 msgid "Dziękujemy za kontakt!"
-msgstr ""
+msgstr "Thank you for contacting us!"
 
 #: .\templates\emails\contact_autoresponder.txt:4
 msgid ""
 "Otrzymaliśmy Twoją wiadomość i wrócimy z odpowiedzią tak szybko, jak to "
 "możliwe."
-msgstr ""
+msgstr "We’ve received your message and will get back to you as soon as possible."
 
 #: .\templates\payments\canceled.html:5
 msgid "Płatność anulowana"
