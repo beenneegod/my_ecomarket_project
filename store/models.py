@@ -139,10 +139,10 @@ class HomePageSettings(models.Model):
     """Singleton settings for homepage hero and teaser images.
     Admins can change images without touching static files.
     """
-    hero_image = models.ImageField(upload_to='homepage/', blank=True, null=True, verbose_name="Obrazek hero (góra)")
+    hero_image = models.ImageField(upload_to='homepage/', blank=True, null=True, verbose_name="Obrazek hero (góra)", storage=get_product_image_storage_instance())
     hero_image_alt = models.CharField(max_length=255, blank=True, verbose_name="Tekst ALT dla hero")
 
-    box_image = models.ImageField(upload_to='homepage/', blank=True, null=True, verbose_name="Obrazek sekcji box")
+    box_image = models.ImageField(upload_to='homepage/', blank=True, null=True, verbose_name="Obrazek sekcji box", storage=get_product_image_storage_instance())
     box_image_alt = models.CharField(max_length=255, blank=True, verbose_name="Tekst ALT dla obrazka box")
 
     updated_at = models.DateTimeField(auto_now=True)
