@@ -92,6 +92,7 @@ MIDDLEWARE = [
     'axes.middleware.AxesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'config.middleware.AdditionalSecurityHeadersMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls' # Указываем на файл urls.py в папке config
@@ -272,12 +273,14 @@ IMAGE_VARIANT_STORAGE = os.getenv('IMAGE_VARIANT_STORAGE', 'sibling' if not DEBU
 IMAGE_VARIANTS_ENABLED = os.getenv('IMAGE_VARIANTS_ENABLED', 'False' if not DEBUG else 'True').lower() in ('true','1','t','yes')
 
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+# Cross-Origin-Opener-Policy to help isolate browsing context
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
 # Default primary key field type
 # https://docs.djangoproject.com/en/stable/ref/settings/#default-auto-field
 
@@ -310,6 +313,15 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
+    # Basic API throttling to slow down abuse. Can be tuned via env.
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': os.getenv('DRF_THROTTLE_ANON', '60/min'),
+        'user': os.getenv('DRF_THROTTLE_USER', '120/min'),
+    },
 }
 # --- Stripe Keys ---
 STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY')
@@ -457,6 +469,8 @@ CSP_SCRIPT_SRC = (
     'https://www.google.com',
     'https://www.gstatic.com',
     'https://www.recaptcha.net',
+    # Stripe.js for payments
+    'https://js.stripe.com',
 )
 
 # Стили: наши + CDN; в DEBUG допускаем инлайн-стили.
@@ -484,6 +498,8 @@ CSP_IMG_SRC = (
     # reCAPTCHA assets/images
     'https://www.google.com',
     'https://www.gstatic.com',
+    # Stripe telemetry images
+    'https://q.stripe.com',
 )
 AWS_IMG_SOURCES = []
 try:
@@ -511,6 +527,12 @@ CSP_CONNECT_SRC = (
     "'self'",
     'ws:',
     'wss:',
+    # reCAPTCHA network calls
+    'https://www.google.com',
+    'https://www.gstatic.com',
+    'https://www.recaptcha.net',
+    # Stripe API
+    'https://api.stripe.com',
 )
 CSP_OBJECT_SRC = ("'none'",)
 CSP_FRAME_ANCESTORS = ("'none'",)
@@ -521,6 +543,8 @@ CSP_FRAME_SRC = (
     "'self'",
     'https://www.google.com',
     'https://www.recaptcha.net',
+    # Stripe Elements/3DS iframes
+    'https://js.stripe.com',
 )
 
 # No inline scripts required now; all JS is external. Keep nonces off.

@@ -3,6 +3,21 @@
 
 {% block title %}{{ page_title|default:"Kontakt" }} - EcoMarket{% endblock %}
 
+{% block extra_css %}
+{{ block.super }}
+<style>
+  .grecaptcha-badge{
+    transform: scale(0.85);
+    transform-origin: 100% 100%;
+    right: 12px !important;
+    bottom: 12px !important;
+  }
+  @media (max-width: 576px){
+    .grecaptcha-badge{ transform: scale(0.8); }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4 mb-5">
   <div class="row justify-content-center">
