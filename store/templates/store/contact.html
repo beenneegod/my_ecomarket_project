@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ page_title|default:"Kontakt" }} - EcoMarket{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0"><i class="bi bi-envelope-fill me-2"></i>{% trans "Skontaktuj się z nami" %}</h4>
+        </div>
+        <div class="card-body">
+          {% if SUPPORT_ADDRESS or SUPPORT_PHONE %}
+          <div class="alert alert-secondary" role="alert">
+            {% if SUPPORT_ADDRESS %}
+              <div><i class="bi bi-geo-alt-fill me-1"></i><strong>{% trans "Adres" %}:</strong> {{ SUPPORT_ADDRESS }}</div>
+            {% endif %}
+            {% if SUPPORT_PHONE %}
+              <div class="mt-1"><i class="bi bi-telephone-fill me-1"></i><strong>{% trans "Telefon" %}:</strong> <a href="tel:{{ SUPPORT_PHONE|cut:' ' }}">{{ SUPPORT_PHONE }}</a></div>
+            {% endif %}
+          </div>
+          {% endif %}
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="id_name" class="form-label">{% trans "Imię i nazwisko" %}</label>
+              {{ form.name }}
+              {% if form.name.errors %}
+                <div class="invalid-feedback d-block">{{ form.name.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label for="id_email" class="form-label">{% trans "Adres e‑mail" %}</label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="invalid-feedback d-block">{{ form.email.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label for="id_subject" class="form-label">{% trans "Temat" %}</label>
+              {{ form.subject }}
+              {% if form.subject.errors %}
+                <div class="invalid-feedback d-block">{{ form.subject.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label for="id_message" class="form-label">{% trans "Wiadomość" %}</label>
+              {{ form.message }}
+              {% if form.message.errors %}
+                <div class="invalid-feedback d-block">{{ form.message.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            {{ form.website }} {# honeypot #}
+            {{ form.recaptcha_token }}
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-send me-1"></i>{% trans "Wyślij" %}</button>
+            </div>
+          </form>
+        </div>
+        <div class="card-footer bg-light">
+          <div class="small text-muted">
+            {% trans "Możesz też napisać do nas bezpośrednio" %}:
+            <a href="mailto:{{ SUPPORT_EMAIL|default:DEFAULT_FROM_EMAIL }}">{{ SUPPORT_EMAIL|default:DEFAULT_FROM_EMAIL }}</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if RECAPTCHA_SITE_KEY %}
+<script src="https://www.google.com/recaptcha/api.js?render={{ RECAPTCHA_SITE_KEY }}" defer></script>
+<script>
+  (function(){
+    function setToken(){
+      if (!window.grecaptcha || !grecaptcha.execute) return;
+      try {
+        grecaptcha.ready(function(){
+          grecaptcha.execute('{{ RECAPTCHA_SITE_KEY }}', {action: 'contact'}).then(function(token){
+            var el = document.getElementById('id_recaptcha_token');
+            if (el) el.value = token;
+          });
+        });
+      } catch (e) { /* no-op */ }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setToken);
+    } else {
+      setToken();
+    }
+  })();
+  // Refresh token every 90 seconds on this page to keep fresh
+  setInterval(function(){
+    if (window.grecaptcha && grecaptcha.execute) {
+      grecaptcha.execute('{{ RECAPTCHA_SITE_KEY }}', {action: 'contact'}).then(function(token){
+        var el = document.getElementById('id_recaptcha_token');
+        if (el) el.value = token;
+      });
+    }
+  }, 90000);
+</script>
+{% endif %}
+{% endblock %}

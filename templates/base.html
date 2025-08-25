@@ -74,6 +74,9 @@
                         <li class="nav-item">
                             <a class="nav-link d-flex align-items-center gap-1 {% if request.resolver_match.app_name == 'places' %}active{% endif %}" style="white-space: nowrap;" href="{% url 'places:map' %}"{% if request.resolver_match.app_name == 'places' %} aria-current="page"{% endif %}><i class="bi bi-geo-alt-fill me-1"></i> {% trans "Eko‑Miejsca" %}</a>
                         </li>
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-1 ws-nowrap {% if request.resolver_match.view_name == 'store:contact' %}active{% endif %}" href="{% url 'store:contact' %}"{% if request.resolver_match.view_name == 'store:contact' %} aria-current="page"{% endif %}><i class="bi bi-envelope-fill me-1"></i> {% trans "Kontakt" %}</a>
+                            </li>
                     </ul>
                     <form method="get" action="{% url 'store:product_list' %}" class="d-flex align-items-center flex-grow-1 me-3 search-form-narrow">
                         <label for="navbarSearch" class="visually-hidden">{% trans "Szukaj" %}</label>
@@ -150,7 +153,12 @@
 
     <footer class="py-3 mt-auto bg-light">
         <div class="container text-center">
-            <p class="mb-0">&copy; {% now "Y" %} EcoMarket. {% trans "Wszelkie prawa zastrzeżone." %}</p>
+            <p class="mb-1">&copy; {% now "Y" %} EcoMarket. {% trans "Wszelkie prawa zastrzeżone." %}</p>
+            <p class="small mb-0">
+                {% trans "Kontakt:" %}
+                <a href="{% url 'store:contact' %}">{% trans "formularz" %}</a>
+                {% trans "lub e‑mail" %}: <a href="mailto:{{ SUPPORT_EMAIL|default:DEFAULT_FROM_EMAIL }}">{{ SUPPORT_EMAIL|default:DEFAULT_FROM_EMAIL }}</a>
+            </p>
         </div>
     </footer>
 

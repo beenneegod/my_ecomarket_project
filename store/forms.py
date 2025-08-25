@@ -286,3 +286,44 @@ class CartAddProductForm(forms.Form):
         widget=forms.NumberInput(attrs={'class': 'form-control quantity-input-detail', 'min': '1'})
     )
     update = forms.BooleanField(required=False, initial=False, widget=forms.HiddenInput)
+
+
+class ContactForm(forms.Form):
+    name = forms.CharField(
+        label='Imię i nazwisko',
+        max_length=120,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Jan Kowalski', 'required': 'required'})
+    )
+    email = forms.EmailField(
+        label='Adres e‑mail',
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'you@example.com', 'required': 'required'})
+    )
+    subject = forms.CharField(
+        label='Temat',
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'W czym możemy pomóc?', 'required': 'required'})
+    )
+    message = forms.CharField(
+        label='Wiadomość',
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Opisz swój problem lub pytanie...', 'required': 'required'})
+    )
+    # Prosty honeypot przeciw ботам
+    website = forms.CharField(required=False, widget=forms.HiddenInput)
+    recaptcha_token = forms.CharField(required=False, widget=forms.HiddenInput)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user and getattr(user, 'is_authenticated', False):
+            full_name = (user.get_full_name() or '').strip()
+            if not full_name:
+                full_name = user.username
+            self.fields['name'].initial = full_name
+            self.fields['email'].initial = getattr(user, 'email', '')
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('website'):
+            # если заполнен honeypot — отклоняем
+            raise forms.ValidationError('Nieprawidłowe zgłoszenie.')
+        return cleaned

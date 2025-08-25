@@ -23,4 +23,5 @@ urlpatterns = [
     path('subscription/cancel/<int:subscription_id>/', views.cancel_subscription, name='cancel_subscription'),
     path('cart/count/', views.cart_count, name='cart_count'),
     path('product/<int:product_id>/rate/', views.rate_product, name='rate_product'),
+    path('contact/', views.contact, name='contact'),
 ]

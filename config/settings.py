@@ -110,6 +110,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'store.context_processors.cart',
+                'store.context_processors.support_email',
                 # Контекст процессор для корзины (добавим позже)
                 # 'store.context_processors.cart',
             ],
@@ -351,6 +352,21 @@ DEFAULT_FROM_EMAIL = (
     os.getenv('DEFAULT_FROM_EMAIL')
     or (RESEND_FROM_EMAIL if RESEND_API_KEY and RESEND_FROM_EMAIL else EMAIL_HOST_USER)
 ) # Часто совпадает с логином / или в Resend — проверенный домен
+
+# Public support contact email shown on the contact page and used as recipient
+SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', DEFAULT_FROM_EMAIL)
+
+# Public company contact info
+SUPPORT_PHONE = os.getenv('SUPPORT_PHONE', '')
+SUPPORT_ADDRESS = os.getenv('SUPPORT_ADDRESS', '')
+
+# Google reCAPTCHA v3 keys (public site key and secret key)
+RECAPTCHA_SITE_KEY = os.getenv('RECAPTCHA_SITE_KEY', '')
+RECAPTCHA_SECRET_KEY = os.getenv('RECAPTCHA_SECRET_KEY', '')
+try:
+    RECAPTCHA_MIN_SCORE = float(os.getenv('RECAPTCHA_MIN_SCORE', '0.5'))
+except Exception:
+    RECAPTCHA_MIN_SCORE = 0.5
 
 # Опционально: Управление соединениями (может помочь при некоторых проблемах)
 EMAIL_TIMEOUT = 60 # Время ожидания ответа от сервера (секунды)

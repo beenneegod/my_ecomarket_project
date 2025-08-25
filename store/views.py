@@ -8,7 +8,7 @@ from .models import Product, Order, Category, Profile, SubscriptionBoxType, User
 from .cart import Cart
 from decimal import Decimal
 from django.contrib.auth import login # Функция для автоматического входа пользователя
-from .forms import UserRegistrationForm, ProfileUpdateForm, SubscriptionChoiceForm, CouponApplyForm, UserCouponChoiceForm, CartAddProductForm # Добавлен CartAddProductForm
+from .forms import UserRegistrationForm, ProfileUpdateForm, SubscriptionChoiceForm, CouponApplyForm, UserCouponChoiceForm, CartAddProductForm, ContactForm # Добавлен CartAddProductForm
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q, Count
@@ -21,6 +21,8 @@ from django.conf import settings
 from django.utils import timezone
 import logging
 logger = logging.getLogger(__name__)
+from django.core.mail import send_mail
+import requests
 
 
 
@@ -708,3 +710,98 @@ def cart_count(request):
         'count': len(cart),
         'total': str(cart.get_total_price()),
     })
+
+
+def contact(request):
+    """Public contact page to reach the shop support."""
+    initial = {}
+    if request.user.is_authenticated:
+        initial['email'] = getattr(request.user, 'email', '')
+        initial['name'] = (request.user.get_full_name() or request.user.username or '').strip()
+    if request.method == 'POST':
+        form = ContactForm(request.POST, user=request.user)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            email = form.cleaned_data['email']
+            subject = form.cleaned_data['subject']
+            message = form.cleaned_data['message']
+            token = form.cleaned_data.get('recaptcha_token')
+
+            # Verify reCAPTCHA (skip in dev if not configured)
+            recaptcha_ok = True
+            secret = getattr(settings, 'RECAPTCHA_SECRET_KEY', '')
+            if secret:
+                recaptcha_ok = False
+                try:
+                    resp = requests.post(
+                        'https://www.google.com/recaptcha/api/siteverify',
+                        data={
+                            'secret': secret,
+                            'response': token,
+                            'remoteip': request.META.get('REMOTE_ADDR')
+                        },
+                        timeout=10
+                    )
+                    data = resp.json()
+                    if data.get('success'):
+                        score = float(data.get('score', 0)) if 'score' in data else 1.0
+                        recaptcha_ok = score >= getattr(settings, 'RECAPTCHA_MIN_SCORE', 0.5)
+                except Exception as e:
+                    logger.warning('reCAPTCHA verification failed: %s', e)
+                    recaptcha_ok = False
+            else:
+                if not settings.DEBUG:
+                    recaptcha_ok = True  # allow if keys missing but not to block prod unexpectedly
+
+            if not recaptcha_ok:
+                messages.error(request, 'Weryfikacja reCAPTCHA nie powiodła się. Spróbuj ponownie.')
+                return render(request, 'store/contact.html', {'form': form, 'page_title': 'Kontakt z EcoMarket'})
+            full_subject = f"[Kontakt] {subject}"
+            body = (
+                f"Imię i nazwisko: {name}\n"
+                f"E-mail: {email}\n"
+                f"Użytkownik: {request.user.id if request.user.is_authenticated else 'anonim'}\n\n"
+                f"Wiadomość:\n{message}"
+            )
+            try:
+                support_email = getattr(settings, 'SUPPORT_EMAIL', None) or getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+                if not support_email:
+                    # fallback: print to logs when mail is not configured
+                    logger.info("Contact message (mail disabled): %s\n%s", full_subject, body)
+                else:
+                    send_mail(
+                        subject=full_subject,
+                        message=body,
+                        from_email=settings.DEFAULT_FROM_EMAIL or support_email,
+                        recipient_list=[support_email],
+                        fail_silently=False,
+                        html_message=None,
+                    )
+                    # Autoresponder to the customer
+                    try:
+                        send_mail(
+                            subject='Potwierdzenie kontaktu – EcoMarket',
+                            message=(
+                                'Dziękujemy za kontakt! Otrzymaliśmy Twoją wiadomość i odpowiemy tak szybko, jak to możliwe.\n\n'
+                                f'Temat: {subject}\n'
+                                f'Treść:\n{message}\n\n'
+                                'Pozdrawiamy,\nZespół EcoMarket'
+                            ),
+                            from_email=settings.DEFAULT_FROM_EMAIL or support_email,
+                            recipient_list=[email],
+                            fail_silently=True,
+                        )
+                    except Exception:
+                        pass
+                messages.success(request, 'Dziękujemy za kontakt! Odpowiemy tak szybko, jak to możliwe.')
+                return redirect('store:contact')
+            except Exception as e:
+                logger.exception("Contact form send failed: %s", e)
+                messages.error(request, 'Nie udało się wysłać wiadomości. Spróbuj ponownie później lub napisz bezpośrednio e‑mail.')
+    else:
+        form = ContactForm(initial=initial, user=request.user)
+    context = {
+        'form': form,
+        'page_title': 'Kontakt z EcoMarket',
+    }
+    return render(request, 'store/contact.html', context)
