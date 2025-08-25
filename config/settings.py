@@ -476,6 +476,7 @@ CSP_SCRIPT_SRC = (
 # Стили: наши + CDN; в DEBUG допускаем инлайн-стили.
 CSP_STYLE_SRC = (
     "'self'",
+    "'unsafe-inline'",
     'https://cdn.jsdelivr.net',
     'https://fonts.googleapis.com',
     'https://unpkg.com',
@@ -500,6 +501,8 @@ CSP_IMG_SRC = (
     'https://www.gstatic.com',
     # Stripe telemetry images
     'https://q.stripe.com',
+    # Stripe camo (Fastly) for proxying images/assets
+    'https://stripe-camo.global.ssl.fastly.net',
 )
 AWS_IMG_SOURCES = []
 try:
