@@ -24,9 +24,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}">
-    <link rel="stylesheet" href="{% static 'css/custom_styles.css' %}">
-    <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=20250826-1">
+    <link rel="stylesheet" href="{% static 'css/custom_styles.css' %}?v=20250826-1">
+    <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}?v=20250826-1">
+    <!-- Glass utilities and homepage styles used globally -->
+    <link rel="stylesheet" href="{% static 'css/homepage.css' %}?v=20250826-2">
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
@@ -34,8 +36,8 @@
 </head>
 <body>
     <a href="#main-content" class="skip-link">{% trans "Przejdź do treści" %}</a>
-    <header>
-    <nav class="navbar navbar-expand-lg navbar-light" aria-label="Główna nawigacja">
+    <header class="site-header">
+    <nav class="navbar navbar-expand-lg navbar-light glass-visible glass-edge-refraction rounded-0" aria-label="Główna nawigacja">
             <div class="container">
                 <a class="navbar-brand" href="{% url 'homepage' %}">EcoMarket</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Przełącz nawigację">

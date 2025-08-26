@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="container mt-4 mb-4">
-  <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+  <div class="d-flex flex-wrap gap-3 align-items-center mb-3 glass-outline rounded-3 p-3">
   <h2 class="mb-0">{% trans "Eko‑miejsca" %}</h2>
   <div class="ms-auto d-flex align-items-center gap-3 flex-wrap">
       <div class="d-flex align-items-center gap-2">
@@ -40,7 +40,7 @@
     </div>
   </div>
 
-  <div id="map" class="leaflet-map"
+  <div id="map" class="leaflet-map glass-outline rounded-3"
        data-places-api="{% url 'places:places_api' %}"
        data-place-detail-api="{% url 'places:place_detail_api' 0 %}"
        data-add-review-url="{% url 'places:add_review' 0 %}"

@@ -1,9 +1,9 @@
 /* Homepage specific styles moved from inline */
-/* Hero uses theme surface-alt to avoid bluish tint */
-.hero-section { background-color: var(--color-surface-alt) !important; }
+/* Ensure sections are transparent by default; glass layers handle visuals */
+.hero-section { background-color: transparent !important; }
 
-/* Subscription teaser: soft surface and subtle separators */
-.eco-teaser { background-color: var(--color-surface-alt) !important; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+/* Subscription teaser separators without fill */
+.eco-teaser { background-color: transparent !important; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
 
 /* Ensure teaser never overlaps following content; create breathing room on small screens */
 .subscription-teaser { scroll-margin-top: 72px; }
@@ -11,8 +11,59 @@
 	.subscription-teaser{ padding-top: 3rem !important; padding-bottom: 3rem !important; }
 }
 
+/* ======================================
+   Utility: Glassmorphism Card
+   Apply to any card/container for a crisp, transparent glass look
+   Usage: <div class="glassmorphism-card"> ... </div>
+   Optional: add .glassmorphism-card--clear for extra transparency
+   ====================================== */
+.glassmorphism-card{
+	background: rgba(255,255,255,0.16); /* semi-transparent, no gray wash */
+	-webkit-backdrop-filter: saturate(160%) blur(16px) contrast(1.04);
+	backdrop-filter: saturate(160%) blur(16px) contrast(1.04);
+	border: 1px solid rgba(255,255,255,0.22);
+	box-shadow:
+		inset 0 1px 0 rgba(255,255,255,0.12),
+		0 6px 14px rgba(16,24,40,0.05),
+		0 2px 4px rgba(16,24,40,0.04);
+	border-radius: 14px;
+}
+
+/* Even clearer variant */
+.glassmorphism-card--clear{
+	background: rgba(255,255,255,0.10);
+	border-color: rgba(255,255,255,0.16);
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark){
+	.glassmorphism-card{
+		background: rgba(42,42,42,0.16);
+		border-color: rgba(255,255,255,0.10);
+		box-shadow:
+			inset 0 1px 0 rgba(255,255,255,0.035),
+			0 6px 14px rgba(0,0,0,0.22),
+			0 3px 6px rgba(0,0,0,0.16);
+	}
+	.glassmorphism-card--clear{
+		background: rgba(42,42,42,0.12);
+		border-color: rgba(255,255,255,0.08);
+	}
+}
+
+/* Fallback for browsers without backdrop-filter: increase opacity slightly for legibility */
+@supports not ((-webkit-backdrop-filter: none) or (backdrop-filter: none)){
+	.glassmorphism-card{ background: rgba(255,255,255,0.28); }
+	@media (prefers-color-scheme: dark){
+		.glassmorphism-card{ background: rgba(18,18,18,0.28); }
+	}
+}
+
 /* Category cards align with theme surfaces */
 .category-card { background-color: var(--color-surface); border-color: var(--color-border); }
+
+/* Nix Bootstrap bg-light only on hero (others keep their normal bg) */
+.hero-section.bg-light { background-color: transparent !important; }
 
 /* Ensure hero image respects fixed height and remains responsive */
 .hero-section .hero-image{
@@ -35,3 +86,239 @@
 @media (min-width: 1200px){ /* xl */
 	.hero-section .hero-image{ max-height:540px; }
 }
+
+/* Section containers keep radius and positioning, visuals come from glass classes */
+.hero-section,
+.features-section,
+.popular-categories,
+.latest-blog-posts,
+.subscription-teaser{ border-radius: 20px; position: relative; }
+
+/* Product list top band (glass) should not clip dropdowns */
+.glass-ultra-clear{ overflow: visible; }
+
+/* Product filters top band: ensure dropdowns appear above product grid */
+.filters-band{ position: relative; z-index: 1005; }
+
+/* Border-only glass utility (no fill, no blur). Use for subtle glass outline without background. */
+.glass-outline{
+	background:
+		linear-gradient(transparent, transparent) padding-box,
+		linear-gradient(to bottom right, rgba(255,255,255,0.30), rgba(0,0,0,0.09)) border-box !important; /* stronger contrast */
+	border: 1px solid transparent;
+	position: relative;
+	box-shadow:
+		inset 0 0 0 1px rgba(0,0,0,0.07),  /* subtle inner 1px contrast line */
+		inset 0 1px 0 rgba(255,255,255,0.55), /* brighter inner highlight (top) */
+		0 0 0 2px rgba(0,0,0,0.10),        /* darker outer ring for clarity on light bg */
+		0 2px 8px rgba(16,24,40,0.05),     /* near-field softening */
+		0 10px 26px rgba(16,24,40,0.08);   /* deeper drop shadow */
+	border-radius: 14px;
+	overflow: visible;
+}
+@media (prefers-color-scheme: dark){
+	.glass-outline{
+		background:
+			linear-gradient(transparent, transparent) padding-box,
+			linear-gradient(to bottom right, rgba(255,255,255,0.14), rgba(255,255,255,0.05)) border-box !important;
+		box-shadow:
+			inset 0 0 0 1px rgba(255,255,255,0.03), /* subtle inner 1px line for dark */
+			inset 0 1px 0 rgba(255,255,255,0.06),
+			0 0 0 1px rgba(255,255,255,0.04);
+	}
+}
+
+/* Stronger border-only variant for very light backgrounds */
+.glass-outline.glass-outline-strong{
+	border-width: 1px; /* slightly reduced from 2px */
+	box-shadow:
+		inset 0 0 0 1px rgba(0,0,0,0.07), /* inner 1px contrast line */
+		inset 0 1px 0 rgba(255,255,255,0.60),
+		0 0 0 1.5px rgba(0,0,0,0.13), /* lighter outer ring */
+		0 3px 10px rgba(16,24,40,0.05),
+		0 12px 28px rgba(16,24,40,0.08);
+}
+@media (prefers-color-scheme: dark){
+	.glass-outline.glass-outline-strong{
+		box-shadow:
+			inset 0 0 0 1px rgba(255,255,255,0.04), /* inner 1px line (dark) */
+			inset 0 1px 0 rgba(255,255,255,0.08),
+			0 0 0 1.5px rgba(255,255,255,0.06);
+	}
+}
+
+/* Light-mode fallback border colors in case gradient border looks too subtle */
+@media (prefers-color-scheme: light){
+	.glass-outline{ border-color: rgba(0,0,0,0.22); }
+	.glass-outline.glass-outline-strong{ border-color: rgba(0,0,0,0.26); }
+}
+
+/* On larger screens, make the outer ring a bit thicker for visibility */
+@media (min-width: 992px) {
+	.glass-outline.glass-outline-strong{
+		box-shadow:
+			inset 0 0 0 1px rgba(0,0,0,0.07),
+			inset 0 1px 0 rgba(255,255,255,0.60),
+			0 0 0 2px rgba(0,0,0,0.14), /* reduced from 3px and opacity softened */
+			0 4px 12px rgba(16,24,40,0.05),
+			0 14px 32px rgba(16,24,40,0.08);
+	}
+}
+
+/* Reusable helper to mark top sections which should be glassy site-wide */
+
+/* Explicitly ensure no default fills on the key sections using glass */
+.hero-section,
+.popular-categories,
+.latest-blog-posts,
+.subscription-teaser{ background: transparent !important; }
+
+/* Respect existing spacing; avoid double rounding on inner .container */
+.hero-section > .container,
+.features-section > .container,
+.popular-categories > .container,
+.latest-blog-posts > .container,
+.subscription-teaser > .container{
+	padding: 1.25rem 1.25rem;
+}
+
+/* Avoid double borders when eco-teaser is used together with the new section border */
+.subscription-teaser.eco-teaser{ border-top: 0; border-bottom: 0; }
+
+/* Subtle diagonal glare near top-left (apply only for glass-visible; ultra-clear stays pure) */
+.glass-visible::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+	background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 14%, rgba(255,255,255,0) 28%);
+    mix-blend-mode: screen;
+}
+
+/* Ultra-clear has zero overlay to remain fully transparent */
+.glass-ultra-clear::before{ content: none !important; }
+
+/* Remove heavy edge ring to avoid global haze; rely on inner highlight + border */
+
+/* No dark-mode glass on base sections; handled by glass classes */
+
+/* Ultra-clear: zero fill, border-only glass (maximum transparency) */
+.glass-ultra-clear{
+	background:
+		linear-gradient(transparent, transparent) padding-box,
+		linear-gradient(to bottom right, rgba(255,255,255,0.26), rgba(255,255,255,0.06)) border-box !important;
+	border: 1px solid transparent; /* ensure border gradient is visible */
+	-webkit-backdrop-filter: saturate(120%) blur(4px) brightness(1.02) contrast(1.01);
+	backdrop-filter: saturate(120%) blur(4px) brightness(1.02) contrast(1.01);
+	box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+@media (prefers-color-scheme: dark){
+	.glass-ultra-clear{
+		background:
+			linear-gradient(transparent, transparent) padding-box,
+			linear-gradient(to bottom right, rgba(255,255,255,0.14), rgba(255,255,255,0.04)) border-box !important;
+		-webkit-backdrop-filter: saturate(120%) blur(4px) brightness(1.06) contrast(1.02);
+		backdrop-filter: saturate(120%) blur(4px) brightness(1.06) contrast(1.02);
+		box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+	}
+}
+
+/* Light mode tuning: make glass less "paper white" and more see-through */
+@media (prefers-color-scheme: light){
+	.glass-ultra-clear{
+		/* subtle gray-tinted fill to separate from white page background (stronger) */
+		background:
+			linear-gradient(to bottom right, rgba(0,0,0,0.055), rgba(0,0,0,0.025)) padding-box,
+			/* darker edge for clearer silhouette */
+			linear-gradient(to bottom right, rgba(0,0,0,0.18), rgba(0,0,0,0.06)) border-box !important;
+		-webkit-backdrop-filter: saturate(140%) blur(3px) brightness(0.975) contrast(1.06);
+		backdrop-filter: saturate(140%) blur(3px) brightness(0.975) contrast(1.06);
+		box-shadow:
+			inset 0 1px 0 rgba(255,255,255,0.5),
+			0 8px 22px rgba(0,0,0,0.08),
+			0 2px 4px rgba(0,0,0,0.04);
+	}
+}
+
+/* Glass visible: minimal tint so the shape reads without looking gray */
+.glass-visible{
+	background:
+		linear-gradient(to bottom right, rgba(250,247,240,0.06), rgba(250,247,240,0.03)) padding-box,
+		linear-gradient(to bottom right, rgba(255,255,255,0.30), rgba(255,255,255,0.06)) border-box !important;
+	border: 1px solid transparent;
+	-webkit-backdrop-filter: saturate(150%) blur(12px) contrast(1.02);
+	backdrop-filter: saturate(150%) blur(12px) contrast(1.02);
+	box-shadow:
+		inset 0 1px 0 rgba(255,255,255,0.10),
+		0 6px 18px rgba(16,24,40,0.06),
+		0 1px 2px rgba(16,24,40,0.03);
+}
+@media (prefers-color-scheme: dark){
+	.glass-visible{
+		background:
+			linear-gradient(transparent, transparent) padding-box, /* no fill: true transparency */
+			linear-gradient(to bottom right, rgba(255,255,255,0.14), rgba(255,255,255,0.05)) border-box !important;
+		-webkit-backdrop-filter: saturate(150%) blur(12px) brightness(1.14) contrast(1.03);
+		backdrop-filter: saturate(150%) blur(12px) brightness(1.14) contrast(1.03);
+		box-shadow:
+			inset 0 1px 0 rgba(255,255,255,0.10);
+	}
+}
+
+/* ======================================
+   Optional modifiers inspired by icon sample
+   - glass-edge-refraction: thin refractive ring at the very edges
+   - glass-glare-spot: small highlight spot near top-left
+   Apply alongside a glass background element (section or .glassmorphism-card)
+   ====================================== */
+.glass-edge-refraction{ position: relative; }
+.glass-edge-refraction::after{
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	pointer-events: none;
+	/* cross-browser thin edge ring without center haze */
+	box-shadow:
+		inset 0 0 0 1px rgba(255,255,255,0.14),
+		inset 0 0 24px rgba(255,255,255,0.06);
+	mix-blend-mode: screen;
+}
+
+/* For ultra-clear glass, keep the ring extra subtle to avoid any center haze perception */
+.glass-ultra-clear.glass-edge-refraction::after{ box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14) !important; }
+@media (prefers-color-scheme: dark){
+	.glass-ultra-clear.glass-edge-refraction::after{ box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12) !important; }
+}
+
+@media (prefers-color-scheme: dark){
+	.glass-edge-refraction::after{
+		box-shadow:
+			inset 0 0 0 1px rgba(255,255,255,0.12),
+			inset 0 0 18px rgba(255,255,255,0.05);
+	}
+}
+
+/* small glare spot near top-left; use sparingly */
+.glass-glare-spot{ position: relative; }
+.glass-glare-spot::before{
+	content: "";
+	position: absolute;
+	top: 0; left: 0; right: 0; bottom: 0;
+	border-radius: inherit;
+	pointer-events: none;
+	background: radial-gradient(120% 80% at 10% 6%, rgba(255,255,255,0.22), rgba(255,255,255,0) 40%);
+	mix-blend-mode: screen;
+}
+@media (prefers-color-scheme: dark){
+	.glass-glare-spot::before{
+		background: radial-gradient(120% 80% at 10% 6%, rgba(255,255,255,0.14), rgba(255,255,255,0) 40%);
+	}
+}
+
+/* Fallbacks: if mask/mask-composite is unsupported, reduce to a very light outer highlight */
+/* mask fallback no longer needed; using box-shadow approach above */
+
+/* When edge refraction is active, suppress the large diagonal glare to avoid oval-ish overlays */
+.glass-edge-refraction::before{ background: none !important; }

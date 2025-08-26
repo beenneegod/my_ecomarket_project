@@ -40,7 +40,8 @@
 
         {# --- Основной блок со списком товаров --- #}
         <section class="col-lg-9 col-md-8">
-        <h2>
+    <div class="glass-ultra-clear glass-edge-refraction rounded-3 p-3 mb-3 filters-band">
+        <h2 class="m-0">
                 {% if query %}
             {% blocktrans %}Rezultat wyszukiwania: "{{ query }}"{% endblocktrans %}
                 {% elif current_category %}
@@ -50,7 +51,7 @@
                 {% endif %}
             </h2>
 
-            <form method="get" class="row g-2 align-items-end mb-3 product-filters">
+            <form method="get" class="row g-2 align-items-end mt-2 product-filters">
                 {% if current_category %}
                     <input type="hidden" name="category" value="{{ current_category.slug }}">
                 {% endif %}
@@ -121,6 +122,7 @@
                     <button type="submit" class="btn btn-success">Zastosuj</button>
                 </div>
             </form>
+        </div>
 
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
                 {% for product in products %}

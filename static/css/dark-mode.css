@@ -24,12 +24,19 @@
     );
 }
 
-.dark-mode .navbar,
+.dark-mode .navbar:not(.glass-visible),
 .dark-mode .card,
 .dark-mode .list-group-item,
 .dark-mode footer.bg-light {
     background-color: var(--color-surface) !important;
     color: var(--color-text-dark);
+}
+
+/* Keep glassy navbar truly transparent in dark mode */
+.dark-mode .navbar.glass-visible {
+    background-color: transparent !important;
+    -webkit-backdrop-filter: saturate(150%) blur(12px) brightness(1.12) contrast(1.03);
+    backdrop-filter: saturate(150%) blur(12px) brightness(1.12) contrast(1.03);
 }
 
 .dark-mode .bg-light {

@@ -97,6 +97,29 @@ body {
     /* background-attachment: fixed; */
 }
 
+/* Light mode: make page background a touch darker for better glass contrast */
+html:not(.dark-mode) body {
+    /* Slightly darker than #F8F9FA for clearer outlines */
+    background-color: #F2F3F5 !important;
+    /* Make the diagonal pattern a hair more visible, still subtle */
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 14px,
+        rgba(210, 210, 210, 0.25) 14px,
+        rgba(210, 210, 210, 0.25) 15px
+    );
+}
+
+/* Sticky header: keep navbar attached to the top without extra spacing */
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 1200; /* keep header and its dropdowns above page content */
+}
+/* When a modal is open, let it sit on top of the header */
+body.modal-open .site-header { z-index: 0; }
+
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-secondary);
     font-weight: 500; /* Montserrat medium */
@@ -120,11 +143,26 @@ a:hover {
     text-decoration: none; /* Bootstrap убирает по умолчанию, но лучше явно указать */
 }
 
-.navbar { /* Этот класс уже есть в твоей шапке */
+.navbar { /* Базовая шапка на светлой теме */
     background-color: var(--color-surface) !important; /* Переопределяем bg-light */
     box-shadow: var(--shadow-sm);
     padding-top: 1rem;
     padding-bottom: 1rem;
+}
+
+/* Если navbar получает стеклянный класс, не перекрываем его сплошным фоном */
+.navbar.glass-visible { background-color: transparent !important; }
+
+@media (prefers-color-scheme: dark) {
+    /* Темная тема: базовый — тёмный фон, стеклянный — прозрачен */
+    .navbar { background-color: #111 !important; }
+    .navbar.glass-visible { background-color: transparent !important; }
+    /* Усилим читаемость для стеклянной шапки на тёмном фоне */
+    .navbar.glass-visible {
+        -webkit-backdrop-filter: saturate(150%) blur(12px) brightness(1.10) contrast(1.02);
+        backdrop-filter: saturate(150%) blur(12px) brightness(1.10) contrast(1.02);
+        border: 1px solid transparent; /* показать градиентную окантовку из .glass-visible */
+    }
 }
 
 .navbar-brand {
@@ -175,7 +213,13 @@ a:hover {
     border-radius: var(--border-radius-md);
     box-shadow: var(--shadow-md);
     border-color: var(--color-border);
+    z-index: 1050; /* above page content/filters, below modal (1055) */
 }
+
+/* Prevent navbar glass edge overlay from sitting above dropdowns */
+.navbar.glass-edge-refraction{ position: relative; isolation: isolate; }
+.navbar.glass-edge-refraction::after{ z-index: 0; }
+.navbar .dropdown-menu{ position: absolute; z-index: 1050; }
 .navbar .dropdown-item {
     font-weight: 500;
 }
@@ -1319,6 +1363,7 @@ header .navbar form.d-flex button.btn-outline-success {
 
 /* Pseudo select (custom dropdown) */
 .product-filters .pseudo-select { position: relative; }
+.product-filters{ position: relative; z-index: 1010; /* above product grid/cards, below sticky header */ }
 .product-filters .pseudo-select-toggle {
     width: 100%;
     text-align: left;
@@ -1337,7 +1382,7 @@ header .navbar form.d-flex button.btn-outline-success {
     mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23000" d="M7 10h10l-5 5-5-5z"/></svg>') center/contain no-repeat;
 }
 .product-filters .pseudo-select-menu {
-    position: absolute; left: 0; right: 0; margin-top: .25rem; z-index: 10;
+    position: absolute; left: 0; right: 0; margin-top: .25rem; z-index: 1020; /* above cards, below header */
     background: var(--bs-body-bg);
     color: var(--bs-body-color);
     border: 1px solid var(--color-border);
